@@ -151,19 +151,22 @@ public class HttpUtil {
 	}
 
 	public void retry(Retry retry, int count) throws Throwable {
-		boolean condition = true;
+		boolean stop = false;
 		int exeCount = 0;
 		do {
 			try {
 				retry.execute();
-				condition = false;
+				stop = true;
 			} catch (Throwable e) {
-				Thread.sleep(3000l);
-				condition = exeCount++ < count;
-				if (!condition)
+				exeCount++;
+				Thread.sleep(10000l * exeCount);
+				finish();
+				setConfUtil(conf);
+				stop = exeCount >= count;
+				if (stop)
 					throw e;
 			}
-		} while (condition);
+		} while (!stop);
 	}
 
 	/**

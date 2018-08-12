@@ -63,10 +63,11 @@ public class DownloadSingle {
 
 	/**
 	 * ¿ªÊ¼ÏÂÔØ
+	 * @throws Throwable 
 	 * 
 	 * @throws IOException
 	 */
-	public boolean startDownload(String url, String save_name) throws Exception {
+	public boolean startDownload(String url, String save_name) throws Throwable {
 		length_download = 0;
 		File savePath = new File(save_path);
 		if (!savePath.exists())

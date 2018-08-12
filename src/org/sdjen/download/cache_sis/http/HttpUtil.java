@@ -14,6 +14,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.protocol.HTTP;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 
 public class HttpUtil {
@@ -59,6 +60,10 @@ public class HttpUtil {
 		}
 	}
 
+	public interface Retry {
+		void execute() throws Throwable;
+	}
+
 	public void execute(String uri, Executor<?> executor) {
 		InputStream in = null;
 		HttpGet get = new HttpGet(uri);
@@ -101,11 +106,11 @@ public class HttpUtil {
 	 * @return 返回网页的html内容
 	 * @throws IOException
 	 */
-	public String getHTML(String uri) throws IOException {
-		Executor<String> executor = new Executor<String>() {
+	public String getHTML(final String uri) throws Throwable {
+		final Executor<String> executor = new Executor<String>() {
 			public void execute(InputStream inputStream) {
 				try {
-					setResult("");
+					setResult(null);
 					StringBuffer pageHTML = new StringBuffer();
 					BufferedReader br;
 					br = new BufferedReader(
@@ -121,8 +126,44 @@ public class HttpUtil {
 				}
 			}
 		};
-		execute(uri, executor);
+		retry(new Retry() {
+
+			public void execute() throws Throwable {
+
+				HttpUtil.this.execute(uri, executor);
+
+				String result = executor.getResult();
+				if (null == result)
+					throw new Exception("取内容失败");
+			}
+		}, 3);
 		return executor.getResult();
+	}
+
+	public static void main(String[] args) throws Throwable {
+		HttpUtil httpUtil = new HttpUtil();
+		httpUtil.retry(new Retry() {
+
+			public void execute() throws Throwable {
+				throw new Exception("d");
+			}
+		}, 3);
+	}
+
+	public void retry(Retry retry, int count) throws Throwable {
+		boolean condition = true;
+		int exeCount = 0;
+		do {
+			try {
+				retry.execute();
+				condition = false;
+			} catch (Throwable e) {
+				Thread.sleep(3000l);
+				condition = exeCount++ < count;
+				if (!condition)
+					throw e;
+			}
+		} while (condition);
 	}
 
 	/**

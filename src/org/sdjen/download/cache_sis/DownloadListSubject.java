@@ -14,8 +14,11 @@ public class DownloadListSubject {
 		new DownloadListSubject();
 	}
 
+	ConfUtil conf;
+	LogUtil logUtil;
+
 	public DownloadListSubject() throws Throwable {
-		ConfUtil conf = new ConfUtil("conf.ini");
+		conf = new ConfUtil("conf.ini");
 		if (conf.getProperties().isEmpty()) {
 			conf.getProperties().setProperty("chatset", "gbk");
 			conf.getProperties().setProperty("save_path", "D:/SISCACHE");
@@ -25,35 +28,49 @@ public class DownloadListSubject {
 			conf.getProperties().setProperty("list_end", "1");
 			conf.store();
 		}
+		logUtil = new LogUtil().setLogFile(System.currentTimeMillis() + ".list")
+				.setChatset(conf.getProperties().getProperty("chatset"));
+		try {
+			int page = Integer.valueOf(conf.getProperties().getProperty("list_start"));
+			int limit = Integer.valueOf(conf.getProperties().getProperty("list_end"));
+			int pageU = 50;
+			do {
+				list(page, Math.min(page + pageU - 1, limit));
+				page += pageU;
+			} while (page <= limit);
+		} finally {
+			logUtil.finish();
+			System.out.println("完成！");
+		}
+	}
+
+	private void list(int from, int to) throws Throwable {
 		HttpUtil httpUtil = new HttpUtil().setConfUtil(conf);
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-		LogUtil logUtil = new LogUtil().setLogFile(System.currentTimeMillis() + ".list")
-				.setChatset(conf.getProperties().getProperty("chatset"));
-		for (int i = Integer.valueOf(conf.getProperties().getProperty("list_start")); //
-		i <= Integer.valueOf(conf.getProperties().getProperty("list_end")); //
-		i++) {
-			String uri = MessageFormat.format(conf.getProperties().getProperty("list_url"), i);
-			logUtil.showMsg(uri);
-			String html = httpUtil.getHTML(uri);
-			org.jsoup.nodes.Document doument = Jsoup.parse(html);
-			for (org.jsoup.nodes.Element e : doument.select("tbody").select("tr")) {
-				StringBuilder builder = new StringBuilder();
-				for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
-					builder.append("	");
-					builder.append(dateFormat.format(dateFormat.parse(s.text())));
+		try {
+			for (int i = from; i <= to; i++) {
+				String uri = MessageFormat.format(conf.getProperties().getProperty("list_url"), i);
+				logUtil.showMsg(uri);
+				String html = httpUtil.getHTML(uri);
+				org.jsoup.nodes.Document doument = Jsoup.parse(html);
+				for (org.jsoup.nodes.Element e : doument.select("tbody").select("tr")) {
+					StringBuilder builder = new StringBuilder();
+					for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
+						builder.append("	");
+						builder.append(dateFormat.format(dateFormat.parse(s.text())));
+					}
+					for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {
+						builder.append("	");
+						builder.append(s.text());
+						builder.append("	");
+						builder.append(httpUtil.joinUrlPath(uri, s.attr("href")));
+					}
+					if (builder.length() > 0)
+						logUtil.showMsg(builder);
 				}
-				for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {
-					builder.append("	");
-					builder.append(s.text());
-					builder.append("	");
-					builder.append(httpUtil.joinUrlPath(uri, s.attr("href")));
-				}
-				if (builder.length() > 0)
-					logUtil.showMsg(builder);
 			}
+		} finally {
+			httpUtil.finish();
 		}
-		logUtil.finish();
-		httpUtil.finish();
-		System.out.println("完成！");
 	}
 }

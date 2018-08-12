@@ -34,6 +34,10 @@ public class DownloadListSubject {
 			int page = Integer.valueOf(conf.getProperties().getProperty("list_start"));
 			int limit = Integer.valueOf(conf.getProperties().getProperty("list_end"));
 			int pageU = 50;
+			try {
+				pageU = Integer.valueOf(conf.getProperties().getProperty("list_page_max"));
+			} catch (Exception e) {
+			}
 			do {
 				list(page, Math.min(page + pageU - 1, limit));
 				page += pageU;
@@ -49,7 +53,7 @@ public class DownloadListSubject {
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		try {
 			for (int i = from; i <= to; i++) {
-				String uri = MessageFormat.format(conf.getProperties().getProperty("list_url"), i);
+				String uri = MessageFormat.format(conf.getProperties().getProperty("list_url"), String.valueOf(i));
 				logUtil.showMsg(uri);
 				String html = httpUtil.getHTML(uri);
 				org.jsoup.nodes.Document doument = Jsoup.parse(html);

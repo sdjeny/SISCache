@@ -16,6 +16,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.protocol.HTTP;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class HttpUtil {
 	private CloseableHttpClient client;
@@ -162,6 +163,7 @@ public class HttpUtil {
 				Thread.sleep(10000l * exeCount);
 				finish();
 				setConfUtil(conf);
+				LogUtil.errLog.showMsg("Retry	{0}", exeCount);
 				stop = exeCount >= count;
 				if (stop)
 					throw e;

@@ -30,6 +30,7 @@ public class DownloadListSubject {
 		}
 		logUtil = new LogUtil().setLogFile(System.currentTimeMillis() + ".list")
 				.setChatset(conf.getProperties().getProperty("chatset"));
+		LogUtil.init(conf);
 		try {
 			int page = Integer.valueOf(conf.getProperties().getProperty("list_start"));
 			int limit = Integer.valueOf(conf.getProperties().getProperty("list_end"));
@@ -44,6 +45,7 @@ public class DownloadListSubject {
 			} while (page <= limit);
 		} finally {
 			logUtil.finish();
+			LogUtil.finishAll();
 			System.out.println("Íê³É£¡");
 		}
 	}

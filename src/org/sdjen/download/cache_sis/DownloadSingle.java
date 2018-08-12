@@ -66,7 +66,7 @@ public class DownloadSingle {
 	 * 
 	 * @throws IOException
 	 */
-	public void startDownload(String url, String save_name) throws Exception {
+	public boolean startDownload(String url, String save_name) throws Exception {
 		length_download = 0;
 		File savePath = new File(save_path);
 		if (!savePath.exists())
@@ -75,7 +75,7 @@ public class DownloadSingle {
 		File newFile = new File(savePath.toString() + "/" + save_name);
 		if (newFile.exists()) {
 			// showMsg("已存在 {0}", newFile);
-			return;
+			return false;
 		}
 		// 创建必要的一些文件夹
 		for (String sub : new String[] { sub_css, sub_js, sub_images, sub_torrent }) {
@@ -119,12 +119,20 @@ public class DownloadSingle {
 				writer.close();
 			} else {
 				LogUtil.errLog.showMsg("X	长度过短	{0}	{1}	{2}", length, save_name, url);
+				return false;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 			LogUtil.errLog.showMsg("	异常：	{0}	{1}		{2}", save_name, url, e);
+			return false;
+		} finally {
+			LogUtil.msgLog.showMsg("	本次下载	{0}（字节）", length_download);
 		}
-		LogUtil.msgLog.showMsg("	本次下载	{0}（字节）", length_download);
+		return true;
+	}
+
+	public long getLength_download() {
+		return length_download;
 	}
 
 	private void replaceAll(String src, String targ) {

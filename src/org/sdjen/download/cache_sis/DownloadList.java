@@ -37,15 +37,20 @@ public class DownloadList {
 			LogUtil.lstLog.showMsg(uri);
 			String html = httpUtil.getHTML(uri);
 			org.jsoup.nodes.Document doument = Jsoup.parse(html);
+			long count = 0, length_download = 0;
 			for (org.jsoup.nodes.Element e : doument.select("tbody").select("th").select("span").select("a[href]")) {
 				try {
-					downloadSingle//
+					if (downloadSingle//
 							// .setHttpUtil(new HttpUtil().setConfUtil(conf))
-							.startDownload(httpUtil.joinUrlPath(uri, e.attr("href")), e.text() + ".html");
+							.startDownload(httpUtil.joinUrlPath(uri, e.attr("href")), e.text() + ".html")) {
+						count++;
+						length_download += downloadSingle.getLength_download();
+					}
 				} catch (Exception e1) {
 					e1.printStackTrace();
 				}
 			}
+			LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)", count, length_download);
 		}
 		httpUtil.finish();
 		LogUtil.finishAll();

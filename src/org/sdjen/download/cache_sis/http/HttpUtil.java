@@ -23,10 +23,21 @@ public class HttpUtil {
 
 	private ConfUtil conf;
 
+	private int retry_times = 5;
+	private int retry_time_second = 30;
+
 	public HttpUtil setConfUtil(ConfUtil conf) {
 		this.conf = conf;
 		org.apache.http.client.config.RequestConfig.Builder builder = RequestConfig.custom()
 				.setCookieSpec(CookieSpecs.IGNORE_COOKIES);
+		try {
+			retry_times = Integer.valueOf(conf.getProperties().getProperty("retry_times"));
+		} catch (Exception e) {
+		}
+		try {
+			retry_time_second = Integer.valueOf(conf.getProperties().getProperty("retry_time_second"));
+		} catch (Exception e) {
+		}
 		try {
 			String[] s = conf.getProperties().getProperty("proxy").split(":");
 			HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// 设置代理IP、端口、协议（请分别替换）
@@ -137,34 +148,24 @@ public class HttpUtil {
 				if (null == result)
 					throw new Exception("取内容失败");
 			}
-		}, 3);
+		});
 		return executor.getResult();
 	}
 
-	public static void main(String[] args) throws Throwable {
-		HttpUtil httpUtil = new HttpUtil();
-		httpUtil.retry(new Retry() {
-
-			public void execute() throws Throwable {
-				throw new Exception("d");
-			}
-		}, 3);
-	}
-
-	public void retry(Retry retry, int count) throws Throwable {
+	public void retry(Retry retry) throws Throwable {
 		boolean stop = false;
-		int exeCount = 0;
+		int count = 0;
 		do {
 			try {
 				retry.execute();
 				stop = true;
 			} catch (Throwable e) {
-				exeCount++;
-				Thread.sleep(10000l * exeCount);
 				finish();
+				count++;
+				Thread.sleep(1000l * retry_time_second * count);
 				setConfUtil(conf);
-				LogUtil.errLog.showMsg("Retry	{0}", exeCount);
-				stop = exeCount >= count;
+				LogUtil.errLog.showMsg("Retry	{0}", count);
+				stop = count >= retry_times;
 				if (stop)
 					throw e;
 			}

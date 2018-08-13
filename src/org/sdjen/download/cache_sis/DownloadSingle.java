@@ -63,7 +63,8 @@ public class DownloadSingle {
 
 	/**
 	 * 开始下载
-	 * @throws Throwable 
+	 * 
+	 * @throws Throwable
 	 * 
 	 * @throws IOException
 	 */
@@ -147,8 +148,9 @@ public class DownloadSingle {
 	 *            下载地址
 	 * @param filePath
 	 *            存放的路径
+	 * @throws Exception
 	 */
-	private boolean downloadFile(final String fileURL, final String filePath) {
+	private boolean downloadFile(final String fileURL, final String filePath) throws Exception {
 		try {
 			final File file = new File(filePath);
 			if (file.exists()) {
@@ -181,7 +183,8 @@ public class DownloadSingle {
 		} catch (Exception e) {
 			e.printStackTrace();
 			LogUtil.errLog.showMsg("	异常：	{0}	{1}		{2}", fileURL, filePath, e);
-			return false;
+			throw e;// 异常则终止本网页生产
+			// return false;
 		}
 	}
 }

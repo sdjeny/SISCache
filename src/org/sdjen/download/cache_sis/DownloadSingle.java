@@ -29,7 +29,8 @@ public class DownloadSingle {
 	private MapDBUtil mapDBUtil;
 	private MessageDigest md5;
 	private long length_download;
-	private long length_flag_min_byte = 10000;
+	private long length_flag_min_byte = 20000;
+	private long length_flag_max_byte = 70000;
 
 	public DownloadSingle() throws Exception {
 		ConfUtil conf = ConfUtil.getDefaultConf();
@@ -38,6 +39,10 @@ public class DownloadSingle {
 		save_path = conf.getProperties().getProperty("save_path");
 		try {
 			length_flag_min_byte = Long.valueOf(conf.getProperties().getProperty("length_flag_min_byte"));
+		} catch (Exception e) {
+		}
+		try {
+			length_flag_max_byte = Long.valueOf(conf.getProperties().getProperty("length_flag_max_byte"));
 		} catch (Exception e) {
 		}
 	}
@@ -112,7 +117,9 @@ public class DownloadSingle {
 			return false;
 		}
 		// 创建必要的一些文件夹
-		for (String sub : new String[] { sub_images, sub_torrent, sub_html, sub_images + "/min", sub_torrent + "/min" }) {
+		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
+		        , sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+		        , sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
@@ -214,6 +221,10 @@ public class DownloadSingle {
 							String result = path;
 							if (bytes.length < length_flag_min_byte)
 								result += "/min";
+							else if (bytes.length > length_flag_max_byte)
+								result += "/max";
+							else
+								result += "/mid";
 							result += "/";
 							if (name.startsWith("."))
 								result += md5;

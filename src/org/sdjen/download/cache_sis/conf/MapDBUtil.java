@@ -9,25 +9,21 @@ import org.mapdb.Serializer;
 
 public class MapDBUtil {
 	DB db;
-	HTreeMap<String, String> map;
-
-	public static void main(String[] args) throws IOException {
-		MapDBUtil dbUtil = new MapDBUtil();
-		dbUtil.getMap().put("1", "2");
-		dbUtil.finish();
-		dbUtil = new MapDBUtil();
-		System.out.println(dbUtil.getMap().keySet());
-		System.out.println(dbUtil.getMap().values());
-		dbUtil.finish();
-	}
+	HTreeMap<String, String> fileMap;
+	HTreeMap<String, String> urlMap;
 
 	public MapDBUtil() throws IOException {
 		db = DBMaker.fileDB(ConfUtil.getDefaultConf().getProperties().getProperty("save_path") + "/map.db").make();
-		map = db.hashMap("", Serializer.STRING, Serializer.STRING).counterEnable().createOrOpen();
+		fileMap = db.hashMap("file-md5-path", Serializer.STRING, Serializer.STRING).counterEnable().createOrOpen();
+		urlMap = db.hashMap("url-path", Serializer.STRING, Serializer.STRING).counterEnable().createOrOpen();
 	}
 
-	public HTreeMap<String, String> getMap() {
-		return map;
+	public HTreeMap<String, String> getFileMap() {
+		return fileMap;
+	}
+
+	public HTreeMap<String, String> getUrlMap() {
+		return urlMap;
 	}
 
 	public DB getDb() {

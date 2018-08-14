@@ -1,19 +1,14 @@
 package org.sdjen.download.cache_sis;
 
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.text.MessageFormat;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
@@ -34,12 +29,17 @@ public class DownloadSingle {
 	private MapDBUtil mapDBUtil;
 	private MessageDigest md5;
 	private long length_download;
+	private long length_flag_min_byte = 10000;
 
 	public DownloadSingle() throws Exception {
 		ConfUtil conf = ConfUtil.getDefaultConf();
 		md5 = MessageDigest.getInstance("MD5");
 		chatset = conf.getProperties().getProperty("chatset");
 		save_path = conf.getProperties().getProperty("save_path");
+		try {
+			length_flag_min_byte = Long.valueOf(conf.getProperties().getProperty("length_flag_min_byte"));
+		} catch (Exception e) {
+		}
 	}
 
 	public DownloadSingle setHttpUtil(HttpUtil httpUtil) {
@@ -112,7 +112,7 @@ public class DownloadSingle {
 			return false;
 		}
 		// 创建必要的一些文件夹
-		for (String sub : new String[] { sub_images, sub_torrent, sub_html }) {
+		for (String sub : new String[] { sub_images, sub_torrent, sub_html, sub_images + "/min", sub_torrent + "/min" }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
@@ -126,18 +126,21 @@ public class DownloadSingle {
 		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
 			String src = e.attr("src");
 			String downloadUrl = httpUtil.joinUrlPath(url, src);
-			String newName = getMD5(downloadUrl.getBytes("utf-8"));
+			String name;// = getMD5(downloadUrl.getBytes("utf-8"));
 			if (src.contains("."))
-				newName += getFileName(src.substring(src.lastIndexOf("."), src.length()));
-			downloadFile(downloadUrl, save_path + "/" + sub_images + "/" + newName);
-			replaceAll(src, sub_images + "/" + newName);
+				name = getFileName(src.substring(src.lastIndexOf("."), src.length()));
+			else {
+				name = ".jpg";
+			}
+			name = downloadFile(downloadUrl, sub_images, name);
+			replaceAll(src, name);
 		}
 		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
 			String href = e.attr("href");
 			if (href.startsWith("attachment.php?aid=")) {
-				String text = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + e.text());
-				downloadFile(httpUtil.joinUrlPath(url, href), save_path + "/" + sub_torrent + "/" + text);
-				replaceAll(href, sub_torrent + "/" + text);
+				String name = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + e.text());
+				name = downloadFile(httpUtil.joinUrlPath(url, href), sub_torrent, name);
+				replaceAll(href, name);
 			}
 		}
 		// 保存网页HTML到文件
@@ -160,6 +163,7 @@ public class DownloadSingle {
 			LogUtil.errLog.showMsg("	异常：	{0}	{1}		{2}", save_name, url, e);
 			return false;
 		} finally {
+			mapDBUtil.getDb().commit();
 			LogUtil.msgLog.showMsg("	本次下载	{0}（字节）", length_download);
 		}
 		return true;
@@ -176,47 +180,71 @@ public class DownloadSingle {
 	/**
 	 * 根据URL下载某个文件
 	 * 
-	 * @param fileURL
+	 * @param url
 	 *            下载地址
-	 * @param filePath
+	 * @param path
 	 *            存放的路径
 	 * @throws Exception
 	 */
-	private boolean downloadFile(final String fileURL, final String filePath) throws Exception {
-		try {
-			final File file = new File(filePath);
-			if (file.exists()) {
-				// showMsg("文件已存在： {0}", filePath);
-				return false;
-			} else {
-				HttpUtil.Executor<Boolean> executor = new HttpUtil.Executor<Boolean>() {
-					public void execute(InputStream inputStream) {
-						byte[] buffer = new byte[1024];
-						FileOutputStream fos;
-						try {
-							fos = new FileOutputStream(file);
-							int len = 0;
-							while ((len = inputStream.read(buffer)) != -1) {
-								fos.write(buffer, 0, len);
-								length_download += len;
-							}
-							fos.close();
-							LogUtil.msgLog.showMsg("+	{0}	{1}", filePath, fileURL);
-							setResult(true);
-						} catch (Exception e) {
-							e.printStackTrace();
+	private String downloadFile(final String url, final String path, final String name) throws Exception {
+		String result;
+		if (mapDBUtil.getUrlMap().containsKey(url)) {
+			result = mapDBUtil.getUrlMap().get(url);
+		} else {
+			HttpUtil.Executor<String> executor = new HttpUtil.Executor<String>() {
+				public void execute(InputStream inputStream) {
+					setResult(null);
+					ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+					byte[] buffer = new byte[1024];
+					try {
+						int len = 0;
+						while ((len = inputStream.read(buffer)) != -1) {
+							arrayOutputStream.write(buffer, 0, len);
 						}
+						byte[] bytes = arrayOutputStream.toByteArray();
+						try {
+							arrayOutputStream.close();
+						} catch (Exception e) {
+						}
+						String md5 = getMD5(bytes);
+						if (mapDBUtil.getFileMap().containsKey(md5)) {
+							String result = mapDBUtil.getFileMap().get(md5);
+							setResult(result);
+						} else {
+							String result = path;
+							if (bytes.length < length_flag_min_byte)
+								result += "/min";
+							result += "/";
+							if (name.startsWith("."))
+								result += md5;
+							result += name;
+							File file = new File(save_path + "/" + result);
+							if (!file.exists()) {
+								FileOutputStream fos = new FileOutputStream(file);
+								try {
+									fos.write(bytes);
+								} finally {
+									try {
+										fos.close();
+									} catch (Exception e) {
+									}
+								}
+								length_download += bytes.length;
+							}
+							mapDBUtil.getFileMap().put(md5, result);
+							setResult(result);
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
 					}
-				};
-				executor.setResult(false);
-				httpUtil.execute(fileURL, executor);
-				return executor.getResult();
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			LogUtil.errLog.showMsg("	异常：	{0}	{1}		{2}", fileURL, filePath, e);
-			// throw e;// 异常则终止本网页生产
-			return false;
+				}
+			};
+			executor.setResult(null);
+			httpUtil.execute(url, executor);
+			result = executor.getResult();
+			mapDBUtil.getUrlMap().put(url, result);
 		}
+		LogUtil.msgLog.showMsg("+	{0}	{1}", result, url);
+		return result;
 	}
 }

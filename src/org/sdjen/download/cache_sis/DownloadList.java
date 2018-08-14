@@ -4,6 +4,7 @@ import java.text.MessageFormat;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.conf.MapDBUtil;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
@@ -17,7 +18,8 @@ public class DownloadList {
 	public DownloadList() throws Throwable {
 		ConfUtil conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
-		downloadSingle = new DownloadSingle();
+		MapDBUtil mapDBUtil = new MapDBUtil();
+		downloadSingle = new DownloadSingle().setMapDBUtil(mapDBUtil);
 		try {
 			int page = Integer.valueOf(conf.getProperties().getProperty("list_start"));
 			int limit = Integer.valueOf(conf.getProperties().getProperty("list_end"));
@@ -32,6 +34,7 @@ public class DownloadList {
 			} while (page <= limit);
 		} finally {
 			// httpUtil.finish();
+			mapDBUtil.finish();
 			LogUtil.finishAll();
 			// downloadSingle.startDownload("http://www.sexinsex.net/bbs/thread-7701385-1-9.html",
 			// "WW.html");

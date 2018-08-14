@@ -17,6 +17,7 @@ import java.util.Date;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.conf.MapDBUtil;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
@@ -30,6 +31,7 @@ public class DownloadSingle {
 	private String sub_html = "html";
 	private String sub_torrent = "torrent";
 	private HttpUtil httpUtil;
+	private MapDBUtil mapDBUtil;
 	private MessageDigest md5;
 	private long length_download;
 
@@ -42,6 +44,11 @@ public class DownloadSingle {
 
 	public DownloadSingle setHttpUtil(HttpUtil httpUtil) {
 		this.httpUtil = httpUtil;
+		return this;
+	}
+
+	public DownloadSingle setMapDBUtil(MapDBUtil mapDBUtil) {
+		this.mapDBUtil = mapDBUtil;
 		return this;
 	}
 
@@ -60,6 +67,7 @@ public class DownloadSingle {
 	}
 
 	public static void main(String[] args) throws Throwable {
+		MapDBUtil mapDBUtil = new MapDBUtil();
 		ConfUtil.getDefaultConf().getProperties().setProperty("retry_times", "1");
 		ConfUtil.getDefaultConf().getProperties().setProperty("retry_time_second", "1");
 		// ConfUtil.getDefaultConf().getProperties().setProperty("chatset", "utf8");
@@ -68,7 +76,7 @@ public class DownloadSingle {
 		LogUtil.init();
 		HttpUtil httpUtil = new HttpUtil();
 		try {
-			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil);
+			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil).setMapDBUtil(mapDBUtil);
 			util.startDownload("http://www.sexinsex.net/bbs/thread-7705114-1-1.html", "370013862.html");
 			// util.downloadFile("http://img599.net/images/2013/06/02/CCe908c.th.jpg",
 			// "1.jpg");
@@ -76,6 +84,7 @@ public class DownloadSingle {
 			// "2.jpg");
 		} finally {
 			httpUtil.finish();
+			mapDBUtil.finish();
 			LogUtil.finishAll();
 		}
 	}

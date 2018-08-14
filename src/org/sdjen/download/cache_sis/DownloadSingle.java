@@ -24,9 +24,10 @@ public class DownloadSingle {
 	private String html = "";// 存放网页HTML源代码
 	public String chatset = "utf8";
 	private String save_path = "C:\\Users\\jimmy.xu\\Downloads\\htmlhelp";
-	private String sub_css = "css";
-	private String sub_js = "js";
+	// private String sub_css = "css";
+	// private String sub_js = "js";
 	private String sub_images = "images";
+	private String sub_html = "html";
 	private String sub_torrent = "torrent";
 	private HttpUtil httpUtil;
 	private MessageDigest md5;
@@ -59,17 +60,28 @@ public class DownloadSingle {
 	}
 
 	public static void main(String[] args) throws Throwable {
+		ConfUtil.getDefaultConf().getProperties().setProperty("retry_times", "1");
+		ConfUtil.getDefaultConf().getProperties().setProperty("retry_time_second", "1");
+		// ConfUtil.getDefaultConf().getProperties().setProperty("chatset", "utf8");
+		// ConfUtil.getDefaultConf().getProperties().setProperty("list_url",
+		// "https://club.autohome.com.cn/bbs/thread/");
 		LogUtil.init();
 		HttpUtil httpUtil = new HttpUtil();
 		try {
 			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil);
+			util.startDownload("http://www.sexinsex.net/bbs/thread-7705114-1-1.html", "370013862.html");
 			// util.downloadFile("http://img599.net/images/2013/06/02/CCe908c.th.jpg",
 			// "1.jpg");
-			util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg", "2.jpg");
+			// util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg",
+			// "2.jpg");
 		} finally {
 			httpUtil.finish();
 			LogUtil.finishAll();
 		}
+	}
+
+	private String getMD5(byte[] bytes) {
+		return new BigInteger(1, md5.digest(bytes)).toString(Character.MAX_RADIX);
 	}
 
 	/**
@@ -85,13 +97,13 @@ public class DownloadSingle {
 		if (!savePath.exists())
 			savePath.mkdirs();
 		save_name = getFileName(save_name);
-		File newFile = new File(savePath.toString() + "/" + save_name);
+		File newFile = new File(savePath.toString() + "/" + sub_html + "/" + save_name);
 		if (newFile.exists()) {
 			// showMsg("已存在 {0}", newFile);
 			return false;
 		}
 		// 创建必要的一些文件夹
-		for (String sub : new String[] { sub_css, sub_js, sub_images, sub_torrent }) {
+		for (String sub : new String[] { sub_images, sub_torrent, sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
@@ -105,7 +117,7 @@ public class DownloadSingle {
 		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
 			String src = e.attr("src");
 			String downloadUrl = httpUtil.joinUrlPath(url, src);
-			String newName = new BigInteger(1, md5.digest(downloadUrl.getBytes("utf-8"))).toString(Character.MAX_RADIX);
+			String newName = getMD5(downloadUrl.getBytes("utf-8"));
 			if (src.contains("."))
 				newName += getFileName(src.substring(src.lastIndexOf("."), src.length()));
 			downloadFile(downloadUrl, save_path + "/" + sub_images + "/" + newName);
@@ -149,7 +161,7 @@ public class DownloadSingle {
 	}
 
 	private void replaceAll(String src, String targ) {
-		html = html.replace("\"" + src + "\"", "\"" + targ + "\"");
+		html = html.replace("\"" + src + "\"", "\"../" + targ + "\"");
 	}
 
 	/**

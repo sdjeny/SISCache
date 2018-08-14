@@ -59,15 +59,15 @@ public class DownloadSingle {
 
 	private String getFileName(String name) {
 		return name//
-		        .replace('\\', ' ')//
-		        .replace('/', ' ')//
-		        .replace(':', ' ')//
-		        .replace('*', ' ')//
-		        .replace('?', ' ')//
-		        .replace('<', ' ')//
-		        .replace('>', ' ')//
-		        .replace('|', ' ')//
-		        .replace('"', ' ')//
+				.replace('\\', ' ')//
+				.replace('/', ' ')//
+				.replace(':', ' ')//
+				.replace('*', ' ')//
+				.replace('?', ' ')//
+				.replace('<', ' ')//
+				.replace('>', ' ')//
+				.replace('|', ' ')//
+				.replace('"', ' ')//
 		;
 	}
 
@@ -75,7 +75,8 @@ public class DownloadSingle {
 		MapDBUtil mapDBUtil = new MapDBUtil();
 		ConfUtil.getDefaultConf().getProperties().setProperty("retry_times", "1");
 		ConfUtil.getDefaultConf().getProperties().setProperty("retry_time_second", "1");
-		// ConfUtil.getDefaultConf().getProperties().setProperty("chatset", "utf8");
+		// ConfUtil.getDefaultConf().getProperties().setProperty("chatset",
+		// "utf8");
 		// ConfUtil.getDefaultConf().getProperties().setProperty("list_url",
 		// "https://club.autohome.com.cn/bbs/thread/");
 		LogUtil.init();
@@ -118,8 +119,8 @@ public class DownloadSingle {
 		}
 		// 创建必要的一些文件夹
 		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
-		        , sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
-		        , sub_html }) {
+				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+				, sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
@@ -145,7 +146,8 @@ public class DownloadSingle {
 		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
 			String href = e.attr("href");
 			if (href.startsWith("attachment.php?aid=")) {
-				String name = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + e.text());
+				String name = getFileName(
+						"(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + e.text());
 				name = downloadFile(httpUtil.joinUrlPath(url, href), sub_torrent, name);
 				replaceAll(href, name);
 			}
@@ -253,6 +255,8 @@ public class DownloadSingle {
 			executor.setResult(null);
 			httpUtil.execute(url, executor);
 			result = executor.getResult();
+			if (null == result)
+				result = url;
 			mapDBUtil.getUrlMap().put(url, result);
 		}
 		LogUtil.msgLog.showMsg("+	{0}	{1}", result, url);

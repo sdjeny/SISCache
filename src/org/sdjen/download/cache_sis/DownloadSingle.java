@@ -102,8 +102,9 @@ public class DownloadSingle {
 		}
 		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
 			String href = e.attr("href");
-			String text = getFileName(e.text());
 			if (href.startsWith("attachment.php?aid=")) {
+				String text = getFileName(
+						"(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + e.text());
 				downloadFile(httpUtil.joinUrlPath(url, href), save_path + "/" + sub_torrent + "/" + text);
 				replaceAll(href, sub_torrent + "/" + text);
 			}
@@ -159,7 +160,6 @@ public class DownloadSingle {
 			} else {
 				HttpUtil.Executor<Boolean> executor = new HttpUtil.Executor<Boolean>() {
 					public void execute(InputStream inputStream) {
-						setResult(false);
 						byte[] buffer = new byte[1024];
 						FileOutputStream fos;
 						try {
@@ -177,14 +177,15 @@ public class DownloadSingle {
 						}
 					}
 				};
+				executor.setResult(false);
 				httpUtil.execute(fileURL, executor);
 				return executor.getResult();
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			LogUtil.errLog.showMsg("	异常：	{0}	{1}		{2}", fileURL, filePath, e);
-			throw e;// 异常则终止本网页生产
-			// return false;
+//			throw e;// 异常则终止本网页生产
+			 return false;
 		}
 	}
 }

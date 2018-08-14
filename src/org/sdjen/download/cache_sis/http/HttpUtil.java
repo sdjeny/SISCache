@@ -25,11 +25,12 @@ public class HttpUtil {
 
 	private int retry_times = 5;
 	private int retry_time_second = 30;
+	private int timout_millisecond_connect = 10000;
+	private int timout_millisecond_connectionrequest = 10000;
+	private int timout_millisecond_socket = 10000;
 
 	public HttpUtil setConfUtil(ConfUtil conf) {
 		this.conf = conf;
-		org.apache.http.client.config.RequestConfig.Builder builder = RequestConfig.custom()
-				.setCookieSpec(CookieSpecs.IGNORE_COOKIES);
 		try {
 			retry_times = Integer.valueOf(conf.getProperties().getProperty("retry_times"));
 		} catch (Exception e) {
@@ -39,6 +40,28 @@ public class HttpUtil {
 		} catch (Exception e) {
 		}
 		try {
+			timout_millisecond_connect = Integer
+					.valueOf(conf.getProperties().getProperty("timout_millisecond_connect"));
+		} catch (Exception e) {
+		}
+		try {
+			timout_millisecond_connectionrequest = Integer
+					.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
+		} catch (Exception e) {
+		}
+		try {
+			timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
+		} catch (Exception e) {
+		}
+		org.apache.http.client.config.RequestConfig.Builder builder = RequestConfig.custom()//
+				.setConnectTimeout(timout_millisecond_connect)// 设置连接超时时间，单位毫秒。
+				.setConnectionRequestTimeout(timout_millisecond_connectionrequest) // 设置从connect
+				// Manager(连接池)获取Connection
+				// 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
+				.setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
+				// 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
+				.setCookieSpec(CookieSpecs.IGNORE_COOKIES);
+		try {
 			String[] s = conf.getProperties().getProperty("proxy").split(":");
 			HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// 设置代理IP、端口、协议（请分别替换）
 			builder.setProxy(proxy);// 把代理设置到请求配置
@@ -46,7 +69,8 @@ public class HttpUtil {
 		} catch (Exception e) {
 		}
 		// 实例化CloseableHttpClient对象
-		client = HttpClients.custom().setDefaultRequestConfig(builder.build()).build();
+		client = HttpClients.custom().setDefaultRequestConfig(builder.build())//
+				.build();
 		return this;
 	}
 

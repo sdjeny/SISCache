@@ -27,6 +27,11 @@ public class DownloadList {
 			conf.getProperties().setProperty("list_start", "1");
 			conf.getProperties().setProperty("list_end", "1");
 			conf.getProperties().setProperty("list_page_max", "50");
+			conf.getProperties().setProperty("retry_times", "5");
+			conf.getProperties().setProperty("retry_time_second", "30");
+			conf.getProperties().setProperty("timout_millisecond_connect", "10000");
+			conf.getProperties().setProperty("timout_millisecond_connectionrequest", "10000");
+			conf.getProperties().setProperty("timout_millisecond_socket", "10000");
 			conf.store();
 		}
 //		HttpUtil httpUtil = new HttpUtil().setConfUtil(conf);

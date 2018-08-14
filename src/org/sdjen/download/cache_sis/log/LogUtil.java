@@ -14,7 +14,8 @@ public class LogUtil {
 	public static LogUtil lstLog;
 	public static LogUtil msgLog;
 
-	public static void init(ConfUtil conf) throws IOException {
+	public static void init() throws IOException {
+		ConfUtil conf = ConfUtil.getDefaultConf();
 		String save_path = conf.getProperties().getProperty("save_path");
 		String charset = conf.getProperties().getProperty("chatset");
 		File savePath = new File(save_path);
@@ -61,7 +62,6 @@ public class LogUtil {
 	// finish();
 	// super.finalize();
 	// }
-
 	public void showMsg(Object pattern, Object... args) {
 		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));
 		builder.append("	,");

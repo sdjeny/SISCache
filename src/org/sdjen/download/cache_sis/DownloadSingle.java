@@ -33,13 +33,10 @@ public class DownloadSingle {
 	private long length_download;
 
 	public DownloadSingle() throws Exception {
+		ConfUtil conf = ConfUtil.getDefaultConf();
 		md5 = MessageDigest.getInstance("MD5");
-	}
-
-	public DownloadSingle setConfUtil(ConfUtil conf) {
 		chatset = conf.getProperties().getProperty("chatset");
 		save_path = conf.getProperties().getProperty("save_path");
-		return this;
 	}
 
 	public DownloadSingle setHttpUtil(HttpUtil httpUtil) {
@@ -49,16 +46,30 @@ public class DownloadSingle {
 
 	private String getFileName(String name) {
 		return name//
-				.replace('\\', ' ')//
-				.replace('/', ' ')//
-				.replace(':', ' ')//
-				.replace('*', ' ')//
-				.replace('?', ' ')//
-				.replace('<', ' ')//
-				.replace('>', ' ')//
-				.replace('|', ' ')//
-				.replace('"', ' ')//
+		        .replace('\\', ' ')//
+		        .replace('/', ' ')//
+		        .replace(':', ' ')//
+		        .replace('*', ' ')//
+		        .replace('?', ' ')//
+		        .replace('<', ' ')//
+		        .replace('>', ' ')//
+		        .replace('|', ' ')//
+		        .replace('"', ' ')//
 		;
+	}
+
+	public static void main(String[] args) throws Throwable {
+		LogUtil.init();
+		HttpUtil httpUtil = new HttpUtil();
+		try {
+			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil);
+			// util.downloadFile("http://img599.net/images/2013/06/02/CCe908c.th.jpg",
+			// "1.jpg");
+			util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg", "2.jpg");
+		} finally {
+			httpUtil.finish();
+			LogUtil.finishAll();
+		}
 	}
 
 	/**
@@ -103,8 +114,7 @@ public class DownloadSingle {
 		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
 			String href = e.attr("href");
 			if (href.startsWith("attachment.php?aid=")) {
-				String text = getFileName(
-						"(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + e.text());
+				String text = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + e.text());
 				downloadFile(httpUtil.joinUrlPath(url, href), save_path + "/" + sub_torrent + "/" + text);
 				replaceAll(href, sub_torrent + "/" + text);
 			}
@@ -184,8 +194,8 @@ public class DownloadSingle {
 		} catch (Exception e) {
 			e.printStackTrace();
 			LogUtil.errLog.showMsg("	异常：	{0}	{1}		{2}", fileURL, filePath, e);
-//			throw e;// 异常则终止本网页生产
-			 return false;
+			// throw e;// 异常则终止本网页生产
+			return false;
 		}
 	}
 }

@@ -4,33 +4,51 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.protocol.HTTP;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.ssl.SSLContexts;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class HttpUtil {
+	private CloseableHttpClient proxyClient;
 	private CloseableHttpClient client;
-
 	private ConfUtil conf;
-
 	private int retry_times = 5;
 	private int retry_time_second = 30;
 	private int timout_millisecond_connect = 10000;
 	private int timout_millisecond_connectionrequest = 10000;
 	private int timout_millisecond_socket = 10000;
+	private Set<String> proxy_urls = new HashSet<String>();
+	private static PoolingHttpClientConnectionManager poolConnManager = null;
+	private int maxTotalPool = 200;
+	private int maxConPerRoute = 20;
+	private int socketTimeout = 10000;
+	private int connectionRequestTimeout = 2000;
+	private int connectTimeout = 10000;
 
-	public HttpUtil setConfUtil(ConfUtil conf) {
-		this.conf = conf;
+	public HttpUtil() throws IOException {
+		conf = ConfUtil.getDefaultConf();
 		try {
 			retry_times = Integer.valueOf(conf.getProperties().getProperty("retry_times"));
 		} catch (Exception e) {
@@ -40,46 +58,105 @@ public class HttpUtil {
 		} catch (Exception e) {
 		}
 		try {
-			timout_millisecond_connect = Integer
-					.valueOf(conf.getProperties().getProperty("timout_millisecond_connect"));
+			timout_millisecond_connect = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connect"));
 		} catch (Exception e) {
 		}
 		try {
-			timout_millisecond_connectionrequest = Integer
-					.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
+			timout_millisecond_connectionrequest = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
 		} catch (Exception e) {
 		}
 		try {
 			timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
 		} catch (Exception e) {
 		}
-		org.apache.http.client.config.RequestConfig.Builder builder = RequestConfig.custom()//
-				.setConnectTimeout(timout_millisecond_connect)// 设置连接超时时间，单位毫秒。
-				.setConnectionRequestTimeout(timout_millisecond_connectionrequest) // 设置从connect
-				// Manager(连接池)获取Connection
-				// 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
-				.setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
-				// 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
-				.setCookieSpec(CookieSpecs.IGNORE_COOKIES);
 		try {
-			String[] s = conf.getProperties().getProperty("proxy").split(":");
-			HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// 设置代理IP、端口、协议（请分别替换）
-			builder.setProxy(proxy);// 把代理设置到请求配置
-			// showMsg("代理：{0}", proxy);
+			for (String s : conf.getProperties().getProperty("proxy_urls").split(",")) {
+				proxy_urls.add(s.trim());
+			}
+			proxy_urls.remove("");
 		} catch (Exception e) {
 		}
-		// 实例化CloseableHttpClient对象
-		client = HttpClients.custom().setDefaultRequestConfig(builder.build())//
-				.build();
-		return this;
+		try {
+			SSLConnectionSocketFactory sslsf;
+			// sslsf = new
+			// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new
+			// TrustSelfSignedStrategy()).build(),
+			// SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+			sslsf = new SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new TrustSelfSignedStrategy()).build(),
+			        new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }, null, NoopHostnameVerifier.INSTANCE);
+			// sslsf = new
+			// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new
+			// TrustSelfSignedStrategy()).build(),
+			// NoopHostnameVerifier.INSTANCE);
+			// sslsf = new SSLConnectionSocketFactory(SSLContext.getDefault());
+			Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+			        .register("http", PlainConnectionSocketFactory.getSocketFactory())//
+			        .register("https", sslsf)//
+			        .build();
+			poolConnManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+			// Increase max total connection to 200
+			poolConnManager.setMaxTotal(maxTotalPool);
+			// Increase default max connection per route to 20
+			poolConnManager.setDefaultMaxPerRoute(maxConPerRoute);
+			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
+		} catch (Exception e) {
+			LogUtil.errLog.showMsg("InterfacePhpUtilManager init Exception" + e.toString());
+		}
+	}
+
+	private org.apache.http.client.config.RequestConfig.Builder getDefaultBuilder() {
+		return RequestConfig.custom()//
+		        .setConnectTimeout(timout_millisecond_connect)// 设置连接超时时间，单位毫秒。
+		        .setConnectionRequestTimeout(timout_millisecond_connectionrequest) // 设置从connect
+		        // Manager(连接池)获取Connection
+		        // 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
+		        .setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
+		        // 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
+		        .setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
+		;
+	}
+
+	private CloseableHttpClient getClient() {
+		if (null == client) {
+			// 实例化CloseableHttpClient对象
+			client = HttpClients.custom()//
+			        .setConnectionManager(poolConnManager)//
+			        .setDefaultRequestConfig(getDefaultBuilder().build())//
+			        .build();
+		}
+		return client;
+	}
+
+	private CloseableHttpClient getProxyClient() {
+		if (null == proxyClient) {
+			org.apache.http.client.config.RequestConfig.Builder builder = getDefaultBuilder();
+			try {
+				String[] s = conf.getProperties().getProperty("proxy").split(":");
+				HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// 设置代理IP、端口、协议（请分别替换）
+				builder.setProxy(proxy);// 把代理设置到请求配置
+				// showMsg("代理：{0}", proxy);
+			} catch (Exception e) {
+			}
+			// 实例化CloseableHttpClient对象
+			proxyClient = HttpClients.custom()//
+			        .setConnectionManager(poolConnManager)//
+			        .setDefaultRequestConfig(builder.build())//
+			        .build();
+		}
+		return proxyClient;
 	}
 
 	public void finish() {
 		try {
 			client.close();
-		} catch (IOException e) {
-			e.printStackTrace();
+		} catch (Throwable e) {
 		}
+		try {
+			proxyClient.close();
+		} catch (Throwable e) {
+		}
+		client = null;
+		proxyClient = null;
 	}
 
 	public static abstract class Executor<R> {
@@ -100,11 +177,37 @@ public class HttpUtil {
 		void execute() throws Throwable;
 	}
 
-	public void execute(String uri, Executor<?> executor) {
+	private boolean needProxy(String uri) {
+		for (String s : proxy_urls) {
+			if (uri.startsWith(s))
+				return true;
+		}
+		return false;
+	}
+
+	public void execute(String uri, Executor<?> executor) throws IOException {
 		InputStream in = null;
 		HttpGet get = new HttpGet(uri);
 		try {
-			org.apache.http.client.methods.CloseableHttpResponse response = client.execute(get);
+			org.apache.http.client.methods.CloseableHttpResponse response;
+			try {// 先不要代理玩一次
+				response = (needProxy(uri) ? getProxyClient() : getClient()).execute(get);
+			} catch (Exception e) {// 不行就使用代理再玩一次
+				get.abort();
+				get = new HttpGet(uri);
+				response = getProxyClient().execute(get);
+				// 然后把地址加入需要代理队列里
+				int index = uri.indexOf('/', 9);
+				String proxy_url;
+				if (-1 != index)
+					proxy_url = uri.substring(0, index);
+				else
+					proxy_url = uri;
+				if (!proxy_url.isEmpty()) {
+					proxy_urls.add(proxy_url);
+					LogUtil.errLog.showMsg("ADD:	{0}", proxy_url);
+				}
+			}
 			if (response.getStatusLine().getStatusCode() != 200) {
 				get.abort();
 				return;
@@ -113,9 +216,9 @@ public class HttpUtil {
 			if (entity != null) {
 				executor.execute(in = entity.getContent());
 			}
-		} catch (Exception e) {
+		} catch (IOException e) {
 			get.abort();
-			e.printStackTrace();
+			throw e;
 		} finally {
 			if (in != null) {
 				try {
@@ -149,8 +252,7 @@ public class HttpUtil {
 					setResult(null);
 					StringBuffer pageHTML = new StringBuffer();
 					BufferedReader br;
-					br = new BufferedReader(
-							new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
+					br = new BufferedReader(new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
 					String line = null;
 					while ((line = br.readLine()) != null) {
 						pageHTML.append(line);
@@ -163,11 +265,8 @@ public class HttpUtil {
 			}
 		};
 		retry(new Retry() {
-
 			public void execute() throws Throwable {
-
 				HttpUtil.this.execute(uri, executor);
-
 				String result = executor.getResult();
 				if (null == result)
 					throw new Exception("取内容失败");
@@ -187,7 +286,6 @@ public class HttpUtil {
 				finish();
 				count++;
 				Thread.sleep(1000l * retry_time_second * count);
-				setConfUtil(conf);
 				LogUtil.errLog.showMsg("Retry	{0}", count);
 				stop = count >= retry_times;
 				if (stop)

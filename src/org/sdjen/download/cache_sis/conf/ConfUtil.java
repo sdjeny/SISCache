@@ -29,6 +29,7 @@ public class ConfUtil {
 				defaultConf.getProperties().setProperty("timout_millisecond_connectionrequest", "10000");
 				defaultConf.getProperties().setProperty("timout_millisecond_socket", "10000");
 				defaultConf.getProperties().setProperty("proxy_urls", "http://www.sexinsex.net");
+				defaultConf.getProperties().setProperty("supportedProtocols", "TLSv1.2,TLSv1.1,TLSv1,SSLv3,SSLv2Hello");
 				defaultConf.store();
 			}
 		}

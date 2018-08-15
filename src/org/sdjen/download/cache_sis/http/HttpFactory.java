@@ -46,25 +46,36 @@ public class HttpFactory {
 
 	public HttpFactory() throws IOException {
 		conf = ConfUtil.getDefaultConf();
+		boolean isStore = false;
 		try {
 			retry_times = Integer.valueOf(conf.getProperties().getProperty("retry_times"));
 		} catch (Exception e) {
+			conf.getProperties().setProperty("retry_times", String.valueOf(retry_times));
+			isStore = true;
 		}
 		try {
 			retry_time_second = Integer.valueOf(conf.getProperties().getProperty("retry_time_second"));
 		} catch (Exception e) {
+			conf.getProperties().setProperty("retry_time_second", String.valueOf(retry_time_second));
+			isStore = true;
 		}
 		try {
 			timout_millisecond_connect = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connect"));
 		} catch (Exception e) {
+			conf.getProperties().setProperty("timout_millisecond_connect", String.valueOf(timout_millisecond_connect));
+			isStore = true;
 		}
 		try {
 			timout_millisecond_connectionrequest = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
 		} catch (Exception e) {
+			conf.getProperties().setProperty("timout_millisecond_connectionrequest", String.valueOf(timout_millisecond_connectionrequest));
+			isStore = true;
 		}
 		try {
 			timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
 		} catch (Exception e) {
+			conf.getProperties().setProperty("timout_millisecond_socket", String.valueOf(timout_millisecond_socket));
+			isStore = true;
 		}
 		try {
 			for (String s : conf.getProperties().getProperty("proxy_urls").split(",")) {
@@ -72,6 +83,8 @@ public class HttpFactory {
 			}
 			proxy_urls.remove("");
 		} catch (Exception e) {
+			conf.getProperties().setProperty("proxy_urls", "http://www.sexinsex.net");
+			isStore = true;
 		}
 		try {
 			SSLConnectionSocketFactory sslsf;
@@ -79,8 +92,14 @@ public class HttpFactory {
 			// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new
 			// TrustSelfSignedStrategy()).build(),
 			// SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+			String supportedProtocols = conf.getProperties().getProperty("supportedProtocols");
+			if (null == supportedProtocols) {
+				conf.getProperties().setProperty("supportedProtocols", supportedProtocols = "TLSv1.2,TLSv1.1,TLSv1,SSLv3,SSLv2Hello");
+				isStore = true;
+			}
+			// new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }
 			sslsf = new SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new TrustSelfSignedStrategy()).build(),
-			        new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }, null, NoopHostnameVerifier.INSTANCE);
+			        supportedProtocols.split(","), null, NoopHostnameVerifier.INSTANCE);
 			// sslsf =
 			// org.apache.http.conn.ssl.SSLConnectionSocketFactory.getSocketFactory();
 			// sslsf = new
@@ -101,6 +120,8 @@ public class HttpFactory {
 		} catch (Exception e) {
 			LogUtil.errLog.showMsg("InterfacePhpUtilManager init Exception" + e.toString());
 		}
+		if (isStore)
+			conf.store();
 	}
 
 	private org.apache.http.client.config.RequestConfig.Builder getDefaultBuilder() {
@@ -189,24 +210,36 @@ public class HttpFactory {
 	public void execute(String uri, Executor<?> executor) throws IOException {
 		InputStream in = null;
 		HttpGet get = new HttpGet(uri);
+		org.apache.http.client.methods.CloseableHttpResponse response = null;
 		try {
-			org.apache.http.client.methods.CloseableHttpResponse response;
+			boolean needProxy = needProxy(uri);
 			try {// 先不要代理玩一次
-				response = (needProxy(uri) ? getProxyClient() : getClient()).execute(get);
-			} catch (Exception e) {// 不行就使用代理再玩一次
+				response = (needProxy ? getProxyClient() : getClient()).execute(get);
+			} catch (IOException e) {// 不行就使用代理再玩一次
 				get.abort();
-				get = new HttpGet(uri);
-				response = getProxyClient().execute(get);
-				// 然后把地址加入需要代理队列里
-				int index = uri.indexOf('/', 9);
-				String proxy_url;
-				if (-1 != index)
-					proxy_url = uri.substring(0, index);
-				else
-					proxy_url = uri;
-				if (!proxy_url.isEmpty()) {
-					proxy_urls.add(proxy_url);
-					LogUtil.errLog.showMsg("ADD:	{0}", proxy_url);
+				if (!needProxy) {// 如果是直連方式，換代理方式試一次
+					get = new HttpGet(uri);
+					try {
+						response = getProxyClient().execute(get);
+					} catch (IOException e1) {
+						get.abort();
+						throw e;
+					}
+					// 然后把地址加入需要代理队列里
+					int index = uri.indexOf('/', 9);
+					String proxy_url;
+					if (-1 != index)
+						proxy_url = uri.substring(0, index);
+					else
+						proxy_url = uri;
+					if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
+						proxy_urls.add(proxy_url);
+						conf.getProperties().setProperty("proxy_urls", conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
+						conf.store();
+						LogUtil.errLog.showMsg("ADD:	{0}", proxy_url);
+					}
+				} else {// 如果已經是代理方式，那就真連不上了。
+					throw e;
 				}
 			}
 			if (response.getStatusLine().getStatusCode() != 200) {
@@ -225,7 +258,12 @@ public class HttpFactory {
 				try {
 					in.close();
 				} catch (IOException e) {
-					e.printStackTrace();
+				}
+			}
+			if (null != response) {
+				try {
+					response.close();
+				} catch (Exception e) {
 				}
 			}
 		}

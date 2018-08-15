@@ -174,7 +174,7 @@ public class HttpFactory {
 		return proxyClient;
 	}
 
-	public void finish() {
+	public void closeClient() {
 		try {
 			client.close();
 		} catch (Throwable e) {
@@ -185,6 +185,10 @@ public class HttpFactory {
 		}
 		client = null;
 		proxyClient = null;
+	}
+
+	public void finish() {
+		closeClient();
 		// Á¬½Ó³Ø¹Ø±Õ
 		poolConnManager.close();
 	}
@@ -334,10 +338,10 @@ public class HttpFactory {
 				retry.execute();
 				stop = true;
 			} catch (Throwable e) {
-				finish();
+				closeClient();
 				count++;
 				Thread.sleep(1000l * retry_time_second * count);
-				LogUtil.errLog.showMsg("Retry	{0}", count);
+				LogUtil.errLog.showMsg("Retry	{0}	{1}", count, e);
 				stop = count >= retry_times;
 				if (stop)
 					throw e;

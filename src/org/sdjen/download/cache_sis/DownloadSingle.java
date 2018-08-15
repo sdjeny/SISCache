@@ -195,8 +195,8 @@ public class DownloadSingle {
 	 *            存放的路径
 	 * @throws Exception
 	 */
-	private String downloadFile(final String url, final String path, final String name) throws Exception {
-		String result;
+	private String downloadFile(final String url, final String path, final String name) {
+		String result = null;
 		if (mapDBUtil.getUrlMap().containsKey(url)) {
 			result = mapDBUtil.getUrlMap().get(url);
 		} else {
@@ -253,8 +253,13 @@ public class DownloadSingle {
 				}
 			};
 			executor.setResult(null);
-			httpUtil.execute(url, executor);
-			result = executor.getResult();
+			try {
+				httpUtil.execute(url, executor);
+				result = executor.getResult();
+			} catch (Exception e) {
+				LogUtil.errLog.showMsg("	异常：	{0}	{1}", url, e);
+				e.printStackTrace();
+			}
 			if (null == result)
 				result = url;
 			else

@@ -13,7 +13,7 @@ import java.security.MessageDigest;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.conf.MapDBUtil;
-import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class DownloadSingle {
@@ -25,7 +25,7 @@ public class DownloadSingle {
 	private String sub_images = "images";
 	private String sub_html = "html";
 	private String sub_torrent = "torrent";
-	private HttpUtil httpUtil;
+	private HttpFactory httpUtil;
 	private MapDBUtil mapDBUtil;
 	private MessageDigest md5;
 	private long length_download;
@@ -47,7 +47,7 @@ public class DownloadSingle {
 		}
 	}
 
-	public DownloadSingle setHttpUtil(HttpUtil httpUtil) {
+	public DownloadSingle setHttpUtil(HttpFactory httpUtil) {
 		this.httpUtil = httpUtil;
 		return this;
 	}
@@ -80,7 +80,7 @@ public class DownloadSingle {
 		// ConfUtil.getDefaultConf().getProperties().setProperty("list_url",
 		// "https://club.autohome.com.cn/bbs/thread/");
 		LogUtil.init();
-		HttpUtil httpUtil = new HttpUtil();
+		HttpFactory httpUtil = new HttpFactory();
 		try {
 			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil).setMapDBUtil(mapDBUtil);
 			util.startDownload("http://www.sexinsex.net/bbs/thread-7705114-1-1.html", "370013862.html");
@@ -200,7 +200,7 @@ public class DownloadSingle {
 		if (mapDBUtil.getUrlMap().containsKey(url)) {
 			result = mapDBUtil.getUrlMap().get(url);
 		} else {
-			HttpUtil.Executor<String> executor = new HttpUtil.Executor<String>() {
+			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {
 					setResult(null);
 					ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
@@ -257,7 +257,8 @@ public class DownloadSingle {
 			result = executor.getResult();
 			if (null == result)
 				result = url;
-			mapDBUtil.getUrlMap().put(url, result);
+			else
+				mapDBUtil.getUrlMap().put(url, result);
 		}
 		LogUtil.msgLog.showMsg("+	{0}	{1}", result, url);
 		return result;

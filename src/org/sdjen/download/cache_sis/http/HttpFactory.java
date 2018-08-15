@@ -7,9 +7,6 @@ import java.io.InputStreamReader;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLContext;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
 import org.apache.http.client.config.CookieSpecs;
@@ -30,7 +27,7 @@ import org.apache.http.ssl.SSLContexts;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
-public class HttpUtil {
+public class HttpFactory {
 	private CloseableHttpClient proxyClient;
 	private CloseableHttpClient client;
 	private ConfUtil conf;
@@ -47,7 +44,7 @@ public class HttpUtil {
 	private int connectionRequestTimeout = 2000;
 	private int connectTimeout = 10000;
 
-	public HttpUtil() throws IOException {
+	public HttpFactory() throws IOException {
 		conf = ConfUtil.getDefaultConf();
 		try {
 			retry_times = Integer.valueOf(conf.getProperties().getProperty("retry_times"));
@@ -84,6 +81,8 @@ public class HttpUtil {
 			// SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
 			sslsf = new SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new TrustSelfSignedStrategy()).build(),
 			        new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }, null, NoopHostnameVerifier.INSTANCE);
+			// sslsf =
+			// org.apache.http.conn.ssl.SSLConnectionSocketFactory.getSocketFactory();
 			// sslsf = new
 			// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new
 			// TrustSelfSignedStrategy()).build(),
@@ -157,6 +156,8 @@ public class HttpUtil {
 		}
 		client = null;
 		proxyClient = null;
+		// 连接池关闭
+		poolConnManager.close();
 	}
 
 	public static abstract class Executor<R> {
@@ -266,7 +267,7 @@ public class HttpUtil {
 		};
 		retry(new Retry() {
 			public void execute() throws Throwable {
-				HttpUtil.this.execute(uri, executor);
+				HttpFactory.this.execute(uri, executor);
 				String result = executor.getResult();
 				if (null == result)
 					throw new Exception("取内容失败");

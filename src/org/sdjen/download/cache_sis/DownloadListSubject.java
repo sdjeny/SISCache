@@ -5,7 +5,7 @@ import java.text.SimpleDateFormat;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
-import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class DownloadListSubject {
@@ -39,7 +39,7 @@ public class DownloadListSubject {
 	}
 
 	private void list(int from, int to) throws Throwable {
-		HttpUtil httpUtil = new HttpUtil();
+		HttpFactory httpUtil = new HttpFactory();
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		try {
 			for (int i = from; i <= to; i++) {

@@ -5,7 +5,7 @@ import java.text.MessageFormat;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.conf.MapDBUtil;
-import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class DownloadList {
@@ -49,7 +49,7 @@ public class DownloadList {
 	}
 
 	private void list(int from, int to) throws Throwable {
-		HttpUtil httpUtil = new HttpUtil();
+		HttpFactory httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
 		try {
 			for (int i = from; i <= to; i++) {

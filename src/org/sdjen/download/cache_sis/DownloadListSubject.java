@@ -5,32 +5,20 @@ import java.text.SimpleDateFormat;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
-import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class DownloadListSubject {
-
 	public static void main(String[] args) throws Throwable {
 		new DownloadListSubject();
 	}
 
-	ConfUtil conf;
 	LogUtil logUtil;
 
 	public DownloadListSubject() throws Throwable {
-		conf = new ConfUtil("conf.ini");
-		if (conf.getProperties().isEmpty()) {
-			conf.getProperties().setProperty("chatset", "gbk");
-			conf.getProperties().setProperty("save_path", "D:/SISCACHE");
-			conf.getProperties().setProperty("proxy", "192.168.0.231:9666");
-			conf.getProperties().setProperty("list_url", "http://www.sexinsex.net/bbs/forum-143-{0}.html");
-			conf.getProperties().setProperty("list_start", "1");
-			conf.getProperties().setProperty("list_end", "1");
-			conf.store();
-		}
-		logUtil = new LogUtil().setLogFile(System.currentTimeMillis() + ".list")
-				.setChatset(conf.getProperties().getProperty("chatset"));
-		LogUtil.init(conf);
+		ConfUtil conf = ConfUtil.getDefaultConf();
+		logUtil = new LogUtil().setLogFile(System.currentTimeMillis() + ".list").setChatset(conf.getProperties().getProperty("chatset"));
+		LogUtil.init();
 		try {
 			int page = Integer.valueOf(conf.getProperties().getProperty("list_start"));
 			int limit = Integer.valueOf(conf.getProperties().getProperty("list_end"));
@@ -51,11 +39,11 @@ public class DownloadListSubject {
 	}
 
 	private void list(int from, int to) throws Throwable {
-		HttpUtil httpUtil = new HttpUtil().setConfUtil(conf);
+		HttpFactory httpUtil = new HttpFactory();
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		try {
 			for (int i = from; i <= to; i++) {
-				String uri = MessageFormat.format(conf.getProperties().getProperty("list_url"), String.valueOf(i));
+				String uri = MessageFormat.format(ConfUtil.getDefaultConf().getProperties().getProperty("list_url"), String.valueOf(i));
 				logUtil.showMsg(uri);
 				String html = httpUtil.getHTML(uri);
 				org.jsoup.nodes.Document doument = Jsoup.parse(html);

@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.security.Security;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
@@ -82,12 +83,21 @@ public class DownloadSingle {
 		LogUtil.init();
 		HttpFactory httpUtil = new HttpFactory();
 		try {
+			System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
+			// Security.setProperty("jdk.tls.disabledAlgorithms","SSLv3, DH
+			// keySize < 768");
 			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil).setMapDBUtil(mapDBUtil);
-			util.startDownload("http://www.sexinsex.net/bbs/thread-7705114-1-1.html", "370013862.html");
+			// util.startDownload("http://www.sexinsex.net/bbs/thread-6720446-1-2000.html",
+			// "370013862.html", "U");
 			// util.downloadFile("http://img599.net/images/2013/06/02/CCe908c.th.jpg",
 			// "1.jpg");
 			// util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg",
 			// "2.jpg");
+			// util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg",
+			// "rr", "2.jpg");
+			util.downloadFile("https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg", "rr", "11.jpg");
+			// https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg
+			// https://www1.wi.to/2018/03/29/04f7c405227da092576b127e640d07f8.jpg
 		} finally {
 			httpUtil.finish();
 			mapDBUtil.finish();
@@ -106,8 +116,14 @@ public class DownloadSingle {
 	 * 
 	 * @throws IOException
 	 */
-	public boolean startDownload(String url, String save_name) throws Throwable {
+	public boolean startDownload(String url, String save_name, String subKey) throws Throwable {
+		if (null == subKey || subKey.isEmpty())
+			subKey = "unknow";
+		else
+			subKey = subKey.substring(0, Math.min(7, subKey.length()));
 		length_download = 0;
+		sub_images = "images/" + subKey;
+		sub_html = "html/" + subKey;
 		File savePath = new File(save_path);
 		if (!savePath.exists())
 			savePath.mkdirs();
@@ -141,15 +157,18 @@ public class DownloadSingle {
 				name = ".jpg";
 			}
 			name = downloadFile(downloadUrl, sub_images, name);
-			replaceAll(src, name);
+			if (!name.equals(downloadUrl))
+				replaceAll(src, name);
 		}
 		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
 			String href = e.attr("href");
 			if (href.startsWith("attachment.php?aid=")) {
 				String name = getFileName(
 						"(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + e.text());
-				name = downloadFile(httpUtil.joinUrlPath(url, href), sub_torrent, name);
-				replaceAll(href, name);
+				String downloadUrl = httpUtil.joinUrlPath(url, href);
+				name = downloadFile(downloadUrl, sub_torrent, name);
+				if (!name.equals(downloadUrl))
+					replaceAll(href, name);
 			}
 		}
 		// 保存网页HTML到文件
@@ -183,7 +202,7 @@ public class DownloadSingle {
 	}
 
 	private void replaceAll(String src, String targ) {
-		html = html.replace("\"" + src + "\"", "\"../" + targ + "\"");
+		html = html.replace("\"" + src + "\"", "\"../../" + targ + "\"");
 	}
 
 	/**
@@ -262,7 +281,7 @@ public class DownloadSingle {
 			}
 			if (null == result)
 				result = url;
-			else
+			else// 握手异常未解决
 				mapDBUtil.getUrlMap().put(url, result);
 		}
 		LogUtil.msgLog.showMsg("+	{0}	{1}", result, url);

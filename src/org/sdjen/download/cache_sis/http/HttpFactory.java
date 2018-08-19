@@ -37,7 +37,7 @@ public class HttpFactory {
 	private int timout_millisecond_connectionrequest = 10000;
 	private int timout_millisecond_socket = 10000;
 	private Set<String> proxy_urls = new HashSet<String>();
-	private static PoolingHttpClientConnectionManager poolConnManager = null;
+	private PoolingHttpClientConnectionManager poolConnManager = null;
 	private int maxTotalPool = 200;
 	private int maxConPerRoute = 20;
 	private int socketTimeout = 10000;

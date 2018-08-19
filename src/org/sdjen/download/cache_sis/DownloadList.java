@@ -89,10 +89,11 @@ public class DownloadList {
 					}
 				}
 				LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)", count, length_download);
-//				httpUtil.getPoolConnManager().closeExpiredConnections();
+				// httpUtil.getPoolConnManager().closeExpiredConnections();
 			}
 		} finally {
 			httpUtil.finish();
+			LogUtil.refreshMsgLog();
 		}
 	}
 }

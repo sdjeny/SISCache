@@ -198,7 +198,7 @@ public class DownloadSingle {
 				// while (!fs.isDone())
 				// ;// Future返回如果没有完成，则一直循环等待，直到Future返回完成
 				String[] names = fs.get(1, TimeUnit.MINUTES);// 各个线程（任务）执行的结果
-				if (null != names && names[0].equals(names[1])) {
+				if (null != names && !names[0].equals(names[1])) {
 					replaceAll(names[0], names[1]);
 				}
 			} catch (java.util.concurrent.TimeoutException e) {

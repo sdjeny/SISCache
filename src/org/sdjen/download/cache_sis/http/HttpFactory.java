@@ -60,18 +60,15 @@ public class HttpFactory {
 			isStore = true;
 		}
 		try {
-			timout_millisecond_connect = Integer
-					.valueOf(conf.getProperties().getProperty("timout_millisecond_connect"));
+			timout_millisecond_connect = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connect"));
 		} catch (Exception e) {
 			conf.getProperties().setProperty("timout_millisecond_connect", String.valueOf(timout_millisecond_connect));
 			isStore = true;
 		}
 		try {
-			timout_millisecond_connectionrequest = Integer
-					.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
+			timout_millisecond_connectionrequest = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
 		} catch (Exception e) {
-			conf.getProperties().setProperty("timout_millisecond_connectionrequest",
-					String.valueOf(timout_millisecond_connectionrequest));
+			conf.getProperties().setProperty("timout_millisecond_connectionrequest", String.valueOf(timout_millisecond_connectionrequest));
 			isStore = true;
 		}
 		try {
@@ -90,41 +87,40 @@ public class HttpFactory {
 			isStore = true;
 		}
 		try {
-			SSLConnectionSocketFactory sslsf;
-			// sslsf = new
-			// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null,
-			// new
-			// TrustSelfSignedStrategy()).build(),
-			// SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
-			String supportedProtocols = conf.getProperties().getProperty("supportedProtocols");
-			if (null == supportedProtocols) {
-				conf.getProperties().setProperty("supportedProtocols",
-						supportedProtocols = "TLSv1.2,TLSv1.1,TLSv1,SSLv3,SSLv2Hello");
-				isStore = true;
+			if (false) {
+				SSLConnectionSocketFactory sslsf;
+				// sslsf = new
+				// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null,
+				// new
+				// TrustSelfSignedStrategy()).build(),
+				// SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+				String supportedProtocols = conf.getProperties().getProperty("supportedProtocols");
+				if (null == supportedProtocols) {
+					conf.getProperties().setProperty("supportedProtocols", supportedProtocols = "TLSv1.2,TLSv1.1,TLSv1,SSLv3,SSLv2Hello");
+					isStore = true;
+				}
+				// new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }
+				sslsf = new SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new TrustSelfSignedStrategy()).build(),
+				        supportedProtocols.split(","), null, NoopHostnameVerifier.INSTANCE);
+				// sslsf =
+				// org.apache.http.conn.ssl.SSLConnectionSocketFactory.getSocketFactory();
+				// sslsf = new
+				// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null,
+				// new
+				// TrustSelfSignedStrategy()).build(),
+				// NoopHostnameVerifier.INSTANCE);
+				// sslsf = new SSLConnectionSocketFactory(SSLContext.getDefault());
+				Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+				        .register("http", PlainConnectionSocketFactory.getSocketFactory())//
+				        .register("https", sslsf)//
+				        .build();
 			}
-			// new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }
-			sslsf = new SSLConnectionSocketFactory(
-					SSLContexts.custom().loadTrustMaterial(null, new TrustSelfSignedStrategy()).build(),
-					supportedProtocols.split(","), null, NoopHostnameVerifier.INSTANCE);
-			// sslsf =
-			// org.apache.http.conn.ssl.SSLConnectionSocketFactory.getSocketFactory();
-			// sslsf = new
-			// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null,
-			// new
-			// TrustSelfSignedStrategy()).build(),
-			// NoopHostnameVerifier.INSTANCE);
-			// sslsf = new SSLConnectionSocketFactory(SSLContext.getDefault());
-			Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
-					.register("http", PlainConnectionSocketFactory.getSocketFactory())//
-					.register("https", sslsf)//
-					.build();
-			poolConnManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+			poolConnManager = new PoolingHttpClientConnectionManager(/* socketFactoryRegistry */);
 			// Increase max total connection to 200
 			poolConnManager.setMaxTotal(maxTotalPool);
 			// Increase default max connection per route to 20
 			poolConnManager.setDefaultMaxPerRoute(maxConPerRoute);
-			poolConnManager
-					.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
+			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
 		} catch (Exception e) {
 			LogUtil.errLog.showMsg("InterfacePhpUtilManager init Exception" + e.toString());
 		}
@@ -134,13 +130,13 @@ public class HttpFactory {
 
 	private org.apache.http.client.config.RequestConfig.Builder getDefaultBuilder() {
 		return RequestConfig.custom()//
-				.setConnectTimeout(timout_millisecond_connect)// 设置连接超时时间，单位毫秒。
-				.setConnectionRequestTimeout(timout_millisecond_connectionrequest) // 设置从connect
-				// Manager(连接池)获取Connection
-				// 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
-				.setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
-				// 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
-				.setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
+		        .setConnectTimeout(timout_millisecond_connect)// 设置连接超时时间，单位毫秒。
+		        .setConnectionRequestTimeout(timout_millisecond_connectionrequest) // 设置从connect
+		        // Manager(连接池)获取Connection
+		        // 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
+		        .setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
+		        // 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
+		        .setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
 		;
 	}
 
@@ -148,9 +144,9 @@ public class HttpFactory {
 		if (null == client) {
 			// 实例化CloseableHttpClient对象
 			client = HttpClients.custom()//
-					.setConnectionManager(poolConnManager)//
-					.setDefaultRequestConfig(getDefaultBuilder().build())//
-					.build();
+			        .setConnectionManager(poolConnManager)//
+			        .setDefaultRequestConfig(getDefaultBuilder().build())//
+			        .build();
 		}
 		return client;
 	}
@@ -167,9 +163,9 @@ public class HttpFactory {
 			}
 			// 实例化CloseableHttpClient对象
 			proxyClient = HttpClients.custom()//
-					.setConnectionManager(poolConnManager)//
-					.setDefaultRequestConfig(builder.build())//
-					.build();
+			        .setConnectionManager(poolConnManager)//
+			        .setDefaultRequestConfig(builder.build())//
+			        .build();
 		}
 		return proxyClient;
 	}
@@ -243,8 +239,7 @@ public class HttpFactory {
 						proxy_url = uri;
 					if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
 						proxy_urls.add(proxy_url);
-						conf.getProperties().setProperty("proxy_urls",
-								conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
+						conf.getProperties().setProperty("proxy_urls", conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
 						conf.store();
 						LogUtil.errLog.showMsg("ADD:	{0}", proxy_url);
 					}
@@ -302,8 +297,7 @@ public class HttpFactory {
 					setResult(null);
 					StringBuffer pageHTML = new StringBuffer();
 					BufferedReader br;
-					br = new BufferedReader(
-							new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
+					br = new BufferedReader(new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
 					String line = null;
 					while ((line = br.readLine()) != null) {
 						pageHTML.append(line);

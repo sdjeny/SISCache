@@ -83,7 +83,7 @@ public class DownloadSingle {
 		LogUtil.init();
 		HttpFactory httpUtil = new HttpFactory();
 		try {
-			System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
+//			System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
 			// Security.setProperty("jdk.tls.disabledAlgorithms","SSLv3, DH
 			// keySize < 768");
 			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil).setMapDBUtil(mapDBUtil);

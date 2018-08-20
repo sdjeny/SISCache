@@ -74,7 +74,7 @@ public class LogUtil {
 	// finish();
 	// super.finalize();
 	// }
-	public void showMsg(Object pattern, Object... args) {
+	public synchronized void showMsg(Object pattern, Object... args) {
 		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));
 		builder.append("	,");
 		if (null != args && args.length > 0 && pattern instanceof String) {

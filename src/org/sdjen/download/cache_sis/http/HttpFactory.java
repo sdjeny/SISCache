@@ -28,8 +28,10 @@ import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class HttpFactory {
-	private CloseableHttpClient proxyClient;
-	private CloseableHttpClient client;
+	// private CloseableHttpClient proxyClient;
+	// private CloseableHttpClient client;
+	private org.apache.http.client.config.RequestConfig requestConfig;
+	private org.apache.http.client.config.RequestConfig proxyRequestConfig;
 	private ConfUtil conf;
 	private int retry_times = 5;
 	private int retry_time_second = 30;
@@ -121,6 +123,16 @@ public class HttpFactory {
 			// Increase default max connection per route to 20
 			poolConnManager.setDefaultMaxPerRoute(maxConPerRoute);
 			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
+			requestConfig = getDefaultBuilder().build();
+			org.apache.http.client.config.RequestConfig.Builder builder = getDefaultBuilder();
+			try {
+				String[] s = conf.getProperties().getProperty("proxy").split(":");
+				HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// 设置代理IP、端口、协议（请分别替换）
+				builder.setProxy(proxy);// 把代理设置到请求配置
+				// showMsg("代理：{0}", proxy);
+			} catch (Exception e) {
+			}
+			proxyRequestConfig = builder.build();
 		} catch (Exception e) {
 			LogUtil.errLog.showMsg("InterfacePhpUtilManager init Exception" + e.toString());
 		}
@@ -141,48 +153,54 @@ public class HttpFactory {
 	}
 
 	private CloseableHttpClient getClient() {
-		if (null == client) {
-			// 实例化CloseableHttpClient对象
-			client = HttpClients.custom()//
-			        .setConnectionManager(poolConnManager)//
-			        .setDefaultRequestConfig(getDefaultBuilder().build())//
-			        .build();
-		}
+		// if (null == client) {
+		// 实例化CloseableHttpClient对象
+		CloseableHttpClient client = HttpClients.custom()//
+		        .setConnectionManager(poolConnManager)//
+		        .setDefaultRequestConfig(requestConfig)//
+		        .build();
+		// }
 		return client;
 	}
 
 	private CloseableHttpClient getProxyClient() {
-		if (null == proxyClient) {
-			org.apache.http.client.config.RequestConfig.Builder builder = getDefaultBuilder();
-			try {
-				String[] s = conf.getProperties().getProperty("proxy").split(":");
-				HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// 设置代理IP、端口、协议（请分别替换）
-				builder.setProxy(proxy);// 把代理设置到请求配置
-				// showMsg("代理：{0}", proxy);
-			} catch (Exception e) {
-			}
-			// 实例化CloseableHttpClient对象
-			proxyClient = HttpClients.custom()//
-			        .setConnectionManager(poolConnManager)//
-			        .setDefaultRequestConfig(builder.build())//
-			        .build();
-		}
+		// if (null == proxyClient) {
+		// org.apache.http.client.config.RequestConfig.Builder builder =
+		// getDefaultBuilder();
+		// try {
+		// String[] s = conf.getProperties().getProperty("proxy").split(":");
+		// HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");//
+		// 设置代理IP、端口、协议（请分别替换）
+		// builder.setProxy(proxy);// 把代理设置到请求配置
+		// // showMsg("代理：{0}", proxy);
+		// } catch (Exception e) {
+		// }
+		// 实例化CloseableHttpClient对象
+		CloseableHttpClient proxyClient = HttpClients.custom()//
+		        .setConnectionManager(poolConnManager)//
+		        .setDefaultRequestConfig(proxyRequestConfig)//
+		        .build();
+		// }
 		return proxyClient;
 	}
 
 	public void finish() {
-		try {
-			client.close();
-		} catch (Throwable e) {
-		}
-		try {
-			proxyClient.close();
-		} catch (Throwable e) {
-		}
-		client = null;
-		proxyClient = null;
+		// try {
+		// client.close();
+		// } catch (Throwable e) {
+		// }
+		// try {
+		// proxyClient.close();
+		// } catch (Throwable e) {
+		// }
+		// client = null;
+		// proxyClient = null;
 		// 连接池关闭
 		poolConnManager.close();
+	}
+
+	public PoolingHttpClientConnectionManager getPoolConnManager() {
+		return poolConnManager;
 	}
 
 	public static abstract class Executor<R> {
@@ -275,11 +293,10 @@ public class HttpFactory {
 		}
 	}
 
-	private InputStream getInputStream(String uri) throws IOException {
-		// 请求返回
-		return client.execute(new HttpGet(uri)).getEntity().getContent();
-	}
-
+	// private InputStream getInputStream(String uri) throws IOException {
+	// // 请求返回
+	// return client.execute(new HttpGet(uri)).getEntity().getContent();
+	// }
 	/**
 	 * 根据指定的URL下载html代码
 	 * 

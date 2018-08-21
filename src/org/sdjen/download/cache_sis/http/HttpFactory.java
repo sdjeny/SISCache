@@ -28,8 +28,8 @@ import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class HttpFactory {
-	// private CloseableHttpClient proxyClient;
-	// private CloseableHttpClient client;
+	private CloseableHttpClient proxyClient;
+	private CloseableHttpClient client;
 	private org.apache.http.client.config.RequestConfig requestConfig;
 	private org.apache.http.client.config.RequestConfig proxyRequestConfig;
 	private ConfUtil conf;
@@ -40,11 +40,8 @@ public class HttpFactory {
 	private int timout_millisecond_socket = 10000;
 	private Set<String> proxy_urls = new HashSet<String>();
 	private PoolingHttpClientConnectionManager poolConnManager = null;
-	private int maxTotalPool = 200;
-	private int maxConPerRoute = 20;
-	private int socketTimeout = 10000;
-	private int connectionRequestTimeout = 2000;
-	private int connectTimeout = 10000;
+	private int pool_max_total = 200;
+	private int pool_max_per_route = 20;
 
 	public HttpFactory() throws IOException {
 		conf = ConfUtil.getDefaultConf();
@@ -77,6 +74,18 @@ public class HttpFactory {
 			timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
 		} catch (Exception e) {
 			conf.getProperties().setProperty("timout_millisecond_socket", String.valueOf(timout_millisecond_socket));
+			isStore = true;
+		}
+		try {
+			pool_max_total = Integer.valueOf(conf.getProperties().getProperty("pool_max_total"));
+		} catch (Exception e) {
+			conf.getProperties().setProperty("pool_max_total", String.valueOf(pool_max_total));
+			isStore = true;
+		}
+		try {
+			pool_max_per_route = Integer.valueOf(conf.getProperties().getProperty("pool_max_per_route"));
+		} catch (Exception e) {
+			conf.getProperties().setProperty("pool_max_per_route", String.valueOf(pool_max_per_route));
 			isStore = true;
 		}
 		try {
@@ -119,9 +128,9 @@ public class HttpFactory {
 			}
 			poolConnManager = new PoolingHttpClientConnectionManager(/* socketFactoryRegistry */);
 			// Increase max total connection to 200
-			poolConnManager.setMaxTotal(maxTotalPool);
+			poolConnManager.setMaxTotal(pool_max_total);
 			// Increase default max connection per route to 20
-			poolConnManager.setDefaultMaxPerRoute(maxConPerRoute);
+			poolConnManager.setDefaultMaxPerRoute(pool_max_per_route);
 			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
 			requestConfig = getDefaultBuilder().build();
 			org.apache.http.client.config.RequestConfig.Builder builder = getDefaultBuilder();
@@ -152,35 +161,35 @@ public class HttpFactory {
 		;
 	}
 
-	private CloseableHttpClient getClient() {
-		// if (null == client) {
-		// 实例化CloseableHttpClient对象
-		CloseableHttpClient client = HttpClients.custom()//
-		        .setConnectionManager(poolConnManager)//
-		        .setDefaultRequestConfig(requestConfig)//
-		        .build();
-		// }
+	private synchronized CloseableHttpClient getClient() {
+		if (null == client) {
+			// 实例化CloseableHttpClient对象
+			client = HttpClients.custom()//
+			        .setConnectionManager(poolConnManager)//
+			        .setDefaultRequestConfig(requestConfig)//
+			        .build();
+		}
 		return client;
 	}
 
-	private CloseableHttpClient getProxyClient() {
-		// if (null == proxyClient) {
-		// org.apache.http.client.config.RequestConfig.Builder builder =
-		// getDefaultBuilder();
-		// try {
-		// String[] s = conf.getProperties().getProperty("proxy").split(":");
-		// HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");//
-		// 设置代理IP、端口、协议（请分别替换）
-		// builder.setProxy(proxy);// 把代理设置到请求配置
-		// // showMsg("代理：{0}", proxy);
-		// } catch (Exception e) {
-		// }
-		// 实例化CloseableHttpClient对象
-		CloseableHttpClient proxyClient = HttpClients.custom()//
-		        .setConnectionManager(poolConnManager)//
-		        .setDefaultRequestConfig(proxyRequestConfig)//
-		        .build();
-		// }
+	private synchronized CloseableHttpClient getProxyClient() {
+		if (null == proxyClient) {
+			// org.apache.http.client.config.RequestConfig.Builder builder =
+			// getDefaultBuilder();
+			// try {
+			// String[] s = conf.getProperties().getProperty("proxy").split(":");
+			// HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");//
+			// 设置代理IP、端口、协议（请分别替换）
+			// builder.setProxy(proxy);// 把代理设置到请求配置
+			// // showMsg("代理：{0}", proxy);
+			// } catch (Exception e) {
+			// }
+			// 实例化CloseableHttpClient对象
+			proxyClient = HttpClients.custom()//
+			        .setConnectionManager(poolConnManager)//
+			        .setDefaultRequestConfig(proxyRequestConfig)//
+			        .build();
+		}
 		return proxyClient;
 	}
 

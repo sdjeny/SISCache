@@ -27,20 +27,59 @@ public class DownloadList {
 		LogUtil.init();
 		MapDBUtil mapDBUtil = new MapDBUtil();
 		downloadSingle = new DownloadSingle().setMapDBUtil(mapDBUtil);
+
+		final HttpFactory httpUtil = new HttpFactory();
+		downloadSingle.setHttpUtil(httpUtil);
+		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		try {
-			int page = Integer.valueOf(conf.getProperties().getProperty("list_start"));
-			int limit = Integer.valueOf(conf.getProperties().getProperty("list_end"));
+			int from = Integer.valueOf(conf.getProperties().getProperty("list_start"));
+			int to = Integer.valueOf(conf.getProperties().getProperty("list_end"));
 			int pageU = 50;
 			try {
 				pageU = Integer.valueOf(conf.getProperties().getProperty("list_page_max"));
 			} catch (Exception e) {
 			}
-			do {
-				list(page, Math.min(page + pageU - 1, limit));
-				page += pageU;
-			} while (page <= limit);
+			// do {
+			// list(page, Math.min(page + pageU - 1, limit));
+			// page += pageU;
+			// } while (page <= limit);
+			try {
+				for (int i = from; i <= to; i++) {
+					if (i % pageU == 0)
+						LogUtil.refreshMsgLog();
+					final String uri = MessageFormat.format(ConfUtil.getDefaultConf().getProperties().getProperty("list_url"), String.valueOf(i));
+					LogUtil.lstLog.showMsg(uri);
+					String html = httpUtil.getHTML(uri);
+					org.jsoup.nodes.Document doument = Jsoup.parse(html);
+					long count = 0, length_download = 0;
+					for (final org.jsoup.nodes.Element e : doument.select("tbody").select("tr")) {
+						String date = "";
+						for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
+							date = dateFormat.format(dateFormat.parse(s.text()));
+						}
+						for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {
+							try {
+								if (downloadSingle//
+										// .setHttpUtil(new
+										// HttpUtil().setConfUtil(conf))
+										.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html", date)) {
+									length_download += downloadSingle.getLength_download();
+									count++;
+								}
+							} catch (Throwable e1) {
+								e1.printStackTrace();
+							}
+
+						}
+					}
+					LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)", count, length_download);
+					// httpUtil.getPoolConnManager().closeExpiredConnections();
+				}
+			} finally {
+			}
+
 		} finally {
-			// httpUtil.finish();
+			httpUtil.finish();
 			mapDBUtil.finish();
 			LogUtil.finishAll();
 			// downloadSingle.startDownload("http://www.sexinsex.net/bbs/thread-7701385-1-9.html",
@@ -61,8 +100,7 @@ public class DownloadList {
 		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		try {
 			for (int i = from; i <= to; i++) {
-				final String uri = MessageFormat
-						.format(ConfUtil.getDefaultConf().getProperties().getProperty("list_url"), String.valueOf(i));
+				final String uri = MessageFormat.format(ConfUtil.getDefaultConf().getProperties().getProperty("list_url"), String.valueOf(i));
 				LogUtil.lstLog.showMsg(uri);
 				String html = httpUtil.getHTML(uri);
 				org.jsoup.nodes.Document doument = Jsoup.parse(html);
@@ -77,8 +115,7 @@ public class DownloadList {
 							if (downloadSingle//
 									// .setHttpUtil(new
 									// HttpUtil().setConfUtil(conf))
-									.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html",
-											date)) {
+									.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html", date)) {
 								length_download += downloadSingle.getLength_download();
 								count++;
 							}

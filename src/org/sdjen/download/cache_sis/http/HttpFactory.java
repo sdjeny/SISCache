@@ -159,8 +159,8 @@ public class HttpFactory {
 		        .setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
 		        // 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
 		        .setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
-		        .setExpectContinueEnabled(true)//重点参数 
-		        .setStaleConnectionCheckEnabled(true)//重点参数，在请求之前校验链接是否有效
+		        .setExpectContinueEnabled(false)//重点参数 
+//		        .setStaleConnectionCheckEnabled(true)//重点参数，在请求之前校验链接是否有效
 		;
 	}
 

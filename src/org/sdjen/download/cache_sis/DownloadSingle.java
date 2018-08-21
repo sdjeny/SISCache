@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -41,6 +40,7 @@ public class DownloadSingle {
 	private long length_flag_max_byte = 70000;
 	private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
+	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
 
 	public DownloadSingle() throws Exception {
 		ConfUtil conf = ConfUtil.getDefaultConf();
@@ -69,15 +69,15 @@ public class DownloadSingle {
 
 	private String getFileName(String name) {
 		return name//
-		        .replace('\\', ' ')//
-		        .replace('/', ' ')//
-		        .replace(':', ' ')//
-		        .replace('*', ' ')//
-		        .replace('?', ' ')//
-		        .replace('<', ' ')//
-		        .replace('>', ' ')//
-		        .replace('|', ' ')//
-		        .replace('"', ' ')//
+				.replace('\\', ' ')//
+				.replace('/', ' ')//
+				.replace(':', ' ')//
+				.replace('*', ' ')//
+				.replace('?', ' ')//
+				.replace('<', ' ')//
+				.replace('>', ' ')//
+				.replace('|', ' ')//
+				.replace('"', ' ')//
 		;
 	}
 
@@ -144,8 +144,8 @@ public class DownloadSingle {
 		}
 		// 创建必要的一些文件夹
 		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
-		        , sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
-		        , sub_html }) {
+				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+				, sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
@@ -153,8 +153,10 @@ public class DownloadSingle {
 			}
 		}
 		// 下载网页html代码
+		String tmp_html = httpUtil.getHTML(url);
+		lock_w_html.lock();
 		LogUtil.msgLog.showMsg("{0}	{1}", save_name, url);
-		html = httpUtil.getHTML(url);
+		html = tmp_html;
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		ExecutorService executor = Executors.newFixedThreadPool(6);
 		List<Future<String[]>> resultList = new ArrayList<Future<String[]>>();
@@ -231,6 +233,7 @@ public class DownloadSingle {
 			mapDBUtil.getDb().commit();
 			httpUtil.getPoolConnManager().closeExpiredConnections();
 			LogUtil.msgLog.showMsg("	本次下载	{0}（字节）", length_download);
+			lock_w_html.unlock();
 		}
 		return true;
 	}
@@ -323,11 +326,11 @@ public class DownloadSingle {
 			}
 			if (null == result)
 				result = url;
-			else {// 握手异常未解决
-				lock_w_mapdb.lock();
-				mapDBUtil.getUrlMap().put(url, result);
-				lock_w_mapdb.unlock();
-			}
+			// else {// 握手异常未解决
+			lock_w_mapdb.lock();
+			mapDBUtil.getUrlMap().put(url, result);
+			lock_w_mapdb.unlock();
+			// }
 		}
 		LogUtil.msgLog.showMsg("+	{0}	{1}", result, url);
 		return result;

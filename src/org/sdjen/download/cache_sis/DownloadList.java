@@ -8,6 +8,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
@@ -27,7 +28,6 @@ public class DownloadList {
 		LogUtil.init();
 		MapDBUtil mapDBUtil = new MapDBUtil();
 		downloadSingle = new DownloadSingle().setMapDBUtil(mapDBUtil);
-
 		final HttpFactory httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
 		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
@@ -44,32 +44,55 @@ public class DownloadList {
 			// page += pageU;
 			// } while (page <= limit);
 			try {
+				String list_url = ConfUtil.getDefaultConf().getProperties().getProperty("list_url");
 				for (int i = from; i <= to; i++) {
-					if (i % pageU == 0)
+					if ((i - from) % pageU == 0)
 						LogUtil.refreshMsgLog();
-					final String uri = MessageFormat.format(ConfUtil.getDefaultConf().getProperties().getProperty("list_url"), String.valueOf(i));
+					final String uri = MessageFormat.format(list_url, String.valueOf(i));
 					LogUtil.lstLog.showMsg(uri);
 					String html = httpUtil.getHTML(uri);
 					org.jsoup.nodes.Document doument = Jsoup.parse(html);
-					long count = 0, length_download = 0;
+					ExecutorService executor = Executors.newFixedThreadPool(2);
+					List<Future<Long>> resultList = new ArrayList<Future<Long>>();
 					for (final org.jsoup.nodes.Element e : doument.select("tbody").select("tr")) {
-						String date = "";
-						for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
-							date = dateFormat.format(dateFormat.parse(s.text()));
-						}
-						for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {
-							try {
-								if (downloadSingle//
-										// .setHttpUtil(new
-										// HttpUtil().setConfUtil(conf))
-										.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html", date)) {
-									length_download += downloadSingle.getLength_download();
-									count++;
+						resultList.add(executor.submit(new Callable<Long>() {
+							public Long call() throws Exception {
+								String date = "";
+								for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
+									date = dateFormat.format(dateFormat.parse(s.text()));
 								}
-							} catch (Throwable e1) {
-								e1.printStackTrace();
+								Long result = null;
+								for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {
+									try {
+										if (downloadSingle.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html", date)) {
+											if (null == result)
+												result = 0l;
+											result += downloadSingle.getLength_download();
+										}
+									} catch (Throwable e1) {
+										e1.printStackTrace();
+									}
+								}
+								return result;
 							}
-
+						}));// 将任务执行结果存储到List中
+					}
+					executor.shutdown();
+					long count = 0, length_download = 0;
+					for (Future<Long> fs : resultList) {
+						try {
+							// while (!fs.isDone())
+							// ;// Future返回如果没有完成，则一直循环等待，直到Future返回完成
+							Long length = fs.get(30, TimeUnit.MINUTES);// 各个线程（任务）执行的结果
+							if (null != length) {
+								length_download += length;
+								count++;
+							}
+						} catch (java.util.concurrent.TimeoutException e) {
+							fs.cancel(false);
+						} catch (Exception e) {
+							e.printStackTrace();
+						} finally {
 						}
 					}
 					LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)", count, length_download);
@@ -77,7 +100,6 @@ public class DownloadList {
 				}
 			} finally {
 			}
-
 		} finally {
 			httpUtil.finish();
 			mapDBUtil.finish();
@@ -113,16 +135,15 @@ public class DownloadList {
 					for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {
 						try {
 							if (downloadSingle//
-									// .setHttpUtil(new
-									// HttpUtil().setConfUtil(conf))
-									.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html", date)) {
+							        // .setHttpUtil(new
+							        // HttpUtil().setConfUtil(conf))
+							        .startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html", date)) {
 								length_download += downloadSingle.getLength_download();
 								count++;
 							}
 						} catch (Throwable e1) {
 							e1.printStackTrace();
 						}
-
 					}
 				}
 				LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)", count, length_download);

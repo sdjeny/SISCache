@@ -29,9 +29,9 @@ public class DownloadSingle {
 	private String html = "";// 存放网页HTML源代码
 	public String chatset = "utf8";
 	private String save_path = "C:\\Users\\jimmy.xu\\Downloads\\htmlhelp";
-	private String sub_images = "images";
-	private String sub_html = "html";
-	private String sub_torrent = "torrent";
+	// private String sub_images = "images";
+	// private String sub_html = "html";
+	// private String sub_torrent = "torrent";
 	private HttpFactory httpUtil;
 	private MapDBUtil mapDBUtil;
 	private MessageDigest md5;
@@ -69,15 +69,15 @@ public class DownloadSingle {
 
 	private String getFileName(String name) {
 		return name//
-				.replace('\\', ' ')//
-				.replace('/', ' ')//
-				.replace(':', ' ')//
-				.replace('*', ' ')//
-				.replace('?', ' ')//
-				.replace('<', ' ')//
-				.replace('>', ' ')//
-				.replace('|', ' ')//
-				.replace('"', ' ')//
+		        .replace('\\', ' ')//
+		        .replace('/', ' ')//
+		        .replace(':', ' ')//
+		        .replace('*', ' ')//
+		        .replace('?', ' ')//
+		        .replace('<', ' ')//
+		        .replace('>', ' ')//
+		        .replace('|', ' ')//
+		        .replace('"', ' ')//
 		;
 	}
 
@@ -125,41 +125,59 @@ public class DownloadSingle {
 	 * 
 	 * @throws IOException
 	 */
-	public boolean startDownload(final String url, String save_name, String subKey) throws Throwable {
-		if (null == subKey || subKey.isEmpty())
+	public boolean startDownload(final String url, String save_name, String dateStr) throws Throwable {
+		String subKey;
+		if (null == dateStr || dateStr.isEmpty())
 			subKey = "unknow";
 		else
-			subKey = subKey.substring(0, Math.min(7, subKey.length()));
-		length_download = 0;
-		sub_images = "images/" + subKey;
-		sub_html = "html/" + subKey;
-		File savePath = new File(save_path);
-		if (!savePath.exists())
-			savePath.mkdirs();
+			subKey = dateStr.substring(0, Math.min(7, dateStr.length()));
+		final String sub_images = "images/" + subKey;
+		String sub_html = "html/" + subKey;
+		final String sub_torrent = "torrent";
 		save_name = getFileName(save_name);
-		File newFile = new File(savePath.toString() + "/" + sub_html + "/" + save_name);
+		File newFile = new File(save_path + "/" + sub_html + "/" + save_name);
 		if (newFile.exists()) {
 			// showMsg("已存在 {0}", newFile);
 			return false;
 		}
+		// 下载网页html代码
+		String tmp_html = httpUtil.getHTML(url);
+		lock_w_html.lock();
+		File savePath = new File(save_path);
+		if (!savePath.exists())
+			savePath.mkdirs();
 		// 创建必要的一些文件夹
 		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
-				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
-				, sub_html }) {
+		        , sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+		        , sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
 				LogUtil.msgLog.showMsg("{0}文件夹 {0}	不存在，已创建！", f);
 			}
 		}
-		// 下载网页html代码
-		String tmp_html = httpUtil.getHTML(url);
-		lock_w_html.lock();
-		LogUtil.msgLog.showMsg("{0}	{1}", save_name, url);
+		length_download = 0;
+		LogUtil.msgLog.showMsg("{0} {1}	{2}", dateStr, save_name, url);
 		html = tmp_html;
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		ExecutorService executor = Executors.newFixedThreadPool(6);
 		List<Future<String[]>> resultList = new ArrayList<Future<String[]>>();
+		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
+			final String href = e.attr("href");
+			final String text = e.text();
+			if (href.startsWith("attachment.php?aid=")) {
+				resultList.add(executor.submit(new Callable<String[]>() {
+					public String[] call() throws Exception {
+						String newName = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + text);
+						String downloadUrl = httpUtil.joinUrlPath(url, href);
+						newName = downloadFile(downloadUrl, sub_torrent, newName);
+						// if (!name.equals(downloadUrl))
+						// replaceAll(href, name);
+						return new String[] { href, newName };
+					}
+				}));// 将任务执行结果存储到List中
+			}
+		}
 		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
 			final String src = e.attr("src");
 			resultList.add(executor.submit(new Callable<String[]>() {
@@ -177,22 +195,6 @@ public class DownloadSingle {
 					return new String[] { src, newName };
 				}
 			}));// 将任务执行结果存储到List中
-		}
-		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
-			final String href = e.attr("href");
-			final String text = e.text();
-			if (href.startsWith("attachment.php?aid=")) {
-				resultList.add(executor.submit(new Callable<String[]>() {
-					public String[] call() throws Exception {
-						String newName = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + text);
-						String downloadUrl = httpUtil.joinUrlPath(url, href);
-						newName = downloadFile(downloadUrl, sub_torrent, newName);
-						// if (!name.equals(downloadUrl))
-						// replaceAll(href, name);
-						return new String[] { href, newName };
-					}
-				}));// 将任务执行结果存储到List中
-			}
 		}
 		executor.shutdown();
 		for (Future<String[]> fs : resultList) {

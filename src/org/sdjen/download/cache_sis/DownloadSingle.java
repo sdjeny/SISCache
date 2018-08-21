@@ -41,20 +41,34 @@ public class DownloadSingle {
 	private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
+	private int download_threads = 6;
 
 	public DownloadSingle() throws Exception {
 		ConfUtil conf = ConfUtil.getDefaultConf();
 		md5 = MessageDigest.getInstance("MD5");
 		chatset = conf.getProperties().getProperty("chatset");
 		save_path = conf.getProperties().getProperty("save_path");
+		boolean isStore = false;
+		try {
+			download_threads = Integer.valueOf(conf.getProperties().getProperty("download_threads"));
+		} catch (Exception e) {
+			conf.getProperties().setProperty("download_threads", String.valueOf(download_threads));
+			isStore = true;
+		}
 		try {
 			length_flag_min_byte = Long.valueOf(conf.getProperties().getProperty("length_flag_min_byte"));
 		} catch (Exception e) {
+			conf.getProperties().setProperty("length_flag_min_byte", String.valueOf(length_flag_min_byte));
+			isStore = true;
 		}
 		try {
 			length_flag_max_byte = Long.valueOf(conf.getProperties().getProperty("length_flag_max_byte"));
 		} catch (Exception e) {
+			conf.getProperties().setProperty("length_flag_max_byte", String.valueOf(length_flag_max_byte));
+			isStore = true;
 		}
+		if (isStore)
+			conf.store();
 	}
 
 	public DownloadSingle setHttpUtil(HttpFactory httpUtil) {
@@ -69,15 +83,15 @@ public class DownloadSingle {
 
 	private String getFileName(String name) {
 		return name//
-		        .replace('\\', ' ')//
-		        .replace('/', ' ')//
-		        .replace(':', ' ')//
-		        .replace('*', ' ')//
-		        .replace('?', ' ')//
-		        .replace('<', ' ')//
-		        .replace('>', ' ')//
-		        .replace('|', ' ')//
-		        .replace('"', ' ')//
+				.replace('\\', ' ')//
+				.replace('/', ' ')//
+				.replace(':', ' ')//
+				.replace('*', ' ')//
+				.replace('?', ' ')//
+				.replace('<', ' ')//
+				.replace('>', ' ')//
+				.replace('|', ' ')//
+				.replace('"', ' ')//
 		;
 	}
 
@@ -148,8 +162,8 @@ public class DownloadSingle {
 			savePath.mkdirs();
 		// 创建必要的一些文件夹
 		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
-		        , sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
-		        , sub_html }) {
+				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+				, sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
@@ -160,7 +174,7 @@ public class DownloadSingle {
 		LogUtil.msgLog.showMsg("{0} {1}	{2}", dateStr, save_name, url);
 		html = tmp_html;
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
-		ExecutorService executor = Executors.newFixedThreadPool(6);
+		ExecutorService executor = Executors.newFixedThreadPool(download_threads);
 		List<Future<String[]>> resultList = new ArrayList<Future<String[]>>();
 		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
 			final String href = e.attr("href");

@@ -59,7 +59,12 @@ public class DownloadList {
 							public Long call() throws Exception {
 								String date = "";
 								for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
-									date = dateFormat.format(dateFormat.parse(s.text()));
+									String text = s.text();
+									try {
+										date = dateFormat.format(dateFormat.parse(text));
+									} catch (Exception e) {
+										System.out.println(text + "	" + e);
+									}
 								}
 								Long result = null;
 								for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {

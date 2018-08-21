@@ -24,6 +24,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.ssl.SSLContexts;
+import org.apache.http.util.EntityUtils;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
@@ -158,6 +159,8 @@ public class HttpFactory {
 		        .setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
 		        // 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
 		        .setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
+		        .setExpectContinueEnabled(true)//重点参数 
+		        .setStaleConnectionCheckEnabled(true)//重点参数，在请求之前校验链接是否有效
 		;
 	}
 
@@ -242,6 +245,7 @@ public class HttpFactory {
 		InputStream in = null;
 		HttpGet get = null;
 		org.apache.http.client.methods.CloseableHttpResponse response = null;
+		HttpEntity entity = null;
 		try {
 			get = new HttpGet(uri);
 			boolean needProxy = needProxy(uri);
@@ -278,9 +282,10 @@ public class HttpFactory {
 				get.abort();
 				return;
 			}
-			HttpEntity entity = response.getEntity();
+			entity = response.getEntity();
 			if (entity != null) {
 				executor.execute(in = entity.getContent());
+//				EntityUtils.consume(entity);//此处高能，通过源码分析，由EntityUtils是否回收HttpEntity
 			}
 		} catch (Exception e) {
 			if (null != get)
@@ -292,6 +297,9 @@ public class HttpFactory {
 					in.close();
 				} catch (IOException e) {
 				}
+			}
+			if (entity != null) {
+				EntityUtils.consumeQuietly(entity);//此处高能，通过源码分析，由EntityUtils是否回收HttpEntity
 			}
 			if (null != response) {
 				try {

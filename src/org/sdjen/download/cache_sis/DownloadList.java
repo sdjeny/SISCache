@@ -30,7 +30,6 @@ public class DownloadList {
 		downloadSingle = new DownloadSingle().setMapDBUtil(mapDBUtil);
 		final HttpFactory httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
-		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		try {
 			int from = Integer.valueOf(conf.getProperties().getProperty("list_start"));
 			int to = Integer.valueOf(conf.getProperties().getProperty("list_end"));
@@ -57,6 +56,7 @@ public class DownloadList {
 					for (final org.jsoup.nodes.Element e : doument.select("tbody").select("tr")) {
 						resultList.add(executor.submit(new Callable<Long>() {
 							public Long call() throws Exception {
+								final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 								String date = "";
 								for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
 									String text = s.text();

@@ -114,7 +114,7 @@ public class DownloadSingle {
 		}
 	}
 
-	private String getMD5(byte[] bytes) {
+	private synchronized String getMD5(byte[] bytes) {
 		return new BigInteger(1, md5.digest(bytes)).toString(Character.MAX_RADIX);
 	}
 

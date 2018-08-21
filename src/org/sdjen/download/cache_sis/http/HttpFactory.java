@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
@@ -278,7 +279,7 @@ public class HttpFactory {
 					throw e;
 				}
 			}
-			if (response.getStatusLine().getStatusCode() != 200) {
+			if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 				get.abort();
 				return;
 			}
@@ -304,7 +305,7 @@ public class HttpFactory {
 			if (null != response) {
 				try {
 					response.close();
-				} catch (Exception e) {
+				} catch (IOException e) {
 				}
 			}
 		}

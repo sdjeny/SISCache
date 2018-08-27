@@ -147,7 +147,7 @@ public class DownloadSingle {
 			subKey = dateStr.substring(0, Math.min(7, dateStr.length()));
 		final String sub_images = "images/" + subKey;
 		String sub_html = "html/" + subKey;
-		final String sub_torrent = "torrent";
+		final String sub_torrent = "torrent/" + subKey;
 		save_name = getFileName(save_name);
 		File newFile = new File(save_path + "/" + sub_html + "/" + save_name);
 		if (newFile.exists()) {

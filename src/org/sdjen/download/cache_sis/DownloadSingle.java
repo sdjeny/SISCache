@@ -246,7 +246,6 @@ public class DownloadSingle {
 			LogUtil.errLog.showMsg("	异常：	{0}	{1}		{2}", save_name, url, e);
 			return false;
 		} finally {
-			mapDBUtil.getDb().commit();
 			httpUtil.getPoolConnManager().closeExpiredConnections();
 			LogUtil.msgLog.showMsg("	本次下载	{0}（字节）", length_download);
 			lock_w_html.unlock();
@@ -275,8 +274,8 @@ public class DownloadSingle {
 	 */
 	private String downloadFile(final String url, final String path, final String name) {
 		String result = null;
-		if (mapDBUtil.getUrlMap().containsKey(url)) {
-			result = mapDBUtil.getUrlMap().get(url);
+		if (mapDBUtil.getReadUrlMap().containsKey(url)) {
+			result = mapDBUtil.getReadUrlMap().get(url);
 		} else {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {
@@ -294,8 +293,8 @@ public class DownloadSingle {
 						} catch (Exception e) {
 						}
 						String md5 = getMD5(bytes);
-						if (mapDBUtil.getFileMap().containsKey(md5)) {
-							String result = mapDBUtil.getFileMap().get(md5);
+						if (mapDBUtil.getReadFileMap().containsKey(md5)) {
+							String result = mapDBUtil.getReadFileMap().get(md5);
 							setResult(result);
 						} else {
 							String result = path;
@@ -323,7 +322,8 @@ public class DownloadSingle {
 								length_download += bytes.length;
 							}
 							lock_w_mapdb.lock();
-							mapDBUtil.getFileMap().put(md5, result);
+							mapDBUtil.getWriteFileMap().put(md5, result);
+							mapDBUtil.commit();
 							lock_w_mapdb.unlock();
 							setResult(result);
 						}
@@ -344,7 +344,8 @@ public class DownloadSingle {
 				result = url;
 			// else {// 握手异常未解决
 			lock_w_mapdb.lock();
-			mapDBUtil.getUrlMap().put(url, result);
+			mapDBUtil.getWriteUrlMap().put(url, result);
+			mapDBUtil.commit();
 			lock_w_mapdb.unlock();
 			// }
 		}

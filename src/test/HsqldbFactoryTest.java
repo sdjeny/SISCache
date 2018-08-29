@@ -1,3 +1,5 @@
+package test;
+
 import org.junit.Test;
 
 import com.google.common.annotations.VisibleForTesting;

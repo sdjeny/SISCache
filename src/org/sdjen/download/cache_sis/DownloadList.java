@@ -12,9 +12,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
-import org.sdjen.download.cache_sis.conf.MapDBUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
+import org.sdjen.download.cache_sis.log.MapDBFactory;
 
 public class DownloadList {
 	private DownloadSingle downloadSingle;
@@ -26,7 +26,7 @@ public class DownloadList {
 	public DownloadList() throws Throwable {
 		ConfUtil conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
-		MapDBUtil mapDBUtil = new MapDBUtil();
+		MapDBFactory mapDBUtil = new MapDBFactory();
 		downloadSingle = new DownloadSingle().setMapDBUtil(mapDBUtil);
 		final HttpFactory httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);

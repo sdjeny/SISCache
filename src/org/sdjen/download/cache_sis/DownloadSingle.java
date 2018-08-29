@@ -21,9 +21,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
-import org.sdjen.download.cache_sis.conf.MapDBUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
+import org.sdjen.download.cache_sis.log.MapDBFactory;
 
 public class DownloadSingle {
 	private String html = "";// ´æ·ÅÍøÒ³HTMLÔ´´úÂë
@@ -33,7 +33,7 @@ public class DownloadSingle {
 	// private String sub_html = "html";
 	// private String sub_torrent = "torrent";
 	private HttpFactory httpUtil;
-	private MapDBUtil mapDBUtil;
+	private MapDBFactory mapDBUtil;
 	private MessageDigest md5;
 	private long length_download;
 	private long length_flag_min_byte = 20000;
@@ -76,7 +76,7 @@ public class DownloadSingle {
 		return this;
 	}
 
-	public DownloadSingle setMapDBUtil(MapDBUtil mapDBUtil) {
+	public DownloadSingle setMapDBUtil(MapDBFactory mapDBUtil) {
 		this.mapDBUtil = mapDBUtil;
 		return this;
 	}
@@ -96,7 +96,7 @@ public class DownloadSingle {
 	}
 
 	public static void main(String[] args) throws Throwable {
-		MapDBUtil mapDBUtil = new MapDBUtil();
+		MapDBFactory mapDBUtil = new MapDBFactory();
 		ConfUtil.getDefaultConf().getProperties().setProperty("retry_times", "1");
 		ConfUtil.getDefaultConf().getProperties().setProperty("retry_time_second", "1");
 		// ConfUtil.getDefaultConf().getProperties().setProperty("chatset",

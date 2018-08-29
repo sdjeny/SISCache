@@ -1,4 +1,4 @@
-package org.sdjen.download.cache_sis.conf;
+package org.sdjen.download.cache_sis.log;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,8 +7,9 @@ import org.mapdb.DB;
 import org.mapdb.DBMaker;
 import org.mapdb.HTreeMap;
 import org.mapdb.Serializer;
+import org.sdjen.download.cache_sis.conf.ConfUtil;
 
-public class MapDBUtil {
+public class MapDBFactory {
 	DB rdb;
 	DB wdb;
 	HTreeMap<String, String> readFileMap;
@@ -20,7 +21,7 @@ public class MapDBUtil {
 		File file = new File("WEBCACHE");
 		if (!file.exists())
 			file.mkdirs();
-		MapDBUtil mapDBUtil = new MapDBUtil();
+		MapDBFactory mapDBUtil = new MapDBFactory();
 		mapDBUtil.getWriteFileMap().put("hehe", "RREEE");
 		System.out.println(mapDBUtil.getReadFileMap().get("hehe"));
 		System.out.println(mapDBUtil.getReadFileMap().size());
@@ -29,7 +30,7 @@ public class MapDBUtil {
 		System.out.println(mapDBUtil.getReadFileMap().size());
 	}
 
-	public MapDBUtil() throws IOException {
+	public MapDBFactory() throws IOException {
 		String path = ConfUtil.getDefaultConf().getProperties().getProperty("save_path") + "/map.db";
 		wdb = DBMaker.fileDB(path)//
 				.checksumHeaderBypass()//

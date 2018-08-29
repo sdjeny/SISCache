@@ -100,7 +100,8 @@ public class DownloadList {
 						} finally {
 						}
 					}
-					LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)", count, length_download);
+					LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)	map_url_size:{2}	map_file_size:{3}", count, length_download,
+					        mapDBUtil.getReadUrlMap().getSize(), mapDBUtil.getReadFileMap().getSize());
 					// httpUtil.getPoolConnManager().closeExpiredConnections();
 				}
 			} finally {

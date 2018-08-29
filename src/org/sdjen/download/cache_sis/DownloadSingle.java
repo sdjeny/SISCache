@@ -273,10 +273,8 @@ public class DownloadSingle {
 	 * @throws Exception
 	 */
 	private String downloadFile(final String url, final String path, final String name) {
-		String result = null;
-		if (mapDBUtil.getReadUrlMap().containsKey(url)) {
-			result = mapDBUtil.getReadUrlMap().get(url);
-		} else {
+		String result = mapDBUtil.getReadUrlMap().get(url);
+		if (null == result) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {
 					setResult(null);
@@ -293,11 +291,9 @@ public class DownloadSingle {
 						} catch (Exception e) {
 						}
 						String md5 = getMD5(bytes);
-						if (mapDBUtil.getReadFileMap().containsKey(md5)) {
-							String result = mapDBUtil.getReadFileMap().get(md5);
-							setResult(result);
-						} else {
-							String result = path;
+						String result = mapDBUtil.getReadFileMap().get(md5);
+						if (null == result) {
+							result = path;
 							if (bytes.length < length_flag_min_byte)
 								result += "/min";
 							else if (bytes.length > length_flag_max_byte)
@@ -325,8 +321,8 @@ public class DownloadSingle {
 							mapDBUtil.getWriteFileMap().put(md5, result);
 							mapDBUtil.commit();
 							lock_w_mapdb.unlock();
-							setResult(result);
 						}
+						setResult(result);
 					} catch (Exception e) {
 						e.printStackTrace();
 					}

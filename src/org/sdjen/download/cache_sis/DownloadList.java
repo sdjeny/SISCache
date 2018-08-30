@@ -33,7 +33,8 @@ public class DownloadList {
 		try {
 			boolean autoFirst = true;
 			try {
-				autoFirst = Boolean.valueOf(conf.getProperties().getProperty("auto_first"));
+				if (conf.getProperties().containsKey("auto_first"))
+					autoFirst = Boolean.valueOf(conf.getProperties().getProperty("auto_first"));
 			} catch (Exception e) {
 			}
 			int from = Integer.valueOf(conf.getProperties().getProperty("list_start"));

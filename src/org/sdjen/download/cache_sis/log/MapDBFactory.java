@@ -32,7 +32,11 @@ public class MapDBFactory {
 
 	public MapDBFactory setName(String name) throws IOException {
 		this.name = name;
-		String path = ConfUtil.getDefaultConf().getProperties().getProperty("save_path") + "/" + name + ".db";
+		String path = ConfUtil.getDefaultConf().getProperties().getProperty("save_path") + "/db/";
+		File file = new File(path);
+		if (!file.exists())
+			file.mkdirs();
+		path=path+ name + ".db";
 		wdb = DBMaker.fileDB(path)//
 				.checksumHeaderBypass()//
 				.transactionEnable()//

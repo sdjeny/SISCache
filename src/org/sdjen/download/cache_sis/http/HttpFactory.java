@@ -4,18 +4,28 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.net.ssl.SSLException;
+
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -24,6 +34,7 @@ import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
@@ -160,9 +171,60 @@ public class HttpFactory {
 		        .setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
 		        // 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
 		        .setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
-		        .setExpectContinueEnabled(true)//重点参数，不知道干啥用的
-//		        .setStaleConnectionCheckEnabled(true)//重点参数，在请求之前校验链接是否有效
+		        .setExpectContinueEnabled(true)// 重点参数，不知道干啥用的
+		// .setStaleConnectionCheckEnabled(true)//重点参数，在请求之前校验链接是否有效
 		;
+	}
+
+	private org.apache.http.client.ServiceUnavailableRetryStrategy getServiceUnavailableRetryStrategy() {
+		return new org.apache.http.client.ServiceUnavailableRetryStrategy() {
+			/**
+			 * retry逻辑
+			 */
+			@Override
+			public boolean retryRequest(HttpResponse response, int executionCount, HttpContext context) {
+				if (executionCount <= retry_times)
+					return true;
+				else
+					return false;
+			}
+
+			/**
+			 * retry间隔时间
+			 */
+			@Override
+			public long getRetryInterval() {
+				return 1000l * retry_time_second;
+			}
+		};
+	}
+
+	private HttpRequestRetryHandler getHttpRequestRetryHandler() {
+		return new HttpRequestRetryHandler() {
+			public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
+				if (executionCount <= retry_times) {
+					// from :https://blog.csdn.net/minicto/article/details/56677420
+					try {
+						Thread.sleep(1000l * retry_time_second * executionCount);
+					} catch (InterruptedException e) {
+					}
+					return !(HttpClientContext.adapt(context).getRequest() instanceof HttpEntityEnclosingRequest);
+					// Retry if the request is considered idempotent
+					// Do not retry if over max retry count
+				} else if (false) {
+					if (exception instanceof InterruptedIOException) {
+						return false;// Timeout
+					} else if (exception instanceof UnknownHostException) {
+						return false;// Unknown host
+					} else if (exception instanceof ConnectTimeoutException) {
+						return false;// Connection refused
+					} else if (exception instanceof SSLException) {
+						return false;// SSL handshake exception
+					}
+				}
+				return false;
+			}
+		};
 	}
 
 	private synchronized CloseableHttpClient getClient() {
@@ -171,6 +233,7 @@ public class HttpFactory {
 			client = HttpClients.custom()//
 			        .setConnectionManager(poolConnManager)//
 			        .setDefaultRequestConfig(requestConfig)//
+			        .setRetryHandler(getHttpRequestRetryHandler())//
 			        .build();
 		}
 		return client;
@@ -192,6 +255,7 @@ public class HttpFactory {
 			proxyClient = HttpClients.custom()//
 			        .setConnectionManager(poolConnManager)//
 			        .setDefaultRequestConfig(proxyRequestConfig)//
+			        .setRetryHandler(getHttpRequestRetryHandler())//
 			        .build();
 		}
 		return proxyClient;
@@ -286,7 +350,7 @@ public class HttpFactory {
 			entity = response.getEntity();
 			if (entity != null) {
 				executor.execute(in = entity.getContent());
-//				EntityUtils.consumeQuietly(entity);//此处高能，通过源码分析，由EntityUtils是否回收HttpEntity
+				// EntityUtils.consumeQuietly(entity);//此处高能，通过源码分析，由EntityUtils是否回收HttpEntity
 			}
 		} catch (Exception e) {
 			if (null != get)
@@ -300,7 +364,7 @@ public class HttpFactory {
 				}
 			}
 			if (entity != null) {
-				EntityUtils.consumeQuietly(entity);//此处高能，通过源码分析，由EntityUtils是否回收HttpEntity
+				EntityUtils.consumeQuietly(entity);// 此处高能，通过源码分析，由EntityUtils是否回收HttpEntity
 			}
 			if (null != response) {
 				try {

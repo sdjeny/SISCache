@@ -324,7 +324,7 @@ public class HttpFactory {
 						response = getProxyClient().execute(get);
 					} catch (IOException e1) {
 						get.abort();
-						throw e;
+						throw e1;
 					}
 					// 然后把地址加入需要代理队列里
 					int index = uri.indexOf('/', 9);

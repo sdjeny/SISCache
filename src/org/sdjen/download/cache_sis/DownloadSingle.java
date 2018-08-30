@@ -90,7 +90,6 @@ public class DownloadSingle {
 	}
 
 	public static void main(String[] args) throws Throwable {
-		MapDBFactory mapDBUtil = new MapDBFactory();
 		ConfUtil.getDefaultConf().getProperties().setProperty("retry_times", "1");
 		ConfUtil.getDefaultConf().getProperties().setProperty("retry_time_second", "1");
 		// ConfUtil.getDefaultConf().getProperties().setProperty("chatset",
@@ -98,6 +97,7 @@ public class DownloadSingle {
 		// ConfUtil.getDefaultConf().getProperties().setProperty("list_url",
 		// "https://club.autohome.com.cn/bbs/thread/");
 		LogUtil.init();
+		MapDBFactory.init();
 		HttpFactory httpUtil = new HttpFactory();
 		try {
 			// System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
@@ -112,12 +112,13 @@ public class DownloadSingle {
 			// "2.jpg");
 			// util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg",
 			// "rr", "2.jpg");
-			util.downloadFile("https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg", "rr", "11.jpg");
+			util.downloadFile("https://e.piclect.com/o180829_110f6.jpg", "rr", "11.jpg");
+//			util.downloadFile("https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg", "rr", "11.jpg");
 			// https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg
 			// https://www1.wi.to/2018/03/29/04f7c405227da092576b127e640d07f8.jpg
 		} finally {
 			httpUtil.finish();
-			mapDBUtil.finish();
+			MapDBFactory.finishAll();
 			LogUtil.finishAll();
 		}
 	}

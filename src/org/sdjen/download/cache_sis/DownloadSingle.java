@@ -33,7 +33,6 @@ public class DownloadSingle {
 	// private String sub_html = "html";
 	// private String sub_torrent = "torrent";
 	private HttpFactory httpUtil;
-	private MapDBFactory mapDBUtil;
 	private MessageDigest md5;
 	private long length_download;
 	private long length_flag_min_byte = 20000;
@@ -76,11 +75,6 @@ public class DownloadSingle {
 		return this;
 	}
 
-	public DownloadSingle setMapDBUtil(MapDBFactory mapDBUtil) {
-		this.mapDBUtil = mapDBUtil;
-		return this;
-	}
-
 	private String getFileName(String name) {
 		return name//
 				.replace('\\', ' ')//
@@ -109,7 +103,7 @@ public class DownloadSingle {
 			// System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
 			// Security.setProperty("jdk.tls.disabledAlgorithms","SSLv3, DH
 			// keySize < 768");
-			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil).setMapDBUtil(mapDBUtil);
+			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil);
 			// util.startDownload("http://www.sexinsex.net/bbs/thread-6720446-1-2000.html",
 			// "370013862.html", "U");
 			// util.downloadFile("http://img599.net/images/2013/06/02/CCe908c.th.jpg",
@@ -273,7 +267,7 @@ public class DownloadSingle {
 	 * @throws Exception
 	 */
 	private String downloadFile(final String url, final String path, final String name) {
-		String result = mapDBUtil.getReadUrlMap().get(url);
+		String result = MapDBFactory.getUrlDB().get(url);
 		if (null == result) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {
@@ -291,7 +285,7 @@ public class DownloadSingle {
 						} catch (Exception e) {
 						}
 						String md5 = getMD5(bytes);
-						String result = mapDBUtil.getReadFileMap().get(md5);
+						String result = MapDBFactory.getFileDB().get(md5);
 						if (null == result) {
 							result = path;
 							if (bytes.length < length_flag_min_byte)
@@ -318,8 +312,8 @@ public class DownloadSingle {
 								length_download += bytes.length;
 							}
 							lock_w_mapdb.lock();
-							mapDBUtil.getWriteFileMap().put(md5, result);
-							mapDBUtil.commit();
+							MapDBFactory.getFileDB().put(md5, result);
+//							mapDBUtil.commit();
 							lock_w_mapdb.unlock();
 						}
 						setResult(result);
@@ -340,8 +334,8 @@ public class DownloadSingle {
 				result = url;
 			// else {// 握手异常未解决
 			lock_w_mapdb.lock();
-			mapDBUtil.getWriteUrlMap().put(url, result);
-			mapDBUtil.commit();
+			MapDBFactory.getUrlDB().put(url, result);
+//			mapDBUtil.commit();
 			lock_w_mapdb.unlock();
 			// }
 		}

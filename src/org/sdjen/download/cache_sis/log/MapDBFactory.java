@@ -2,6 +2,8 @@ package org.sdjen.download.cache_sis.log;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map.Entry;
+import java.util.function.BiConsumer;
 
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
@@ -10,69 +12,102 @@ import org.mapdb.Serializer;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 
 public class MapDBFactory {
-	DB rdb;
-	DB wdb;
-	HTreeMap<String, String> readFileMap;
-	HTreeMap<String, String> readUrlMap;
-	HTreeMap<String, String> writeFileMap;
-	HTreeMap<String, String> writeUrlMap;
+	private String name;
+	private DB rdb;
+	private DB wdb;
+	private HTreeMap<String, String> rMap;
+	private HTreeMap<String, String> wMap;
+	private static MapDBFactory fileDB;
+	private static MapDBFactory urlDB;
 
-	public static void main(String[] args) throws IOException {
-		File file = new File("WEBCACHE");
-		if (!file.exists())
-			file.mkdirs();
-		MapDBFactory mapDBUtil = new MapDBFactory();
-		mapDBUtil.getWriteFileMap().put("hehe", "RREEE");
-		System.out.println(mapDBUtil.getReadFileMap().get("hehe"));
-		System.out.println(mapDBUtil.getReadFileMap().size());
-		mapDBUtil.commit();
-		System.out.println(mapDBUtil.getReadFileMap().get("hehe"));
-		System.out.println(mapDBUtil.getReadFileMap().size());
+	public static void init() throws IOException {
+		fileDB = new MapDBFactory().setName("file-md5-path");
+		urlDB = new MapDBFactory().setName("url-path");
 	}
 
-	public MapDBFactory() throws IOException {
-		String path = ConfUtil.getDefaultConf().getProperties().getProperty("save_path") + "/map.db";
+	public static void finishAll() {
+		fileDB.finish();
+		urlDB.finish();
+	}
+
+	public MapDBFactory setName(String name) throws IOException {
+		this.name = name;
+		String path = ConfUtil.getDefaultConf().getProperties().getProperty("save_path") + "/" + name + ".db";
 		wdb = DBMaker.fileDB(path)//
 				.checksumHeaderBypass()//
 				.transactionEnable()//
 				.closeOnJvmShutdown()//
 				.fileLockDisable()//
 				.make();
-		writeFileMap = wdb.hashMap("file-md5-path", Serializer.STRING, Serializer.STRING)//
+		wMap = wdb.hashMap("map", Serializer.STRING, Serializer.STRING)//
 				// .counterEnable()// 实时更新Map.size
 				.createOrOpen();
-		writeUrlMap = wdb.hashMap("url-path", Serializer.STRING, Serializer.STRING).createOrOpen();
-		commit();
+		wdb.commit();
 		rdb = DBMaker.fileDB(path)//
 				.closeOnJvmShutdown()//
 				.readOnly()//
 				.make();
-		readFileMap = rdb.hashMap("file-md5-path", Serializer.STRING, Serializer.STRING).open();
-		readUrlMap = rdb.hashMap("url-path", Serializer.STRING, Serializer.STRING).open();
+		rMap = rdb.hashMap("map", Serializer.STRING, Serializer.STRING).open();
+		return this;
 	}
 
-	public HTreeMap<String, String> getReadFileMap() {
-		return readFileMap;
+	public static MapDBFactory getFileDB() {
+		return fileDB;
 	}
 
-	public HTreeMap<String, String> getReadUrlMap() {
-		return readUrlMap;
+	public static MapDBFactory getUrlDB() {
+		return urlDB;
 	}
 
-	public HTreeMap<String, String> getWriteFileMap() {
-		return writeFileMap;
+	public String get(String key) {
+		return rMap.get(key);
 	}
 
-	public HTreeMap<String, String> getWriteUrlMap() {
-		return writeUrlMap;
-	}
-
-	public void commit() {
+	public void put(String key, String value) {
+		wMap.put(key, value);
 		wdb.commit();
 	}
 
+	public int size() {
+		return rMap.size();
+	}
+
+	public static void main(String[] args) throws IOException {
+		File file = new File("WEBCACHE");
+		if (!file.exists())
+			file.mkdirs();
+		MapDBFactory.init();
+		String path = ConfUtil.getDefaultConf().getProperties().getProperty("save_path") + "/map.db";
+		DB db = DBMaker.fileDB(path)//
+				.closeOnJvmShutdown()//
+				.readOnly()//
+				.make();
+		db.hashMap("url-path", Serializer.STRING, Serializer.STRING).open()//
+				.forEach(new BiConsumer<String, String>() {
+
+					public void accept(String key, String value) {
+						System.out.println("U:	" + key + "	:	" + value);
+						MapDBFactory.getUrlDB().put(key, value);
+					}
+				});
+		db.hashMap("file-md5-path", Serializer.STRING, Serializer.STRING).open()//
+				.forEach(new BiConsumer<String, String>() {
+
+					public void accept(String key, String value) {
+						System.out.println("F:	" + key + "	:	" + value);
+						MapDBFactory.getFileDB().put(key, value);
+					}
+				});
+		db.close();
+		MapDBFactory.finishAll();
+	}
+
+	// public void commit() {
+	// wdb.commit();
+	// }
+
 	public void finish() {
-		rdb.close();
 		wdb.close();
+		rdb.close();
 	}
 }

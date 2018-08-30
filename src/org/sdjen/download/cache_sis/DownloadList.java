@@ -31,6 +31,11 @@ public class DownloadList {
 		final HttpFactory httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
 		try {
+			boolean autoFirst = true;
+			try {
+				autoFirst = Boolean.valueOf(conf.getProperties().getProperty("auto_first"));
+			} catch (Exception e) {
+			}
 			int from = Integer.valueOf(conf.getProperties().getProperty("list_start"));
 			int to = Integer.valueOf(conf.getProperties().getProperty("list_end"));
 			int pageU = 50;
@@ -74,7 +79,7 @@ public class DownloadList {
 											if (null == result)
 												result = 0l;
 											result += downloadSingle.getLength_download();
-											break;//只关注第一条命中
+											break;// 只关注第一条命中
 										}
 									} catch (Throwable e1) {
 										e1.printStackTrace();
@@ -105,8 +110,10 @@ public class DownloadList {
 					LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)	map_url_size:{2}	map_file_size:{3}", count,
 							length_download, MapDBFactory.getUrlDB().size(), MapDBFactory.getFileDB().size());
 					// httpUtil.getPoolConnManager().closeExpiredConnections();
-					conf.getProperties().setProperty("list_start", String.valueOf(i));
-					conf.store();// 成功则保存，方便中断后继续执行
+					if (autoFirst) {
+						conf.getProperties().setProperty("list_start", String.valueOf(i));
+						conf.store();// 成功则保存，方便中断后继续执行
+					}
 				}
 			} finally {
 			}

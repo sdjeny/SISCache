@@ -23,7 +23,19 @@ public class LogUtil {
 			savePath.mkdirs();
 		lstLog = new LogUtil().setLogFile(save_path + "/list.csv").setChatset(charset);
 		errLog = new LogUtil().setLogFile(save_path + "/err.log").setChatset(charset);
-		msgLog = new LogUtil().setLogFile(save_path + "/download.log").setChatset(charset);
+		refreshMsgLog();
+
+//		msgLog = new LogUtil().setLogFile(save_path + "/download.log").setChatset(charset);
+	}
+
+	public static void refreshMsgLog() throws IOException {
+		if (null != msgLog)
+			msgLog.finish();
+		ConfUtil conf = ConfUtil.getDefaultConf();
+		String save_path = conf.getProperties().getProperty("save_path");
+		String charset = conf.getProperties().getProperty("chatset");
+		msgLog = new LogUtil().setLogFile(save_path + "/download_" + System.currentTimeMillis() + ".log")
+				.setChatset(charset);
 	}
 
 	public static void finishAll() {
@@ -62,7 +74,7 @@ public class LogUtil {
 	// finish();
 	// super.finalize();
 	// }
-	public void showMsg(Object pattern, Object... args) {
+	public synchronized void showMsg(Object pattern, Object... args) {
 		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));
 		builder.append("	,");
 		if (null != args && args.length > 0 && pattern instanceof String) {

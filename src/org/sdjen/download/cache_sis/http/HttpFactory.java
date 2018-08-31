@@ -4,17 +4,28 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.net.ssl.SSLException;
+
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpRequestRetryHandler;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.config.SocketConfig;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
@@ -23,13 +34,17 @@ import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContexts;
+import org.apache.http.util.EntityUtils;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class HttpFactory {
 	private CloseableHttpClient proxyClient;
 	private CloseableHttpClient client;
+	private org.apache.http.client.config.RequestConfig requestConfig;
+	private org.apache.http.client.config.RequestConfig proxyRequestConfig;
 	private ConfUtil conf;
 	private int retry_times = 5;
 	private int retry_time_second = 30;
@@ -37,12 +52,9 @@ public class HttpFactory {
 	private int timout_millisecond_connectionrequest = 10000;
 	private int timout_millisecond_socket = 10000;
 	private Set<String> proxy_urls = new HashSet<String>();
-	private static PoolingHttpClientConnectionManager poolConnManager = null;
-	private int maxTotalPool = 200;
-	private int maxConPerRoute = 20;
-	private int socketTimeout = 10000;
-	private int connectionRequestTimeout = 2000;
-	private int connectTimeout = 10000;
+	private PoolingHttpClientConnectionManager poolConnManager = null;
+	private int pool_max_total = 200;
+	private int pool_max_per_route = 20;
 
 	public HttpFactory() throws IOException {
 		conf = ConfUtil.getDefaultConf();
@@ -60,24 +72,33 @@ public class HttpFactory {
 			isStore = true;
 		}
 		try {
-			timout_millisecond_connect = Integer
-					.valueOf(conf.getProperties().getProperty("timout_millisecond_connect"));
+			timout_millisecond_connect = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connect"));
 		} catch (Exception e) {
 			conf.getProperties().setProperty("timout_millisecond_connect", String.valueOf(timout_millisecond_connect));
 			isStore = true;
 		}
 		try {
-			timout_millisecond_connectionrequest = Integer
-					.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
+			timout_millisecond_connectionrequest = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
 		} catch (Exception e) {
-			conf.getProperties().setProperty("timout_millisecond_connectionrequest",
-					String.valueOf(timout_millisecond_connectionrequest));
+			conf.getProperties().setProperty("timout_millisecond_connectionrequest", String.valueOf(timout_millisecond_connectionrequest));
 			isStore = true;
 		}
 		try {
 			timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
 		} catch (Exception e) {
 			conf.getProperties().setProperty("timout_millisecond_socket", String.valueOf(timout_millisecond_socket));
+			isStore = true;
+		}
+		try {
+			pool_max_total = Integer.valueOf(conf.getProperties().getProperty("pool_max_total"));
+		} catch (Exception e) {
+			conf.getProperties().setProperty("pool_max_total", String.valueOf(pool_max_total));
+			isStore = true;
+		}
+		try {
+			pool_max_per_route = Integer.valueOf(conf.getProperties().getProperty("pool_max_per_route"));
+		} catch (Exception e) {
+			conf.getProperties().setProperty("pool_max_per_route", String.valueOf(pool_max_per_route));
 			isStore = true;
 		}
 		try {
@@ -90,41 +111,50 @@ public class HttpFactory {
 			isStore = true;
 		}
 		try {
-			SSLConnectionSocketFactory sslsf;
-			// sslsf = new
-			// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null,
-			// new
-			// TrustSelfSignedStrategy()).build(),
-			// SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
-			String supportedProtocols = conf.getProperties().getProperty("supportedProtocols");
-			if (null == supportedProtocols) {
-				conf.getProperties().setProperty("supportedProtocols",
-						supportedProtocols = "TLSv1.2,TLSv1.1,TLSv1,SSLv3,SSLv2Hello");
-				isStore = true;
+			if (false) {
+				SSLConnectionSocketFactory sslsf;
+				// sslsf = new
+				// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null,
+				// new
+				// TrustSelfSignedStrategy()).build(),
+				// SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+				String supportedProtocols = conf.getProperties().getProperty("supportedProtocols");
+				if (null == supportedProtocols) {
+					conf.getProperties().setProperty("supportedProtocols", supportedProtocols = "TLSv1.2,TLSv1.1,TLSv1,SSLv3,SSLv2Hello");
+					isStore = true;
+				}
+				// new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }
+				sslsf = new SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new TrustSelfSignedStrategy()).build(),
+				        supportedProtocols.split(","), null, NoopHostnameVerifier.INSTANCE);
+				// sslsf =
+				// org.apache.http.conn.ssl.SSLConnectionSocketFactory.getSocketFactory();
+				// sslsf = new
+				// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null,
+				// new
+				// TrustSelfSignedStrategy()).build(),
+				// NoopHostnameVerifier.INSTANCE);
+				// sslsf = new SSLConnectionSocketFactory(SSLContext.getDefault());
+				Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+				        .register("http", PlainConnectionSocketFactory.getSocketFactory())//
+				        .register("https", sslsf)//
+				        .build();
 			}
-			// new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }
-			sslsf = new SSLConnectionSocketFactory(
-					SSLContexts.custom().loadTrustMaterial(null, new TrustSelfSignedStrategy()).build(),
-					supportedProtocols.split(","), null, NoopHostnameVerifier.INSTANCE);
-			// sslsf =
-			// org.apache.http.conn.ssl.SSLConnectionSocketFactory.getSocketFactory();
-			// sslsf = new
-			// SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null,
-			// new
-			// TrustSelfSignedStrategy()).build(),
-			// NoopHostnameVerifier.INSTANCE);
-			// sslsf = new SSLConnectionSocketFactory(SSLContext.getDefault());
-			Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
-					.register("http", PlainConnectionSocketFactory.getSocketFactory())//
-					.register("https", sslsf)//
-					.build();
-			poolConnManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+			poolConnManager = new PoolingHttpClientConnectionManager(/* socketFactoryRegistry */);
 			// Increase max total connection to 200
-			poolConnManager.setMaxTotal(maxTotalPool);
+			poolConnManager.setMaxTotal(pool_max_total);
 			// Increase default max connection per route to 20
-			poolConnManager.setDefaultMaxPerRoute(maxConPerRoute);
-			poolConnManager
-					.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
+			poolConnManager.setDefaultMaxPerRoute(pool_max_per_route);
+			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
+			requestConfig = getDefaultBuilder().build();
+			org.apache.http.client.config.RequestConfig.Builder builder = getDefaultBuilder();
+			try {
+				String[] s = conf.getProperties().getProperty("proxy").split(":");
+				HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// 设置代理IP、端口、协议（请分别替换）
+				builder.setProxy(proxy);// 把代理设置到请求配置
+				// showMsg("代理：{0}", proxy);
+			} catch (Exception e) {
+			}
+			proxyRequestConfig = builder.build();
 		} catch (Exception e) {
 			LogUtil.errLog.showMsg("InterfacePhpUtilManager init Exception" + e.toString());
 		}
@@ -134,59 +164,120 @@ public class HttpFactory {
 
 	private org.apache.http.client.config.RequestConfig.Builder getDefaultBuilder() {
 		return RequestConfig.custom()//
-				.setConnectTimeout(timout_millisecond_connect)// 设置连接超时时间，单位毫秒。
-				.setConnectionRequestTimeout(timout_millisecond_connectionrequest) // 设置从connect
-				// Manager(连接池)获取Connection
-				// 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
-				.setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
-				// 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
-				.setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
+		        .setConnectTimeout(timout_millisecond_connect)// 设置连接超时时间，单位毫秒。
+		        .setConnectionRequestTimeout(timout_millisecond_connectionrequest) // 设置从connect
+		        // Manager(连接池)获取Connection
+		        // 超时时间，单位毫秒。这个属性是新加的属性，因为目前版本是可以共享连接池的。
+		        .setSocketTimeout(timout_millisecond_socket)// 请求获取数据的超时时间(即响应时间)，单位毫秒。
+		        // 如果访问一个接口，多少时间内无法返回数据，就直接放弃此次调用。
+		        .setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
+		        .setExpectContinueEnabled(true)// 重点参数，不知道干啥用的
+		// .setStaleConnectionCheckEnabled(true)//重点参数，在请求之前校验链接是否有效
 		;
 	}
 
-	private CloseableHttpClient getClient() {
+	private org.apache.http.client.ServiceUnavailableRetryStrategy getServiceUnavailableRetryStrategy() {
+		return new org.apache.http.client.ServiceUnavailableRetryStrategy() {
+			/**
+			 * retry逻辑
+			 */
+			@Override
+			public boolean retryRequest(HttpResponse response, int executionCount, HttpContext context) {
+				if (executionCount <= retry_times)
+					return true;
+				else
+					return false;
+			}
+
+			/**
+			 * retry间隔时间
+			 */
+			@Override
+			public long getRetryInterval() {
+				return 1000l * retry_time_second;
+			}
+		};
+	}
+
+	private HttpRequestRetryHandler getHttpRequestRetryHandler() {
+		return new HttpRequestRetryHandler() {
+			public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
+				if (executionCount <= retry_times) {
+					// from :https://blog.csdn.net/minicto/article/details/56677420
+					try {
+						Thread.sleep(1000l * retry_time_second * executionCount);
+					} catch (InterruptedException e) {
+					}
+					return !(HttpClientContext.adapt(context).getRequest() instanceof HttpEntityEnclosingRequest);
+					// Retry if the request is considered idempotent
+					// Do not retry if over max retry count
+				} else if (false) {
+					if (exception instanceof InterruptedIOException) {
+						return false;// Timeout
+					} else if (exception instanceof UnknownHostException) {
+						return false;// Unknown host
+					} else if (exception instanceof ConnectTimeoutException) {
+						return false;// Connection refused
+					} else if (exception instanceof SSLException) {
+						return false;// SSL handshake exception
+					}
+				}
+				return false;
+			}
+		};
+	}
+
+	private synchronized CloseableHttpClient getClient() {
 		if (null == client) {
 			// 实例化CloseableHttpClient对象
 			client = HttpClients.custom()//
-					.setConnectionManager(poolConnManager)//
-					.setDefaultRequestConfig(getDefaultBuilder().build())//
-					.build();
+			        .setConnectionManager(poolConnManager)//
+			        .setDefaultRequestConfig(requestConfig)//
+			        .setRetryHandler(getHttpRequestRetryHandler())//
+			        .build();
 		}
 		return client;
 	}
 
-	private CloseableHttpClient getProxyClient() {
+	private synchronized CloseableHttpClient getProxyClient() {
 		if (null == proxyClient) {
-			org.apache.http.client.config.RequestConfig.Builder builder = getDefaultBuilder();
-			try {
-				String[] s = conf.getProperties().getProperty("proxy").split(":");
-				HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// 设置代理IP、端口、协议（请分别替换）
-				builder.setProxy(proxy);// 把代理设置到请求配置
-				// showMsg("代理：{0}", proxy);
-			} catch (Exception e) {
-			}
+			// org.apache.http.client.config.RequestConfig.Builder builder =
+			// getDefaultBuilder();
+			// try {
+			// String[] s = conf.getProperties().getProperty("proxy").split(":");
+			// HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");//
+			// 设置代理IP、端口、协议（请分别替换）
+			// builder.setProxy(proxy);// 把代理设置到请求配置
+			// // showMsg("代理：{0}", proxy);
+			// } catch (Exception e) {
+			// }
 			// 实例化CloseableHttpClient对象
 			proxyClient = HttpClients.custom()//
-					.setConnectionManager(poolConnManager)//
-					.setDefaultRequestConfig(builder.build())//
-					.build();
+			        .setConnectionManager(poolConnManager)//
+			        .setDefaultRequestConfig(proxyRequestConfig)//
+			        .setRetryHandler(getHttpRequestRetryHandler())//
+			        .build();
 		}
 		return proxyClient;
 	}
 
 	public void finish() {
-		try {
-			client.close();
-		} catch (Throwable e) {
-		}
-		try {
-			proxyClient.close();
-		} catch (Throwable e) {
-		}
-		client = null;
-		proxyClient = null;
+		// try {
+		// client.close();
+		// } catch (Throwable e) {
+		// }
+		// try {
+		// proxyClient.close();
+		// } catch (Throwable e) {
+		// }
+		// client = null;
+		// proxyClient = null;
 		// 连接池关闭
 		poolConnManager.close();
+	}
+
+	public PoolingHttpClientConnectionManager getPoolConnManager() {
+		return poolConnManager;
 	}
 
 	public static abstract class Executor<R> {
@@ -219,6 +310,7 @@ public class HttpFactory {
 		InputStream in = null;
 		HttpGet get = null;
 		org.apache.http.client.methods.CloseableHttpResponse response = null;
+		HttpEntity entity = null;
 		try {
 			get = new HttpGet(uri);
 			boolean needProxy = needProxy(uri);
@@ -232,7 +324,7 @@ public class HttpFactory {
 						response = getProxyClient().execute(get);
 					} catch (IOException e1) {
 						get.abort();
-						throw e;
+						throw e1;
 					}
 					// 然后把地址加入需要代理队列里
 					int index = uri.indexOf('/', 9);
@@ -243,8 +335,7 @@ public class HttpFactory {
 						proxy_url = uri;
 					if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
 						proxy_urls.add(proxy_url);
-						conf.getProperties().setProperty("proxy_urls",
-								conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
+						conf.getProperties().setProperty("proxy_urls", conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
 						conf.store();
 						LogUtil.errLog.showMsg("ADD:	{0}", proxy_url);
 					}
@@ -252,13 +343,14 @@ public class HttpFactory {
 					throw e;
 				}
 			}
-			if (response.getStatusLine().getStatusCode() != 200) {
+			if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 				get.abort();
 				return;
 			}
-			HttpEntity entity = response.getEntity();
+			entity = response.getEntity();
 			if (entity != null) {
 				executor.execute(in = entity.getContent());
+				// EntityUtils.consumeQuietly(entity);//此处高能，通过源码分析，由EntityUtils是否回收HttpEntity
 			}
 		} catch (Exception e) {
 			if (null != get)
@@ -271,20 +363,22 @@ public class HttpFactory {
 				} catch (IOException e) {
 				}
 			}
+			if (entity != null) {
+				EntityUtils.consumeQuietly(entity);// 此处高能，通过源码分析，由EntityUtils是否回收HttpEntity
+			}
 			if (null != response) {
 				try {
 					response.close();
-				} catch (Exception e) {
+				} catch (IOException e) {
 				}
 			}
 		}
 	}
 
-	private InputStream getInputStream(String uri) throws IOException {
-		// 请求返回
-		return client.execute(new HttpGet(uri)).getEntity().getContent();
-	}
-
+	// private InputStream getInputStream(String uri) throws IOException {
+	// // 请求返回
+	// return client.execute(new HttpGet(uri)).getEntity().getContent();
+	// }
 	/**
 	 * 根据指定的URL下载html代码
 	 * 
@@ -302,8 +396,7 @@ public class HttpFactory {
 					setResult(null);
 					StringBuffer pageHTML = new StringBuffer();
 					BufferedReader br;
-					br = new BufferedReader(
-							new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
+					br = new BufferedReader(new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
 					String line = null;
 					while ((line = br.readLine()) != null) {
 						pageHTML.append(line);

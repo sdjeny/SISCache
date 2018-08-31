@@ -55,7 +55,7 @@ public class ConfUtil {
 		return properties;
 	}
 
-	public void store() throws IOException {
+	public synchronized void store() throws IOException {
 		FileWriter writer = new FileWriter(file);
 		try {
 			properties.store(writer, "");

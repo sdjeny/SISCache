@@ -23,15 +23,20 @@ public class DownloadList {
 		new DownloadList();
 	}
 
+	boolean autoFirst;
+	HttpFactory httpUtil;
+	String list_url;
+	ConfUtil conf;
+
 	public DownloadList() throws Throwable {
-		ConfUtil conf = ConfUtil.getDefaultConf();
+		conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
 		MapDBFactory.init();
 		downloadSingle = new DownloadSingle();
-		final HttpFactory httpUtil = new HttpFactory();
+		httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
 		try {
-			boolean autoFirst = true;
+			autoFirst = true;
 			try {
 				if (conf.getProperties().containsKey("auto_first"))
 					autoFirst = Boolean.valueOf(conf.getProperties().getProperty("auto_first"));
@@ -49,72 +54,13 @@ public class DownloadList {
 			// page += pageU;
 			// } while (page <= limit);
 			try {
-				String list_url = ConfUtil.getDefaultConf().getProperties().getProperty("list_url");
+				list_url = ConfUtil.getDefaultConf().getProperties().getProperty("list_url");
 				for (int i = from; i <= to; i++) {
-					if ((i - from) % pageU == 0)
+					if (i != from && ((i - from) % pageU == 0)) {
 						LogUtil.refreshMsgLog();
-					final String uri = MessageFormat.format(list_url, String.valueOf(i));
-					LogUtil.lstLog.showMsg(uri);
-					String html = httpUtil.getHTML(uri);
-					org.jsoup.nodes.Document doument = Jsoup.parse(html);
-					ExecutorService executor = Executors.newFixedThreadPool(2);
-					List<Future<Long>> resultList = new ArrayList<Future<Long>>();
-					for (final org.jsoup.nodes.Element e : doument.select("tbody").select("tr")) {
-						resultList.add(executor.submit(new Callable<Long>() {
-							public Long call() throws Exception {
-								final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-								String date = "";
-								for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
-									String text = s.text();
-									try {
-										date = dateFormat.format(dateFormat.parse(text));
-									} catch (Exception e) {
-										System.out.println(text + "	" + e);
-									}
-								}
-								Long result = null;
-								for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {
-									try {
-										if (downloadSingle.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")),
-												s.text() + ".html", date)) {
-											if (null == result)
-												result = 0l;
-											result += downloadSingle.getLength_download();
-											break;// 只关注第一条命中
-										}
-									} catch (Throwable e1) {
-										e1.printStackTrace();
-									}
-								}
-								return result;
-							}
-						}));// 将任务执行结果存储到List中
+						list(1);
 					}
-					executor.shutdown();
-					long count = 0, length_download = 0;
-					for (Future<Long> fs : resultList) {
-						try {
-							// while (!fs.isDone())
-							// ;// Future返回如果没有完成，则一直循环等待，直到Future返回完成
-							Long length = fs.get(30, TimeUnit.MINUTES);// 各个线程（任务）执行的结果
-							if (null != length) {
-								length_download += length;
-								count++;
-							}
-						} catch (java.util.concurrent.TimeoutException e) {
-							fs.cancel(false);
-						} catch (Exception e) {
-							e.printStackTrace();
-						} finally {
-						}
-					}
-					LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)	map_url_size:{2}	map_file_size:{3}", count,
-							length_download, MapDBFactory.getUrlDB().size(), MapDBFactory.getFileDB().size());
-					// httpUtil.getPoolConnManager().closeExpiredConnections();
-					if (autoFirst) {
-						conf.getProperties().setProperty("list_start", String.valueOf(i));
-						conf.store();// 成功则保存，方便中断后继续执行
-					}
+					list(i);
 				}
 			} finally {
 			}
@@ -134,14 +80,78 @@ public class DownloadList {
 		}
 	}
 
+	private void list(int i) throws Throwable {
+		final String uri = MessageFormat.format(list_url, String.valueOf(i));
+		LogUtil.lstLog.showMsg(uri);
+		String html = httpUtil.getHTML(uri);
+		org.jsoup.nodes.Document doument = Jsoup.parse(html);
+		ExecutorService executor = Executors.newFixedThreadPool(2);
+		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
+		for (final org.jsoup.nodes.Element e : doument.select("tbody").select("tr")) {
+			resultList.add(executor.submit(new Callable<Long>() {
+				public Long call() throws Exception {
+					String date = "";
+					for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
+						String text = s.text();
+						try {
+							SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+							date = dateFormat.format(dateFormat.parse(text));
+							dateFormat = null;
+						} catch (Exception e) {
+							System.out.println(text + "	" + e);
+						}
+					}
+					Long result = null;
+					for (org.jsoup.nodes.Element s : e.select("th").select("span").select("a[href]")) {
+						try {
+							if (downloadSingle.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html", date)) {
+								if (null == result)
+									result = 0l;
+								result += downloadSingle.getLength_download();
+								break;// 只关注第一条命中
+							}
+						} catch (Throwable e1) {
+							e1.printStackTrace();
+						}
+					}
+					return result;
+				}
+			}));// 将任务执行结果存储到List中
+		}
+		executor.shutdown();
+		long count = 0, length_download = 0;
+		for (Future<Long> fs : resultList) {
+			try {
+				// while (!fs.isDone())
+				// ;// Future返回如果没有完成，则一直循环等待，直到Future返回完成
+				Long length = fs.get(30, TimeUnit.MINUTES);// 各个线程（任务）执行的结果
+				if (null != length) {
+					length_download += length;
+					count++;
+				}
+			} catch (java.util.concurrent.TimeoutException e) {
+				fs.cancel(false);
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+			}
+		}
+		LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)	map_url_size:{2}	map_file_size:{3}", count, length_download,
+				MapDBFactory.getUrlDB().size(), MapDBFactory.getFileDB().size());
+		// httpUtil.getPoolConnManager().closeExpiredConnections();
+		if (autoFirst) {
+			conf.getProperties().setProperty("list_start", String.valueOf(i));
+			conf.store();// 成功则保存，方便中断后继续执行
+		}
+	}
+
 	private void list(int from, int to) throws Throwable {
 		final HttpFactory httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
 		final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 		try {
 			for (int i = from; i <= to; i++) {
-				final String uri = MessageFormat
-						.format(ConfUtil.getDefaultConf().getProperties().getProperty("list_url"), String.valueOf(i));
+				final String uri = MessageFormat.format(ConfUtil.getDefaultConf().getProperties().getProperty("list_url"), String.valueOf(i));
 				LogUtil.lstLog.showMsg(uri);
 				String html = httpUtil.getHTML(uri);
 				org.jsoup.nodes.Document doument = Jsoup.parse(html);
@@ -156,8 +166,7 @@ public class DownloadList {
 							if (downloadSingle//
 									// .setHttpUtil(new
 									// HttpUtil().setConfUtil(conf))
-									.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html",
-											date)) {
+									.startDownload(httpUtil.joinUrlPath(uri, s.attr("href")), s.text() + ".html", date)) {
 								length_download += downloadSingle.getLength_download();
 								count++;
 							}

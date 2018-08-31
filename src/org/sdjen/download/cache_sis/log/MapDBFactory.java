@@ -19,15 +19,18 @@ public class MapDBFactory {
 	private HTreeMap<String, String> wMap;
 	private static MapDBFactory fileDB;
 	private static MapDBFactory urlDB;
+	private static MapDBFactory errorDB;
 
 	public static void init() throws IOException {
 		fileDB = new MapDBFactory().setName("file-md5-path");
 		urlDB = new MapDBFactory().setName("url-path");
+		errorDB = new MapDBFactory().setName("error");
 	}
 
 	public static void finishAll() {
 		fileDB.finish();
 		urlDB.finish();
+		errorDB.finish();
 	}
 
 	public MapDBFactory setName(String name) throws IOException {
@@ -36,7 +39,7 @@ public class MapDBFactory {
 		File file = new File(path);
 		if (!file.exists())
 			file.mkdirs();
-		path=path+ name + ".db";
+		path = path + name + ".db";
 		wdb = DBMaker.fileDB(path)//
 				.checksumHeaderBypass()//
 				.transactionEnable()//
@@ -63,6 +66,10 @@ public class MapDBFactory {
 		return urlDB;
 	}
 
+	public static MapDBFactory getErrorDB() {
+		return errorDB;
+	}
+
 	public String get(String key) {
 		return rMap.get(key);
 	}
@@ -86,23 +93,30 @@ public class MapDBFactory {
 				.closeOnJvmShutdown()//
 				.readOnly()//
 				.make();
-		db.hashMap("url-path", Serializer.STRING, Serializer.STRING).open()//
-				.forEach(new BiConsumer<String, String>() {
-
-					public void accept(String key, String value) {
-						System.out.println("U:	" + key + "	:	" + value);
-						MapDBFactory.getUrlDB().put(key, value);
-					}
-				});
+		// db.hashMap("url-path", Serializer.STRING, Serializer.STRING).open()//
+		// .forEach(new BiConsumer<String, String>() {
+		//
+		// public void accept(String key, String value) {
+		// System.out.println("U: " + key + " : " + value);
+		// MapDBFactory.getUrlDB().put(key, value);
+		// }
+		// });
 		db.hashMap("file-md5-path", Serializer.STRING, Serializer.STRING).open()//
 				.forEach(new BiConsumer<String, String>() {
 
 					public void accept(String key, String value) {
-						System.out.println("F:	" + key + "	:	" + value);
-						MapDBFactory.getFileDB().put(key, value);
+						try {
+							System.out.println("F:	" + key + "	:	" + value);
+							MapDBFactory.getFileDB().put(key, value);
+						} catch (Exception e) {
+							MapDBFactory.getErrorDB().put(key, e.toString());
+						}
 					}
 				});
 		db.close();
+		System.out.println("url:	" + MapDBFactory.getUrlDB().size());
+		System.out.println("file:	" + MapDBFactory.getFileDB().size());
+		System.out.println("err:	" + MapDBFactory.getErrorDB().size());
 		MapDBFactory.finishAll();
 	}
 

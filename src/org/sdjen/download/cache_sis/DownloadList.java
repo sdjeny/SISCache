@@ -58,10 +58,16 @@ public class DownloadList {
 				list_url = ConfUtil.getDefaultConf().getProperties().getProperty("list_url");
 				for (int i = from; i <= to; i++) {
 					if (i != from && ((i - from) % pageU == 0)) {
+						for (int j = 0; j < 3; j++) {
+							list(j);
+						}
 						LogUtil.refreshMsgLog();
-						list(1);
 					}
 					list(i);
+					if (autoFirst) {
+						conf.getProperties().setProperty("list_start", String.valueOf(i));
+						conf.store();// 成功则保存，方便中断后继续执行
+					}
 				}
 			} finally {
 			}
@@ -141,10 +147,6 @@ public class DownloadList {
 		LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)	map_url_size:{2}	map_file_size:{3}", count, length_download,
 				MapDBFactory.getUrlDB().size(), MapDBFactory.getFileDB().size());
 		// httpUtil.getPoolConnManager().closeExpiredConnections();
-		if (autoFirst) {
-			conf.getProperties().setProperty("list_start", String.valueOf(i));
-			conf.store();// 成功则保存，方便中断后继续执行
-		}
 	}
 
 	private void list(int from, int to) throws Throwable {

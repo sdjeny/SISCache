@@ -68,47 +68,75 @@ public class CassandraFactory {
 			Session session = cluster.connect(keyspace);
 		}
 		CassandraFactory factory = new CassandraFactory().connect();
-		{
-			MapDBFactory.init();
-			String path = ConfUtil.getDefaultConf().getProperties().getProperty("save_path") + "/map.db";
-			DB db = DBMaker.fileDB(path)//
-					.closeOnJvmShutdown()//
-					.readOnly()//
-					.make();
-			db.hashMap("url-path", Serializer.STRING, Serializer.STRING).open()//
-					.forEach(new BiConsumer<String, String>() {
-
-						public void accept(String key, String value) {
-							try {
-								System.out.println("U: " + key + " : " + value);
-								factory.getSession().execute("INSERT INTO url_path(key,path) VALUES (?,?);",key,value);
-							} catch (Exception e) {
-								MapDBFactory.getErrorDB().put(key, e.toString());
-							}
-						}
-					});
-			db.hashMap("file-md5-path", Serializer.STRING, Serializer.STRING).open()//
-					.forEach(new BiConsumer<String, String>() {
-
-						public void accept(String key, String value) {
-							try {
-								System.out.println("F:	" + key + "	:	" + value);
-								factory.getSession().execute("INSERT INTO md5_path(key,path) VALUES (?,?);",key,value);
-							} catch (Exception e) {
-								MapDBFactory.getErrorDB().put(key, e.toString());
-							}
-						}
-					});
-			db.close();
-			MapDBFactory.finishAll();
+		// {
+		// MapDBFactory.init();
+		// String path =
+		// ConfUtil.getDefaultConf().getProperties().getProperty("save_path") +
+		// "/map.db";
+		// DB db = DBMaker.fileDB(path)//
+		// .closeOnJvmShutdown()//
+		// .readOnly()//
+		// .make();
+		// db.hashMap("url-path", Serializer.STRING, Serializer.STRING).open()//
+		// .forEach(new BiConsumer<String, String>() {
+		//
+		// public void accept(String key, String value) {
+		// try {
+		// System.out.println("U: " + key + " : " + value);
+		// factory.getSession().execute("INSERT INTO url_path(key,path) VALUES
+		// (?,?);",key,value);
+		// } catch (Exception e) {
+		// MapDBFactory.getErrorDB().put(key, e.toString());
+		// }
+		// }
+		// });
+		// db.hashMap("file-md5-path", Serializer.STRING,
+		// Serializer.STRING).open()//
+		// .forEach(new BiConsumer<String, String>() {
+		//
+		// public void accept(String key, String value) {
+		// try {
+		// System.out.println("F: " + key + " : " + value);
+		// factory.getSession().execute("INSERT INTO md5_path(key,path) VALUES
+		// (?,?);",key,value);
+		// } catch (Exception e) {
+		// MapDBFactory.getErrorDB().put(key, e.toString());
+		// }
+		// }
+		// });
+		// db.close();
+		// MapDBFactory.finishAll();
+		// }
+		long l = System.currentTimeMillis();
+		try {
+			for (String key : ("1m3rco0n43fg3ev63gz5u5dxg" + ",1anc6byrmqnrvsd7s20ark1zl" + ",ez9acoxzotp6btmtr93877f8m"
+					+ ",apw4k2k821uk0ishkga1m8fu8").split(",")) {
+				ResultSet resultSet = factory.getSession().execute("select path from md5_path where key=?", key);
+				for (Row row : resultSet) {
+					System.out.println((System.currentTimeMillis() - l) + " " + row.getString("path"));
+				}
+			}
+		} finally {
+			factory.session.close();
+			factory.cluster.close();
 		}
-		factory.session.close();
-		factory.cluster.close();
 	}
 
 	public Cluster cluster;
 
 	public Session session;
+	private static CassandraFactory factory;
+
+	public static synchronized CassandraFactory getDefaultFactory() {
+		if (null == factory)
+			factory = new CassandraFactory().connect();
+		return factory;
+	}
+
+	public void finish() {
+		session.close();
+		cluster.close();
+	}
 
 	public CassandraFactory connect() {
 		cluster = Cluster.builder()//
@@ -137,14 +165,38 @@ public class CassandraFactory {
 		return this;
 	}
 
-	public Session getSession() {
+	private Session getSession() {
 		return session;
+	}
+
+	public String getMD5_Path(String key) {
+		ResultSet resultSet = getSession().execute("select path from md5_path where key=?", key);
+		for (Row row : resultSet) {
+			return row.getString("path");
+		}
+		return null;
+	}
+
+	public String getURL_Path(String key) {
+		ResultSet resultSet = getSession().execute("select path from url_path where key=?", key);
+		for (Row row : resultSet) {
+			return row.getString("path");
+		}
+		return null;
+	}
+
+	public void saveMD5(String key, String path) {
+		getSession().execute("INSERT INTO md5_path(key,path) VALUES(?,?);", key, path);
+	}
+
+	public void saveURL(String key, String path) {
+		getSession().execute("INSERT INTO url_path(key,path) VALUES(?,?);", key, path);
 	}
 
 	/**
 	 * 插入
 	 */
-	public void insert() {
+	private void insert() {
 		String cql = "INSERT INTO mydb.test (a , b , c , d ) VALUES (?,?,?,?);";
 		ResultSet resultSet = session.execute(cql, "Hi~ o(*￣▽￣*)ブ", 8, "草", 10);
 
@@ -163,7 +215,7 @@ public class CassandraFactory {
 	/**
 	 * 修改
 	 */
-	public void update() {
+	private void update() {
 		// a,b是复合主键 所以条件都要带上，少一个都会报错，而且update不能修改主键的值，这应该和cassandra的存储方式有关
 		String cql = "UPDATE mydb.test SET d = 1234 WHERE a='aa' and b=2;";
 		// 也可以这样 cassandra插入的数据如果主键已经存在，其实就是更新操作
@@ -175,7 +227,7 @@ public class CassandraFactory {
 	/**
 	 * 删除
 	 */
-	public void delete() {
+	private void delete() {
 		// 删除一条记录里的单个字段 只能删除非主键，且要带上主键条件
 		String cql = "DELETE d FROM mydb.test WHERE a='aa' AND b=2;";
 		// 删除一张表里的一条或多条记录 条件里必须带上分区键
@@ -187,7 +239,7 @@ public class CassandraFactory {
 	/**
 	 * 查询
 	 */
-	public void query() {
+	private void query() {
 		String cql = "SELECT * FROM test;";
 		String cql2 = "SELECT a,b,c,d FROM mydb.test;";
 

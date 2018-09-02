@@ -22,8 +22,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
+import org.sdjen.download.cache_sis.log.CassandraFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
-import org.sdjen.download.cache_sis.log.MapDBFactory;
+//import org.sdjen.download.cache_sis.log.MapDBFactory;
 
 public class DownloadSingle {
 	private String html = "";// 存放网页HTML源代码
@@ -38,7 +39,7 @@ public class DownloadSingle {
 	private long length_flag_min_byte = 20000;
 	private long length_flag_max_byte = 70000;
 	private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
-	private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
+//	private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
 	private int download_threads = 6;
 
@@ -97,7 +98,7 @@ public class DownloadSingle {
 		// ConfUtil.getDefaultConf().getProperties().setProperty("list_url",
 		// "https://club.autohome.com.cn/bbs/thread/");
 		LogUtil.init();
-		MapDBFactory.init();
+//		MapDBFactory.init();
 		HttpFactory httpUtil = new HttpFactory();
 		try {
 			// System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
@@ -118,7 +119,7 @@ public class DownloadSingle {
 			// https://www1.wi.to/2018/03/29/04f7c405227da092576b127e640d07f8.jpg
 		} finally {
 			httpUtil.finish();
-			MapDBFactory.finishAll();
+//			MapDBFactory.finishAll();
 			LogUtil.finishAll();
 		}
 	}
@@ -268,7 +269,7 @@ public class DownloadSingle {
 	 * @throws Exception
 	 */
 	private String downloadFile(final String url, final String path, final String name) {
-		String result = MapDBFactory.getUrlDB().get(url);
+		String result = CassandraFactory.getDefaultFactory().getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
 		if (null == result) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {
@@ -286,7 +287,7 @@ public class DownloadSingle {
 						} catch (Exception e) {
 						}
 						String md5 = getMD5(bytes);
-						String result = MapDBFactory.getFileDB().get(md5);
+						String result = CassandraFactory.getDefaultFactory().getMD5_Path(md5);//MapDBFactory.getFileDB().get(md5);
 						if (null == result) {
 							result = path;
 							if (bytes.length < length_flag_min_byte)
@@ -312,10 +313,11 @@ public class DownloadSingle {
 								}
 								length_download += bytes.length;
 							}
-							lock_w_mapdb.lock();
-							MapDBFactory.getFileDB().put(md5, result);
+//							lock_w_mapdb.lock();
+//							MapDBFactory.getFileDB().put(md5, result);
 //							mapDBUtil.commit();
-							lock_w_mapdb.unlock();
+//							lock_w_mapdb.unlock();
+							CassandraFactory.getDefaultFactory().saveMD5(md5, result);
 						}
 						setResult(result);
 					} catch (Exception e) {
@@ -334,10 +336,11 @@ public class DownloadSingle {
 			if (null == result)
 				result = url;
 			// else {// 握手异常未解决
-			lock_w_mapdb.lock();
-			MapDBFactory.getUrlDB().put(url, result);
+//			lock_w_mapdb.lock();
+//			MapDBFactory.getUrlDB().put(url, result);
 //			mapDBUtil.commit();
-			lock_w_mapdb.unlock();
+//			lock_w_mapdb.unlock();
+			CassandraFactory.getDefaultFactory().saveURL(url, result);
 			// }
 		}
 		LogUtil.msgLog.showMsg("+	{0}	{1}", result, url);

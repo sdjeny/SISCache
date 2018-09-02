@@ -58,7 +58,7 @@ public class DownloadList {
 				list_url = ConfUtil.getDefaultConf().getProperties().getProperty("list_url");
 				for (int i = from; i <= to; i++) {
 					if (i != from && ((i - from) % pageU == 0)) {
-						for (int j = 0; j < 3; j++) {
+						for (int j = 1; j < 3; j++) {
 							list(j);
 						}
 						LogUtil.refreshMsgLog();

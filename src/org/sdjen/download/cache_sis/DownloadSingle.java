@@ -42,6 +42,7 @@ public class DownloadSingle {
 //	private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
 	private int download_threads = 6;
+	private org.sdjen.download.cache_sis.log.CassandraFactory cassandraFactory;
 
 	public DownloadSingle() throws Exception {
 		ConfUtil conf = ConfUtil.getDefaultConf();
@@ -69,6 +70,7 @@ public class DownloadSingle {
 		}
 		if (isStore)
 			conf.store();
+		cassandraFactory = CassandraFactory.getDefaultFactory();
 	}
 
 	public DownloadSingle setHttpUtil(HttpFactory httpUtil) {
@@ -266,10 +268,11 @@ public class DownloadSingle {
 	 *            下载地址
 	 * @param path
 	 *            存放的路径
+	 * @throws IOException 
 	 * @throws Exception
 	 */
 	private String downloadFile(final String url, final String path, final String name) {
-		String result = CassandraFactory.getDefaultFactory().getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
+		String result = cassandraFactory.getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
 		if (null == result) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {
@@ -287,7 +290,7 @@ public class DownloadSingle {
 						} catch (Exception e) {
 						}
 						String md5 = getMD5(bytes);
-						String result = CassandraFactory.getDefaultFactory().getMD5_Path(md5);//MapDBFactory.getFileDB().get(md5);
+						String result = cassandraFactory.getMD5_Path(md5);//MapDBFactory.getFileDB().get(md5);
 						if (null == result) {
 							result = path;
 							if (bytes.length < length_flag_min_byte)
@@ -317,7 +320,7 @@ public class DownloadSingle {
 //							MapDBFactory.getFileDB().put(md5, result);
 //							mapDBUtil.commit();
 //							lock_w_mapdb.unlock();
-							CassandraFactory.getDefaultFactory().saveMD5(md5, result);
+							cassandraFactory.saveMD5(md5, result);
 						}
 						setResult(result);
 					} catch (Exception e) {
@@ -340,7 +343,7 @@ public class DownloadSingle {
 //			MapDBFactory.getUrlDB().put(url, result);
 //			mapDBUtil.commit();
 //			lock_w_mapdb.unlock();
-			CassandraFactory.getDefaultFactory().saveURL(url, result);
+			cassandraFactory.saveURL(url, result);
 			// }
 		}
 		LogUtil.msgLog.showMsg("+	{0}	{1}", result, url);

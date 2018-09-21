@@ -127,7 +127,36 @@ public class CassandraFactory {
 	public Session session;
 	private static CassandraFactory factory;
 
-	public static synchronized CassandraFactory getDefaultFactory() {
+	private String addresses = "192.168.0.231";
+	private int port = 9042;
+	private String keyspace = "mydb";
+
+	public CassandraFactory() throws IOException {
+		ConfUtil conf = ConfUtil.getDefaultConf();
+		boolean isStore = false;
+		String value = conf.getProperties().getProperty("cassandra_addresses");
+		if (null == value || value.isEmpty()) {
+			conf.getProperties().setProperty("cassandra_addresses", addresses);
+			isStore = true;
+		} else
+			addresses = value;
+		value = conf.getProperties().getProperty("cassandra_keyspace");
+		if (null == value || value.isEmpty()) {
+			conf.getProperties().setProperty("cassandra_keyspace", keyspace);
+			isStore = true;
+		} else
+			keyspace = value;
+		try {
+			port = Integer.valueOf(conf.getProperties().getProperty("cassandra_port"));
+		} catch (Exception e) {
+			conf.getProperties().setProperty("cassandra_port", String.valueOf(port));
+			isStore = true;
+		}
+		if (isStore)
+			conf.store();
+	}
+
+	public static synchronized CassandraFactory getDefaultFactory() throws IOException {
 		if (null == factory)
 			factory = new CassandraFactory().connect();
 		return factory;
@@ -140,8 +169,8 @@ public class CassandraFactory {
 
 	public CassandraFactory connect() {
 		cluster = Cluster.builder()//
-				.addContactPoints("192.168.0.231")// addContactPoints:cassandra节点ip
-				.withPort(9042)// withPort:cassandra节点端口 默认9042
+				.addContactPoints(addresses.split(","))// addContactPoints:cassandra节点ip
+				.withPort(port)// withPort:cassandra节点端口 默认9042
 				// .withCredentials("cassandra", "cassandra")//
 				// withCredentials:cassandra用户名密码，如果cassandra.yaml里authenticator：AllowAllAuthenticator可以不用配置
 				.withPoolingOptions(new PoolingOptions()
@@ -154,9 +183,9 @@ public class CassandraFactory {
 				.build();
 		session = cluster.connect();
 		// 创建键空间 单数据中心 复制策略 ：1
-		String cql = "CREATE KEYSPACE if not exists mydb WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}";
+		String cql = "CREATE KEYSPACE if not exists " + keyspace + " WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}";
 		session.close();
-		session = cluster.connect("mydb");// 指定键空间，cql里不需要再指明
+		session = cluster.connect(keyspace);// 指定键空间，cql里不需要再指明
 		session.execute(cql);
 		// 创建表a,b为复合主键 a：分区键，b：集群键
 		session.execute("CREATE TABLE if not exists test (a text,b int,c text,d int,PRIMARY KEY (a, b))");

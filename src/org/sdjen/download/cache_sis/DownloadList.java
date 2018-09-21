@@ -41,6 +41,8 @@ public class DownloadList {
 			try {
 				if (conf.getProperties().containsKey("auto_first"))
 					autoFirst = Boolean.valueOf(conf.getProperties().getProperty("auto_first"));
+				else 
+					conf.getProperties().setProperty("auto_first", String.valueOf(autoFirst));
 			} catch (Exception e) {
 			}
 			int from = Integer.valueOf(conf.getProperties().getProperty("list_start"));

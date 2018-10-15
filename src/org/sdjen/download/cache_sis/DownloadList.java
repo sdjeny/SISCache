@@ -101,7 +101,8 @@ public class DownloadList {
 			resultList.add(executor.submit(new Callable<Long>() {
 				public Long call() throws Exception {
 					String date = "";
-					for (org.jsoup.nodes.Element s : e.select("td.author").select("em")) {
+					for (org.jsoup.nodes.Element s : e.select("td.author")// class=authorµÄtd
+							.select("em")) {
 						String text = s.text();
 						try {
 							SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");

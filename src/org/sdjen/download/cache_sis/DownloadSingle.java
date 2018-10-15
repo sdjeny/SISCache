@@ -39,7 +39,7 @@ public class DownloadSingle {
 	private long length_flag_min_byte = 20000;
 	private long length_flag_max_byte = 70000;
 	private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
-//	private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
+	// private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
 	private int download_threads = 6;
 	private org.sdjen.download.cache_sis.log.CassandraFactory cassandraFactory;
@@ -100,7 +100,7 @@ public class DownloadSingle {
 		// ConfUtil.getDefaultConf().getProperties().setProperty("list_url",
 		// "https://club.autohome.com.cn/bbs/thread/");
 		LogUtil.init();
-//		MapDBFactory.init();
+		// MapDBFactory.init();
 		HttpFactory httpUtil = new HttpFactory();
 		try {
 			// System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
@@ -116,12 +116,13 @@ public class DownloadSingle {
 			// util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg",
 			// "rr", "2.jpg");
 			util.downloadFile("https://e.piclect.com/o180829_110f6.jpg", "rr", "11.jpg");
-//			util.downloadFile("https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg", "rr", "11.jpg");
+			// util.downloadFile("https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg",
+			// "rr", "11.jpg");
 			// https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg
 			// https://www1.wi.to/2018/03/29/04f7c405227da092576b127e640d07f8.jpg
 		} finally {
 			httpUtil.finish();
-//			MapDBFactory.finishAll();
+			// MapDBFactory.finishAll();
 			LogUtil.finishAll();
 		}
 	}
@@ -139,10 +140,11 @@ public class DownloadSingle {
 	 */
 	public boolean startDownload(final String url, String save_name, String dateStr) throws Throwable {
 		String subKey;
-		if (null == dateStr || dateStr.isEmpty())
+		try {
+			subKey = dateStr.substring(0, Math.min(7, dateStr.length())) + "/" + dateStr.substring(8, dateStr.length()).replace("-", "");
+		} catch (Exception e1) {
 			subKey = "unknow";
-		else
-			subKey = dateStr.substring(0, Math.min(7, dateStr.length()));
+		}
 		final String sub_images = "images/" + subKey;
 		String sub_html = "html/" + subKey;
 		final String sub_torrent = "torrent/" + subKey;
@@ -257,7 +259,7 @@ public class DownloadSingle {
 
 	private void replaceAll(String src, String targ) {
 		lock_w_replace.lock();
-		html = html.replace("\"" + src + "\"", "\"../../" + targ + "\"");
+		html = html.replace("\"" + src + "\"", "\"../../../" + targ + "\"");
 		lock_w_replace.unlock();
 	}
 
@@ -268,7 +270,7 @@ public class DownloadSingle {
 	 *            下载地址
 	 * @param path
 	 *            存放的路径
-	 * @throws IOException 
+	 * @throws IOException
 	 * @throws Exception
 	 */
 	private String downloadFile(final String url, final String path, final String name) {
@@ -290,7 +292,7 @@ public class DownloadSingle {
 						} catch (Exception e) {
 						}
 						String md5 = getMD5(bytes);
-						String result = cassandraFactory.getMD5_Path(md5);//MapDBFactory.getFileDB().get(md5);
+						String result = cassandraFactory.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
 						if (null == result) {
 							result = path;
 							if (bytes.length < length_flag_min_byte)
@@ -316,10 +318,10 @@ public class DownloadSingle {
 								}
 								length_download += bytes.length;
 							}
-//							lock_w_mapdb.lock();
-//							MapDBFactory.getFileDB().put(md5, result);
-//							mapDBUtil.commit();
-//							lock_w_mapdb.unlock();
+							// lock_w_mapdb.lock();
+							// MapDBFactory.getFileDB().put(md5, result);
+							// mapDBUtil.commit();
+							// lock_w_mapdb.unlock();
 							cassandraFactory.saveMD5(md5, result);
 						}
 						setResult(result);
@@ -339,10 +341,10 @@ public class DownloadSingle {
 			if (null == result)
 				result = url;
 			// else {// 握手异常未解决
-//			lock_w_mapdb.lock();
-//			MapDBFactory.getUrlDB().put(url, result);
-//			mapDBUtil.commit();
-//			lock_w_mapdb.unlock();
+			// lock_w_mapdb.lock();
+			// MapDBFactory.getUrlDB().put(url, result);
+			// mapDBUtil.commit();
+			// lock_w_mapdb.unlock();
 			cassandraFactory.saveURL(url, result);
 			// }
 		}

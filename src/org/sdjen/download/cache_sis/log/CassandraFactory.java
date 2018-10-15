@@ -67,6 +67,7 @@ public class CassandraFactory {
 					.withPort(port).build();
 			Session session = cluster.connect(keyspace);
 		}
+		ConfUtil.getDefaultConf().getProperties().setProperty("cassandra_addresses", "192.168.0.237");
 		CassandraFactory factory = new CassandraFactory().connect();
 		// {
 		// MapDBFactory.init();
@@ -109,13 +110,22 @@ public class CassandraFactory {
 		// }
 		long l = System.currentTimeMillis();
 		try {
-			for (String key : ("1m3rco0n43fg3ev63gz5u5dxg" + ",1anc6byrmqnrvsd7s20ark1zl" + ",ez9acoxzotp6btmtr93877f8m"
-					+ ",apw4k2k821uk0ishkga1m8fu8").split(",")) {
+			for (String key : (//
+			"1m3rco0n43fg3ev63gz5u5dxg"//
+					+ ",1anc6byrmqnrvsd7s20ark1zl"//
+					+ ",ez9acoxzotp6btmtr93877f8m"//
+					+ ",apw4k2k821uk0ishkga1m8fu8"//
+			).split(",")) {
 				ResultSet resultSet = factory.getSession().execute("select path from md5_path where key=?", key);
 				for (Row row : resultSet) {
 					System.out.println((System.currentTimeMillis() - l) + " " + row.getString("path"));
 				}
 			}
+			ResultSet resultSet = factory.getSession().execute("select count(key) from md5_path");
+			// for (Row row : resultSet) {
+			// System.out.println((System.currentTimeMillis() - l) + " " +
+			// row.getLong(0));
+			// }
 		} finally {
 			factory.session.close();
 			factory.cluster.close();
@@ -127,7 +137,7 @@ public class CassandraFactory {
 	public Session session;
 	private static CassandraFactory factory;
 
-	private String addresses = "192.168.0.231";
+	private String addresses = "192.168.0.233";
 	private int port = 9042;
 	private String keyspace = "mydb";
 

@@ -5,26 +5,48 @@ import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.jsoup.Jsoup;
-import org.sdjen.download.cache_sis.es.GetConnection;
+import org.sdjen.download.cache_sis.ESMap;
+import org.sdjen.download.cache_sis.json.JsonUtil;
 
-import com.google.gson.Gson;
+import test.GetConnection;
 
 public class File2DB {
-	static Logger logger = Logger.getLogger(File2DB.class.getName());
+	static Log logger = LogFactory.getLog(File2DB.class.getClass());
+	// private org.sdjen.download.cache_sis.log.CassandraFactory
+	// cassandraFactory;
 
 	public static void main(String[] args) throws Throwable {
-		logger.log(Level.INFO, Arrays.asList(args).toString());
+		// PropertyConfigurator.configure("config/log4j.properties");
+		// System.setProperty("org.apache.commons.logging.Log",
+		// "org.apache.commons.logging.impl.SimpleLog");
+		// System.setProperty("org.apache.commons.logging.simplelog.showdatetime",
+		// "true");
+		// System.setProperty("org.apache.commons.logging.simplelog.log.org.apache.commons.httpclient",
+		// "stdout");
+		// System.out.println(logger);
+		logger.debug(Arrays.asList(args).toString());
 		File root = new File(null != args && args.length > 0 ? args[0] : "\\\\192.168.0.233/d/SISCACHE/html");
 		File2DB file2db = new File2DB();
 		file2db.listFiles(root);
+		file2db.finish();
+	}
+
+	GetConnection connection;
+
+	public File2DB() throws IOException {
+		connection = new GetConnection();
+	}
+
+	private void finish() {
+		connection.finish();
 	}
 
 	private void listFiles(File file) throws Throwable {
@@ -43,7 +65,7 @@ public class File2DB {
 			try {
 				analyticalHtml(text);
 			} catch (Exception e) {
-				logger.log(Level.SEVERE, file.getPath(), e);
+				logger.error(file.getPath(), e);
 			}
 			// System.out.println(text);
 		}
@@ -71,29 +93,84 @@ public class File2DB {
 		String page = null == pages ? "1" : pages.select("strong").text();
 		String dat = null;
 		String f = "1";
-		for (org.jsoup.nodes.Element e : doument.select("div.mainbox")//// class=mainboxµƒdiv
+		for (org.jsoup.nodes.Element e : doument.select("div.mainbox")//// class=mainboxÁöÑdiv
 				.select("table")//
 				.select("tbody")//
 				.select("tr")//
 				.select("td.postcontent")//
 				.select("div.postinfo")//
 		) {
-			f = e.select("strong").first().ownText().replace("¬•", "");
+			f = e.select("strong").first().ownText().replace("Ê•º", "");
 			if ("1".equals(f))
-				dat = e.ownText().replace("∑¢±Ì”⁄ ", "");
+				dat = e.ownText().replace("ÂèëË°®‰∫é ", "");
 		}
-		logger.log(Level.INFO, MessageFormat.format("{0}	{1}	{2}	{3}	{4}", id, dat, type, title, page));
-		String key = id+"_"+page;
-		Gson gson = new Gson();
+		logger.info(MessageFormat.format("{0}	{1}	{2}	{3}	{4}", id, dat, type, title, page));
+		boolean update = false;
+		{
+
+			for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
+				String href = e.attr("href");
+				if (!href.startsWith("../"))
+					continue;
+				if (href.startsWith("../../../torrent/m")) {
+					update = true;
+					href = href.substring(3);
+					e.attr("href", href);
+				}
+				final String t = e.text();
+				// logger.info(t + " : " + href + " : " + e);
+			}
+			for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
+				String src = e.attr("src");
+				if (!src.startsWith("../"))
+					continue;
+				if (src.startsWith("../../../images/201")) {
+					update = true;
+					src = src.substring(3);
+					e.attr("src", src);
+				}
+				String md5 = src.substring(src.lastIndexOf("/") + 1, src.lastIndexOf("."));
+				String path = src.replace("../", "");
+				Map<String, Object> json = new HashMap<>();
+				json.put("key", md5);
+				json.put("path", path);
+				json.put("type", "path");
+				// logger.info(gson.toJson(json));
+				String ss = connection.doGet("http://192.168.0.237:9200/test_md/_doc/" + md5, new HashMap<>(), new HashMap<>());
+				ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
+				if (!esMap.containsKey("found") || !esMap.get("found", Boolean.class)) {
+					String s = connection.doPost("http://192.168.0.237:9200/test_md/_doc/" + md5, JsonUtil.toJson(json), new HashMap<>());
+					// logger.info(s);
+				}
+			}
+		}
+		if (update)
+			text = doument.html();
+		String key = id + "_" + page;
 		Map<String, Object> json = new HashMap<>();
 		json.put("id", id);
-		json.put("dat", dat);
+		if (null != dat) {
+			json.put("date_str", dat);
+			json.put("date", new SimpleDateFormat("yyyy-MM-dd").parse(dat));
+			json.put("datetime", new SimpleDateFormat("yyyy-MM-dd HH:mm").parse(dat));
+		}
+		json.put("fid", 143);
 		json.put("type", type);
 		json.put("title", title);
 		json.put("page", page);
 		json.put("context", text);
-		GetConnection.doPost("http://192.168.0.237:9200/test/a/"+key, gson.toJson(json), Collections.singletonMap("Content-Type", "application/json"));
+		String r = connection.doPost("http://192.168.0.237:9200/test_html/_doc/" + key, JsonUtil.toJson(json), new HashMap<>());
 	}
+
+	// public String getURL_Path(String path) {
+	// ResultSet resultSet = cassandraFactory.getSession().execute("select key
+	// from url_path where path='"
+	// +path+ "' allow filtering");
+	// for (Row row : resultSet) {
+	// return row.getString("key");
+	// }
+	// return null;
+	// }
 
 	private String getContext(File file) throws Throwable {
 		String charset = "GBK";

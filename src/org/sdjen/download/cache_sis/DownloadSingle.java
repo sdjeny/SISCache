@@ -27,7 +27,7 @@ import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
 
 public class DownloadSingle {
-	private String html = "";// ´æ·ÅÍøÒ³HTMLÔ´´úÂë
+	private String html = "";
 	public String chatset = "utf8";
 	private String save_path = "C:\\Users\\jimmy.xu\\Downloads\\htmlhelp";
 	// private String sub_images = "images";
@@ -132,7 +132,7 @@ public class DownloadSingle {
 	}
 
 	/**
-	 * ¿ªÊ¼ÏÂÔØ
+	 * ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
 	 * 
 	 * @throws Throwable
 	 * 
@@ -151,23 +151,20 @@ public class DownloadSingle {
 		save_name = getFileName(save_name);
 		File newFile = new File(save_path + "/" + sub_html + "/" + save_name);
 		if (newFile.exists()) {
-			// showMsg("ÒÑ´æÔÚ {0}", newFile);
 			return false;
 		}
-		// ÏÂÔØÍøÒ³html´úÂë
 		String tmp_html = httpUtil.getHTML(url);
 		lock_w_html.lock();
 		File savePath = new File(save_path);
 		if (!savePath.exists())
 			savePath.mkdirs();
-		// ´´½¨±ØÒªµÄÒ»Ð©ÎÄ¼þ¼Ð
 		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
 				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
 				, sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
-				LogUtil.msgLog.showMsg("{0}ÎÄ¼þ¼Ð {0}	²»´æÔÚ£¬ÒÑ´´½¨£¡", f);
+				LogUtil.msgLog.showMsg("{0}ï¿½Ä¼ï¿½ï¿½ï¿½ {0}	ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½", f);
 			}
 		}
 		length_download = 0;
@@ -185,11 +182,9 @@ public class DownloadSingle {
 						String newName = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + text);
 						String downloadUrl = httpUtil.joinUrlPath(url, href);
 						newName = downloadFile(downloadUrl, sub_torrent, newName);
-						// if (!name.equals(downloadUrl))
-						// replaceAll(href, name);
 						return new String[] { href, newName };
 					}
-				}));// ½«ÈÎÎñÖ´ÐÐ½á¹û´æ´¢µ½ListÖÐ
+				}));
 			}
 		}
 		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
@@ -208,14 +203,14 @@ public class DownloadSingle {
 					// replaceAll(src, newName);
 					return new String[] { src, newName };
 				}
-			}));// ½«ÈÎÎñÖ´ÐÐ½á¹û´æ´¢µ½ListÖÐ
+			}));// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð½ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½Listï¿½ï¿½
 		}
 		executor.shutdown();
 		for (Future<String[]> fs : resultList) {
 			try {
 				// while (!fs.isDone())
-				// ;// Future·µ»ØÈç¹ûÃ»ÓÐÍê³É£¬ÔòÒ»Ö±Ñ­»·µÈ´ý£¬Ö±µ½Future·µ»ØÍê³É
-				String[] names = fs.get(1, TimeUnit.MINUTES);// ¸÷¸öÏß³Ì£¨ÈÎÎñ£©Ö´ÐÐµÄ½á¹û
+				// ;// Futureï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½Ò»Ö±Ñ­ï¿½ï¿½ï¿½È´ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Futureï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+				String[] names = fs.get(1, TimeUnit.MINUTES);// ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì£ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ÐµÄ½ï¿½ï¿½
 				if (null != names && !names[0].equals(names[1])) {
 					replaceAll(names[0], names[1]);
 				}
@@ -226,7 +221,7 @@ public class DownloadSingle {
 			} finally {
 			}
 		}
-		// ±£´æÍøÒ³HTMLµ½ÎÄ¼þ
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³HTMLï¿½ï¿½ï¿½Ä¼ï¿½
 		try {
 			int length = html.length();
 			length_download += html.length();
@@ -238,16 +233,16 @@ public class DownloadSingle {
 				bw.close();
 				writer.close();
 			} else {
-				LogUtil.errLog.showMsg("X	³¤¶È¹ý¶Ì	{0}	{1}	{2}", length, save_name, url);
+				LogUtil.errLog.showMsg("X	ï¿½ï¿½ï¿½È¹ï¿½ï¿½ï¿½	{0}	{1}	{2}", length, save_name, url);
 				return false;
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
-			LogUtil.errLog.showMsg("	Òì³££º	{0}	{1}		{2}", save_name, url, e);
+			LogUtil.errLog.showMsg("	ï¿½ì³£ï¿½ï¿½	{0}	{1}		{2}", save_name, url, e);
 			return false;
 		} finally {
 			httpUtil.getPoolConnManager().closeExpiredConnections();
-			LogUtil.msgLog.showMsg("	±¾´ÎÏÂÔØ	{0}£¨×Ö½Ú£©", length_download);
+			LogUtil.msgLog.showMsg("	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½	{0}ï¿½ï¿½ï¿½Ö½Ú£ï¿½", length_download);
 			lock_w_html.unlock();
 		}
 		return true;
@@ -264,12 +259,12 @@ public class DownloadSingle {
 	}
 
 	/**
-	 * ¸ù¾ÝURLÏÂÔØÄ³¸öÎÄ¼þ
+	 * ï¿½ï¿½ï¿½ï¿½URLï¿½ï¿½ï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ä¼ï¿½
 	 * 
 	 * @param url
-	 *            ÏÂÔØµØÖ·
+	 *            ï¿½ï¿½ï¿½Øµï¿½Ö·
 	 * @param path
-	 *            ´æ·ÅµÄÂ·¾¶
+	 *            ï¿½ï¿½Åµï¿½Â·ï¿½ï¿½
 	 * @throws IOException
 	 * @throws Exception
 	 */
@@ -335,12 +330,12 @@ public class DownloadSingle {
 				httpUtil.execute(url, executor);
 				result = executor.getResult();
 			} catch (Exception e) {
-				LogUtil.errLog.showMsg("	Òì³££º	{0}	{1}", url, e);
+				LogUtil.errLog.showMsg("	ï¿½ì³£ï¿½ï¿½	{0}	{1}", url, e);
 				e.printStackTrace();
 			}
 			if (null == result)
 				result = url;
-			// else {// ÎÕÊÖÒì³£Î´½â¾ö
+			// else {// ï¿½ï¿½ï¿½ï¿½ï¿½ì³£Î´ï¿½ï¿½ï¿½
 			// lock_w_mapdb.lock();
 			// MapDBFactory.getUrlDB().put(url, result);
 			// mapDBUtil.commit();

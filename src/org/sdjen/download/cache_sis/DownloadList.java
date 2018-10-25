@@ -15,7 +15,6 @@ import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.CassandraFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
-import org.sdjen.download.cache_sis.log.MapDBFactory;
 
 public class DownloadList {
 	private DownloadSingle downloadSingle;
@@ -32,7 +31,6 @@ public class DownloadList {
 	public DownloadList() throws Throwable {
 		conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
-		MapDBFactory.init();
 		downloadSingle = new DownloadSingle();
 		httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
@@ -68,14 +66,13 @@ public class DownloadList {
 					list(i);
 					if (autoFirst) {
 						conf.getProperties().setProperty("list_start", String.valueOf(i));
-						conf.store();// ³É¹¦Ôò±£´æ£¬·½±ãÖÐ¶Ïºó¼ÌÐøÖ´ÐÐ
+						conf.store();// ï¿½É¹ï¿½ï¿½ò±£´æ£¬ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶Ïºï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½
 					}
 				}
 			} finally {
 			}
 		} finally {
 			httpUtil.finish();
-			MapDBFactory.finishAll();
 			LogUtil.finishAll();
 			CassandraFactory.getDefaultFactory().finish();
 			// downloadSingle.startDownload("http://www.sexinsex.net/bbs/thread-7701385-1-9.html",
@@ -86,7 +83,7 @@ public class DownloadList {
 			// new
 			// DownloadSingle_HttpClient().setConfUtil(confUtil).startDownload("http://tieba.baidu.com/p/3986480945",
 			// "EEE.html");
-			System.out.println("Íê³É£¡");
+			System.out.println("ï¿½ï¿½É£ï¿½");
 		}
 	}
 
@@ -101,7 +98,7 @@ public class DownloadList {
 			resultList.add(executor.submit(new Callable<Long>() {
 				public Long call() throws Exception {
 					String date = "";
-					for (org.jsoup.nodes.Element s : e.select("td.author")// class=authorµÄtd
+					for (org.jsoup.nodes.Element s : e.select("td.author")// class=authorï¿½ï¿½td
 							.select("em")) {
 						String text = s.text();
 						try {
@@ -119,7 +116,7 @@ public class DownloadList {
 								if (null == result)
 									result = 0l;
 								result += downloadSingle.getLength_download();
-								break;// Ö»¹Ø×¢µÚÒ»ÌõÃüÖÐ
+								break;// Ö»ï¿½ï¿½×¢ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 							}
 						} catch (Throwable e1) {
 							e1.printStackTrace();
@@ -127,15 +124,15 @@ public class DownloadList {
 					}
 					return result;
 				}
-			}));// ½«ÈÎÎñÖ´ÐÐ½á¹û´æ´¢µ½ListÖÐ
+			}));// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð½ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½Listï¿½ï¿½
 		}
 		executor.shutdown();
 		long count = 0, length_download = 0;
 		for (Future<Long> fs : resultList) {
 			try {
 				// while (!fs.isDone())
-				// ;// Future·µ»ØÈç¹ûÃ»ÓÐÍê³É£¬ÔòÒ»Ö±Ñ­»·µÈ´ý£¬Ö±µ½Future·µ»ØÍê³É
-				Long length = fs.get(30, TimeUnit.MINUTES);// ¸÷¸öÏß³Ì£¨ÈÎÎñ£©Ö´ÐÐµÄ½á¹û
+				// ;// Futureï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½Ò»Ö±Ñ­ï¿½ï¿½ï¿½È´ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Futureï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+				Long length = fs.get(30, TimeUnit.MINUTES);// ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì£ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ÐµÄ½ï¿½ï¿½
 				if (null != length) {
 					length_download += length;
 					count++;
@@ -147,8 +144,6 @@ public class DownloadList {
 			} finally {
 			}
 		}
-		LogUtil.lstLog.showMsg("	Total:	{0}	{1}(byte)	map_url_size:{2}	map_file_size:{3}", count, length_download,
-				MapDBFactory.getUrlDB().size(), MapDBFactory.getFileDB().size());
 		// httpUtil.getPoolConnManager().closeExpiredConnections();
 	}
 

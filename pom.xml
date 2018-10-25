@@ -4,9 +4,13 @@
 	<groupId>org.sdjen</groupId>
 	<artifactId>SISCache</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
+
 	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<maven.compiler.encoding>UTF-8</maven.compiler.encoding>
 		<!-- project.build.sourceEncoding>UTF-8</project.build.sourceEncoding -->
-		<tomcat.version>9.0.11</tomcat.version>
+		<!--tomcat.version>9.0.11</tomcat.version -->
 		<!-- <tomcat.version>7.0.32</tomcat.version> -->
 	</properties>
 	<build>
@@ -60,7 +64,18 @@
 			</plugin>
 		</plugins>
 	</build>
+	<!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-parent -->
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.0.5.RELEASE</version>
+	</parent>
+
 	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
 		<!-- https://mvnrepository.com/artifact/junit/junit -->
 		<dependency>
 			<groupId>junit</groupId>
@@ -87,18 +102,13 @@
 			<version>1.11.3</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.mapdb/mapdb -->
-		<dependency>
-			<groupId>org.mapdb</groupId>
-			<artifactId>mapdb</artifactId>
-			<version>3.0.5</version>
-		</dependency>
+		<!--dependency> <groupId>org.mapdb</groupId> <artifactId>mapdb</artifactId> 
+			<version>3.0.5</version> </dependency -->
 		<!-- https://mvnrepository.com/artifact/org.hsqldb/hsqldb -->
-		<dependency>
-			<groupId>org.hsqldb</groupId>
-			<artifactId>hsqldb</artifactId>
-			<version>2.4.1</version>
-			<!-- scope>test</scope -->
-		</dependency>
+		<!--dependency> <groupId>org.hsqldb</groupId> <artifactId>hsqldb</artifactId> 
+			<version>2.4.1</version -->
+		<!-- scope>test</scope -->
+		<!--/dependency -->
 		<!-- https://mvnrepository.com/artifact/com.datastax.cassandra/cassandra-driver-core -->
 		<dependency>
 			<groupId>com.datastax.cassandra</groupId>
@@ -108,18 +118,12 @@
 		<!-- dependency> <groupId>com.datastax.cassandra</groupId> <artifactId>cassandra-driver-extras</artifactId> 
 			<version>3.1.1</version> </dependency -->
 		<!-- https://mvnrepository.com/artifact/org.apache.tomcat.embed/tomcat-embed-core -->
-		<dependency>
-			<groupId>org.apache.tomcat.embed</groupId>
-			<artifactId>tomcat-embed-core</artifactId>
-			<version>${tomcat.version}</version>
-		</dependency>
+		<!--dependency> <groupId>org.apache.tomcat.embed</groupId> <artifactId>tomcat-embed-core</artifactId> 
+			<version>${tomcat.version}</version> </dependency -->
 		<!-- Elasticsearch核心依赖包 -->
 		<!-- https://mvnrepository.com/artifact/org.elasticsearch.client/elasticsearch-rest-client -->
-		<dependency>
-			<groupId>org.elasticsearch.client</groupId>
-			<artifactId>elasticsearch-rest-client</artifactId>
-			<version>6.4.2</version>
-		</dependency>
+		<!--dependency> <groupId>org.elasticsearch.client</groupId> <artifactId>elasticsearch-rest-client</artifactId> 
+			<version>6.4.2</version> </dependency -->
 
 		<!-- https://mvnrepository.com/artifact/org.elasticsearch.client/transport -->
 		<!--dependency> <groupId>org.elasticsearch.client</groupId> <artifactId>transport</artifactId> 
@@ -129,16 +133,16 @@
 			<version>6.4.2</version> </dependency -->
 
 		<!-- 日志依赖 -->
-		<!-- dependency> <groupId>org.slf4j</groupId> <artifactId>slf4j-log4j12</artifactId> 
-			<version>1.7.21</version> <scope>test</scope> </dependency -->
-		<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
-		<!--dependency> <groupId>org.apache.logging.log4j</groupId> <artifactId>log4j-core</artifactId> 
-			<version>2.8.2</version> </dependency -->
+		<!--使用logback -->
+		<!--dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-logging</artifactId>
+		</dependency-->
 		<!-- https://mvnrepository.com/artifact/com.google.code.gson/gson -->
-		<dependency>
+		<!--dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>2.8.0</version>
-		</dependency>
+		</dependency-->
 	</dependencies>
 </project>

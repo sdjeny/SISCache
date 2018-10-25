@@ -3,9 +3,6 @@ package org.sdjen.download.cache_sis.log;
 import java.io.IOException;
 import java.util.function.BiConsumer;
 
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
-import org.mapdb.Serializer;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 
 import com.datastax.driver.core.AuthProvider;
@@ -28,46 +25,7 @@ import com.datastax.driver.core.policies.TokenAwarePolicy;
 
 public class CassandraFactory {
 	public static void main(String[] args) throws IOException {
-		if (false) {
-			String[] hosts = new String[] { "192.168.0.231"
-					// "192.168.1.1", "192.168.1.2", "192.168.1.3"//
-			};// cassandraÖ÷»úµØÖ·
-
-			// ÈÏÖ¤ÅäÖÃ
-			AuthProvider authProvider = new PlainTextAuthProvider("ershixiong", "123456");
-
-			LoadBalancingPolicy lbp = new TokenAwarePolicy(DCAwareRoundRobinPolicy.builder().withLocalDc("myDC").build());
-
-			// ¶Á³¬Ê±»òÁ¬½Ó³¬Ê±ÉèÖÃ
-			SocketOptions so = new SocketOptions().setReadTimeoutMillis(3000).setConnectTimeoutMillis(3000);
-
-			// Á¬½Ó³ØÅäÖÃ
-			// PoolingOptions poolingOptions = new
-			// PoolingOptions().setConnectionsPerHost(HostDistance.LOCAL, 2, 3);
-			// ¼¯ÈºÔÚÍ¬Ò»¸ö»ú·¿ÓÃHostDistance.LOCAL ²»Í¬µÄ»ú·¿ÓÃHostDistance.REMOTE
-			// ºöÂÔÓÃHostDistance.IGNORED
-			PoolingOptions poolingOptions = new PoolingOptions().setMaxRequestsPerConnection(HostDistance.LOCAL, 64)// Ã¿¸öÁ¬½Ó×î¶àÔÊÐí64¸ö²¢·¢ÇëÇó
-					.setCoreConnectionsPerHost(HostDistance.LOCAL, 2)// ºÍ¼¯ÈºÀïµÄÃ¿¸ö»úÆ÷¶¼ÖÁÉÙÓÐ2¸öÁ¬½Ó
-					.setMaxConnectionsPerHost(HostDistance.LOCAL, 6);// ºÍ¼¯ÈºÀïµÄÃ¿¸ö»úÆ÷¶¼×î¶àÓÐ6¸öÁ¬½Ó
-
-			// ²éÑ¯ÅäÖÃ
-			// ÉèÖÃÒ»ÖÂÐÔ¼¶±ðANY(0),ONE(1),TWO(2),THREE(3),QUORUM(4),ALL(5),LOCAL_QUORUM(6),EACH_QUORUM(7),SERIAL(8),LOCAL_SERIAL(9),LOCAL_ONE(10);
-			// ¿ÉÒÔÔÚÃ¿´ÎÉú³É²éÑ¯statementµÄÊ±ºòÉèÖÃ£¬Ò²¿ÉÒÔÏñÕâÑùÈ«¾ÖÉèÖÃ
-			QueryOptions queryOptions = new QueryOptions().setConsistencyLevel(ConsistencyLevel.ONE);
-
-			// ÖØÊÔ²ßÂÔ
-			RetryPolicy retryPolicy = DowngradingConsistencyRetryPolicy.INSTANCE;
-
-			int port = 9042;// ¶Ë¿ÚºÅ
-
-			String keyspace = "keyspacename";// ÒªÁ¬½ÓµÄ¿â£¬¿ÉÒÔ²»Ð´
-
-			Cluster cluster = Cluster.builder().addContactPoints(hosts).withAuthProvider(authProvider).withLoadBalancingPolicy(lbp)
-					.withSocketOptions(so).withPoolingOptions(poolingOptions).withQueryOptions(queryOptions).withRetryPolicy(retryPolicy)
-					.withPort(port).build();
-			Session session = cluster.connect(keyspace);
-		}
-		ConfUtil.getDefaultConf().getProperties().setProperty("cassandra_addresses", "192.168.0.237");
+		ConfUtil.getDefaultConf().getProperties().setProperty("cassandra_addresses", "192.168.0.233");
 		CassandraFactory factory = new CassandraFactory().connect();
 		// {
 		// MapDBFactory.init();
@@ -121,7 +79,12 @@ public class CassandraFactory {
 					System.out.println((System.currentTimeMillis() - l) + " " + row.getString("path"));
 				}
 			}
-			ResultSet resultSet = factory.getSession().execute("select count(key) from md5_path");
+//			ResultSet resultSet = factory.getSession().execute("select count(key) from md5_path");
+			ResultSet resultSet = factory.getSession().execute("select key from url_path where path=? allow filtering",
+					"images/2018-08/max/4frj05m0pojt47uo090n026qo.gif");
+			for (Row row : resultSet) {
+				System.out.println(row.getString("key"));
+			}
 			// for (Row row : resultSet) {
 			// System.out.println((System.currentTimeMillis() - l) + " " +
 			// row.getLong(0));
@@ -179,32 +142,32 @@ public class CassandraFactory {
 
 	public CassandraFactory connect() {
 		cluster = Cluster.builder()//
-				.addContactPoints(addresses.split(","))// addContactPoints:cassandra½Úµãip
-				.withPort(port)// withPort:cassandra½Úµã¶Ë¿Ú Ä¬ÈÏ9042
+				.addContactPoints(addresses.split(","))// addContactPoints:cassandraï¿½Úµï¿½ip
+				.withPort(port)// withPort:cassandraï¿½Úµï¿½Ë¿ï¿½ Ä¬ï¿½ï¿½9042
 				// .withCredentials("cassandra", "cassandra")//
-				// withCredentials:cassandraÓÃ»§ÃûÃÜÂë£¬Èç¹ûcassandra.yamlÀïauthenticator£ºAllowAllAuthenticator¿ÉÒÔ²»ÓÃÅäÖÃ
+				// withCredentials:cassandraï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½cassandra.yamlï¿½ï¿½authenticatorï¿½ï¿½AllowAllAuthenticatorï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				.withPoolingOptions(new PoolingOptions()
-						// Ã¿¸öÁ¬½ÓµÄ×î´óÇëÇóÊý 2.0µÄÇý¶¯ºÃÏñÃ»ÓÐÕâ¸ö·½·¨
+						// Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2.0ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 						.setMaxRequestsPerConnection(HostDistance.LOCAL, 32)
-						// ±íÊ¾ºÍ¼¯ÈºÀïµÄ»úÆ÷ÖÁÉÙÓÐ2¸öÁ¬½Ó ×î¶àÓÐ4¸öÁ¬½Ó
+						// ï¿½ï¿½Ê¾ï¿½Í¼ï¿½Èºï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½4ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 						.setCoreConnectionsPerHost(HostDistance.LOCAL, 2).setMaxConnectionsPerHost(HostDistance.LOCAL, 4)
 						.setCoreConnectionsPerHost(HostDistance.REMOTE, 2).setMaxConnectionsPerHost(HostDistance.REMOTE, 4)//
 				)//
 				.build();
 		session = cluster.connect();
-		// ´´½¨¼ü¿Õ¼ä µ¥Êý¾ÝÖÐÐÄ ¸´ÖÆ²ßÂÔ £º1
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Æ²ï¿½ï¿½ï¿½ ï¿½ï¿½1
 		String cql = "CREATE KEYSPACE if not exists " + keyspace + " WITH replication = {'class': 'SimpleStrategy', 'replication_factor': '1'}";
 		session.close();
-		session = cluster.connect(keyspace);// Ö¸¶¨¼ü¿Õ¼ä£¬cqlÀï²»ÐèÒªÔÙÖ¸Ã÷
+		session = cluster.connect(keyspace);// Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½Õ¼ä£¬cqlï¿½ï²»ï¿½ï¿½Òªï¿½ï¿½Ö¸ï¿½ï¿½
 		session.execute(cql);
-		// ´´½¨±ía,bÎª¸´ºÏÖ÷¼ü a£º·ÖÇø¼ü£¬b£º¼¯Èº¼ü
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½a,bÎªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ aï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½bï¿½ï¿½ï¿½ï¿½Èºï¿½ï¿½
 		session.execute("CREATE TABLE if not exists test (a text,b int,c text,d int,PRIMARY KEY (a, b))");
 		session.execute("CREATE TABLE if not exists url_path (key text,path text, PRIMARY KEY (key))");
 		session.execute("CREATE TABLE if not exists md5_path (key text,path text, PRIMARY KEY (key))");
 		return this;
 	}
 
-	private Session getSession() {
+	public Session getSession() {
 		return session;
 	}
 
@@ -233,11 +196,11 @@ public class CassandraFactory {
 	}
 
 	/**
-	 * ²åÈë
+	 * ï¿½ï¿½ï¿½ï¿½
 	 */
 	private void insert() {
 		String cql = "INSERT INTO mydb.test (a , b , c , d ) VALUES (?,?,?,?);";
-		ResultSet resultSet = session.execute(cql, "Hi~ o(*£þ¨Œ£þ*)¥Ö", 8, "²Ý", 10);
+		ResultSet resultSet = session.execute(cql, "Hi~ o(*ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½*)ï¿½ï¿½", 8, "ï¿½ï¿½", 10);
 
 		for (Definition definition : resultSet.getColumnDefinitions()) {
 			System.out.print(definition.getName() + " ");
@@ -252,38 +215,39 @@ public class CassandraFactory {
 	}
 
 	/**
-	 * ÐÞ¸Ä
+	 * ï¿½Þ¸ï¿½
 	 */
 	private void update() {
-		// a,bÊÇ¸´ºÏÖ÷¼ü ËùÒÔÌõ¼þ¶¼Òª´øÉÏ£¬ÉÙÒ»¸ö¶¼»á±¨´í£¬¶øÇÒupdate²»ÄÜÐÞ¸ÄÖ÷¼üµÄÖµ£¬ÕâÓ¦¸ÃºÍcassandraµÄ´æ´¢·½Ê½ÓÐ¹Ø
+		// a,bï¿½Ç¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ï£ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½á±¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½updateï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ãºï¿½cassandraï¿½Ä´æ´¢ï¿½ï¿½Ê½ï¿½Ð¹ï¿½
 		String cql = "UPDATE mydb.test SET d = 1234 WHERE a='aa' and b=2;";
-		// Ò²¿ÉÒÔÕâÑù cassandra²åÈëµÄÊý¾ÝÈç¹ûÖ÷¼üÒÑ¾­´æÔÚ£¬ÆäÊµ¾ÍÊÇ¸üÐÂ²Ù×÷
+		// Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ cassandraï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½Ç¸ï¿½ï¿½Â²ï¿½ï¿½ï¿½
 		String cql2 = "INSERT INTO mydb.test (a,b,d) VALUES ( 'aa',2,1234);";
-		// cql ºÍ cql2 µÄÖ´ÐÐÐ§¹ûÆäÊµÊÇÒ»ÑùµÄ
+		// cql ï¿½ï¿½ cql2 ï¿½ï¿½Ö´ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½
 		session.execute(cql);
 	}
 
 	/**
-	 * É¾³ý
+	 * É¾ï¿½ï¿½
 	 */
 	private void delete() {
-		// É¾³ýÒ»Ìõ¼ÇÂ¼ÀïµÄµ¥¸ö×Ö¶Î Ö»ÄÜÉ¾³ý·ÇÖ÷¼ü£¬ÇÒÒª´øÉÏÖ÷¼üÌõ¼þ
+		// É¾ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Äµï¿½ï¿½ï¿½ï¿½Ö¶ï¿½ Ö»ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		String cql = "DELETE d FROM mydb.test WHERE a='aa' AND b=2;";
-		// É¾³ýÒ»ÕÅ±íÀïµÄÒ»Ìõ»ò¶àÌõ¼ÇÂ¼ Ìõ¼þÀï±ØÐë´øÉÏ·ÖÇø¼ü
+		// É¾ï¿½ï¿½Ò»ï¿½Å±ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½
 		String cql2 = "DELETE FROM mydb.test WHERE a='aa';";
 		session.execute(cql);
 		session.execute(cql2);
 	}
 
 	/**
-	 * ²éÑ¯
+	 * ï¿½ï¿½Ñ¯
 	 */
 	private void query() {
 		String cql = "SELECT * FROM test;";
 		String cql2 = "SELECT a,b,c,d FROM mydb.test;";
 
 		ResultSet resultSet = session.execute(cql);
-		System.out.print("ÕâÀïÊÇ×Ö¶ÎÃû£º");
+		System.out.print("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¶ï¿½ï¿½ï¿½ï¿½ï¿½");
 		for (Definition definition : resultSet.getColumnDefinitions()) {
 			System.out.print(definition.getName() + " ");
 		}

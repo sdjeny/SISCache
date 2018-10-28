@@ -2,6 +2,7 @@ package test;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -11,6 +12,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.servlet.http.HttpServletRequest;
+
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.springframework.boot.SpringApplication;
@@ -19,6 +22,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 @Controller
 @EnableAutoConfiguration
@@ -97,18 +102,37 @@ public class SampleController {
 			} catch (Exception e) {
 				// Collections.singletonMap("match",
 				// Collections.singletonMap("title", search))
+				List<ESMap> shoulds = new ArrayList<>();
+				for (java.util.Map.Entry<Object, Object> entry : ESMap.get().set(10, "phrase").set(5, "most_fields").entrySet()) {
+					for (String s : search.split(" ")) {
+						int boost = (Integer) entry.getKey();
+						ESMap item = ESMap.get()//
+								.set("fields", Arrays.asList("title^5", "context"));
+						if (s.contains("^")) {
+							String[] ss = s.split("\\^");
+							try {
+								boost += Integer.valueOf(ss[1]);
+								s = ss[0];
+							} catch (NumberFormatException e1) {
+							}
+						}
+						item.set("query", s);
+						item.set("boost", boost);
+						item.set("type", entry.getValue());
+						shoulds.add(ESMap.get().set("multi_match", item));
+					}
+				}
+				if (false) {
+					shoulds.add(ESMap.get().set("match"//
+							, ESMap.get().set("title", ESMap.get().set("query", search).set("boost", 2))//
+					)//
+					);
+					shoulds.add(ESMap.get().set("match"//
+							, ESMap.get().set("context", ESMap.get().set("query", search).set("boost", 1))//
+					));
+				}
 				params.put("query"//
-						,
-						ESMap.get().set("bool",
-								ESMap.get().set("should",
-										Arrays.asList(//
-												ESMap.get().set("match"//
-														, ESMap.get().set("title", ESMap.get().set("query", search).set("boost", 2))//
-												)//
-												, ESMap.get().set("match"//
-														, ESMap.get().set("context", ESMap.get().set("query", search).set("boost", 1))//
-												)//
-										))//
+						, ESMap.get().set("bool", ESMap.get().set("should", shoulds)//
 						)//
 				);
 			}
@@ -116,27 +140,45 @@ public class SampleController {
 		params.put("size", size);
 		params.put("from", (page - 1) * size + 1);
 		StringBuffer rst = new StringBuffer();
+		String jsonParams = JsonUtil.toJson(params);
 		try {
-			String jsonParams = JsonUtil.toJson(params);
-			logger.log(Level.FINE, jsonParams);
+			long l = System.currentTimeMillis();
 			String js = getConnection().doPost("http://192.168.0.237:9200/test_html/_doc/_search", jsonParams, new HashMap<>());
-			logger.log(Level.FINE, js);
-			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
-			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits")).get("hits");
-			for (Map<String, Object> hit : hits) {
-				Map<String, Object> _source = (Map<String, Object>) hit.get("_source");
+			// logger.log(Level.INFO, (l = System.currentTimeMillis() - l) + " "
+			// + jsonParams);
+			ESMap r = JsonUtil.toObject(js, ESMap.class);
+			rst.append("total:");
+			rst.append(r.get("hits", ESMap.class).get("total"));
+			rst.append("&nbsp;Take:");
+			rst.append(l);
+			try {
+				ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+				HttpServletRequest request = requestAttributes.getRequest();
+				if (Boolean.valueOf(request.getParameter("debug"))) {
+					rst.append("&nbsp;");
+					rst.append(jsonParams);
+				}
+			} catch (Exception e) {
+				logger.log(Level.SEVERE, e.getMessage(), e);
+			}
+			rst.append("</br><table border='0'>");
+			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
+			for (ESMap hit : hits) {
+				ESMap _source = hit.get("_source", ESMap.class);
 				rst.append("<tbody><tr>");
 				rst.append(String.format("<td>%s</td>", _source.get("date_str")));
 				rst.append(String.format("<td>%s</td>", "    "));
 				rst.append(String.format("<td><a href='/siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>", _source.get("id"),
 						_source.get("title")));
-
 				rst.append("</tr></tbody>");
-				rst.append("</br>");
+				// rst.append("</br>");
 			}
+			rst.append("</table>");
 		} catch (IOException e) {
 			rst.append(e.getMessage());
 			for (java.lang.StackTraceElement element : e.getStackTrace()) {
+				rst.append(jsonParams);
+				rst.append("</br>");
 				rst.append(element.toString());
 			}
 		}

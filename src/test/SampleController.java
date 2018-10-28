@@ -138,7 +138,7 @@ public class SampleController {
 			}
 		}
 		params.put("size", size);
-		params.put("from", (page - 1) * size + 1);
+		params.put("from", (page - 1) * size);
 		StringBuffer rst = new StringBuffer();
 		String jsonParams = JsonUtil.toJson(params);
 		try {

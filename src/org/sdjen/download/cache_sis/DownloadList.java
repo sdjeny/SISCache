@@ -83,7 +83,6 @@ public class DownloadList {
 			// new
 			// DownloadSingle_HttpClient().setConfUtil(confUtil).startDownload("http://tieba.baidu.com/p/3986480945",
 			// "EEE.html");
-			System.out.println("��ɣ�");
 		}
 	}
 
@@ -98,7 +97,7 @@ public class DownloadList {
 			resultList.add(executor.submit(new Callable<Long>() {
 				public Long call() throws Exception {
 					String date = "";
-					for (org.jsoup.nodes.Element s : e.select("td.author")// class=author��td
+					for (org.jsoup.nodes.Element s : e.select("td.author")// class=author的td
 							.select("em")) {
 						String text = s.text();
 						try {

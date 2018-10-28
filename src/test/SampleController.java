@@ -144,8 +144,8 @@ public class SampleController {
 		try {
 			long l = System.currentTimeMillis();
 			String js = getConnection().doPost("http://192.168.0.237:9200/test_html/_doc/_search", jsonParams, new HashMap<>());
-			// logger.log(Level.INFO, (l = System.currentTimeMillis() - l) + " "
-			// + jsonParams);
+			l = System.currentTimeMillis() - l;
+			// logger.log(Level.INFO, l + " " + jsonParams);
 			ESMap r = JsonUtil.toObject(js, ESMap.class);
 			rst.append("total:");
 			rst.append(r.get("hits", ESMap.class).get("total"));

@@ -1,6 +1,11 @@
 package test;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,7 +19,9 @@ import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.ESMap;
+import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -31,6 +38,21 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 public class SampleController {
 	private final static Logger logger = Logger.getLogger(SampleController.class.toString());
 	GetConnection connection;
+	ConfUtil conf;
+
+	private String path_es_start;
+
+	public ConfUtil getConf() throws IOException {
+		if (null == conf)
+			conf = ConfUtil.getDefaultConf();
+		return conf;
+	}
+
+	public String getPath_es_start() throws IOException {
+		if (null == path_es_start)
+			path_es_start = getConf().getProperties().getProperty("path_es_start");
+		return path_es_start;
+	}
 
 	public GetConnection getConnection() throws IOException {
 		if (null == connection) {
@@ -39,10 +61,82 @@ public class SampleController {
 		return connection;
 	}
 
-	@RequestMapping("/")
+	@RequestMapping("/hello")
 	@ResponseBody
 	String home() {
 		return "Hello World!";
+	}
+
+	File cacheResultFile;
+
+	public File getCacheResultFile() throws IOException {
+		if (null == cacheResultFile) {
+
+			ConfUtil conf = ConfUtil.getDefaultConf();
+			String save_path = conf.getProperties().getProperty("save_path");
+			String charset = conf.getProperties().getProperty("chatset");
+			cacheResultFile = new File(save_path + "/download.log");
+		}
+		return cacheResultFile;
+	}
+
+	@RequestMapping("/cache_result")
+	@ResponseBody
+	String cache_result() {
+		StringBuilder result = new StringBuilder(
+		// " <meta http-equiv='Content-Type' content='text/html; charset=gb2312'
+		// /> "
+		);
+		BufferedReader reader = null;
+		try {
+			File file = getCacheResultFile();
+			reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "GBK"));
+			String tempString = null;
+			while ((tempString = reader.readLine()) != null) {
+				result.append(tempString).append("<br>");
+			}
+			reader.close();
+		} catch (IOException e) {
+			result.append(e.getMessage());
+			// e.printStackTrace();
+		} finally {
+			if (reader != null) {
+				try {
+					reader.close();
+				} catch (IOException e1) {
+				}
+			}
+		}
+		return result.toString();
+	}
+
+	@RequestMapping("/cache")
+	String cache() {
+		return cache(1, 1);
+	}
+
+	@RequestMapping("/cache/{from}/{to}")
+	String cache(@PathVariable("from") int from, @PathVariable("to") int to) {
+		boolean cover = false;
+		try {
+			ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+			HttpServletRequest request = requestAttributes.getRequest();
+			cover = Boolean.valueOf(request.getParameter("cover"));
+		} catch (Exception e) {
+			logger.log(Level.SEVERE, e.getMessage(), e);
+		}
+		boolean icover = cover;
+		new Thread(new Runnable() {
+			public void run() {
+
+				try {
+					new DownloadList(icover).execute(from, to);
+				} catch (Throwable e) {
+					logger.log(Level.SEVERE, e.getMessage(), e);
+				}
+			}
+		}).start();
+		return "redirect:/siscache/cache_result";
 	}
 
 	@RequestMapping("/list")
@@ -143,7 +237,7 @@ public class SampleController {
 		String jsonParams = JsonUtil.toJson(params);
 		try {
 			long l = System.currentTimeMillis();
-			String js = getConnection().doPost("http://192.168.0.237:9200/test_html/_doc/_search", jsonParams, new HashMap<>());
+			String js = getConnection().doPost(getPath_es_start() + "html/_doc/_search", jsonParams, new HashMap<>());
 			l = System.currentTimeMillis() - l;
 			// logger.log(Level.INFO, l + " " + jsonParams);
 			ESMap r = JsonUtil.toObject(js, ESMap.class);
@@ -204,7 +298,7 @@ public class SampleController {
 		try {
 			String jsonParams = JsonUtil.toJson(params);
 			logger.log(Level.FINE, jsonParams);
-			String js = getConnection().doPost("http://192.168.0.237:9200/test_html/_doc/_search?pretty", jsonParams, new HashMap<>());
+			String js = getConnection().doPost(getPath_es_start() + "html/_doc/_search?pretty", jsonParams, new HashMap<>());
 			logger.log(Level.FINE, js);
 			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
 
@@ -257,7 +351,7 @@ public class SampleController {
 		try {
 			String jsonParams = JsonUtil.toJson(params);
 			logger.log(Level.FINE, jsonParams);
-			String js = getConnection().doPost("http://192.168.0.237:9200/test_html/_doc/_search", jsonParams, new HashMap<>());
+			String js = getConnection().doPost(getPath_es_start() + "html/_doc/_search", jsonParams, new HashMap<>());
 			logger.log(Level.FINE, js);
 			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
 

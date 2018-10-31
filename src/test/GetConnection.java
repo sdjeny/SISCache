@@ -44,6 +44,14 @@ import org.sdjen.download.cache_sis.http.HttpFactory;
  * @since JDK 1.8
  */
 public class GetConnection extends HttpFactory {
+	private static GetConnection connection;
+
+	public static synchronized GetConnection getConnection() throws IOException {
+		if (null == connection)
+			connection = new GetConnection();
+		return connection;
+	}
+
 	public GetConnection() throws IOException {
 		super();
 	}
@@ -115,6 +123,12 @@ public class GetConnection extends HttpFactory {
 		}
 		addHeader(httpPatch, headers);
 		return execute(httpPatch);
+	}
+
+	@Override
+	public void finish() {
+		connection = null;
+		super.finish();
 	}
 
 	/**

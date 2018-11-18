@@ -4,9 +4,8 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,12 +32,45 @@ public class Store_ElasticSearch implements IStore {
 	private MessageDigest md5Digest;
 	public LogUtil msgLog;
 
+	private String logName;
+	private String charset;
+	private ConfUtil conf;
+
+	public ConfUtil getConf() throws IOException {
+		if (null == conf) {
+			conf = ConfUtil.getDefaultConf();
+		}
+		return conf;
+	}
+
+	public String getCharset() {
+		if (null == charset) {
+			try {
+				charset = getConf().getProperties().getProperty("chatset");
+			} catch (IOException e) {
+				logName = "GBK";
+			}
+		}
+		return charset;
+	}
+
+	public String getLogName() {
+		if (null == logName) {
+			try {
+				String save_path = getConf().getProperties().getProperty("save_path");
+				logName = save_path + "/download.log";
+			} catch (IOException e) {
+				logName = "/download.log";
+			}
+		}
+		return logName;
+	}
+
 	private Store_ElasticSearch() throws Exception {
 		connection = GetConnection.getConnection();
 		md5Digest = MessageDigest.getInstance("MD5");
-		ConfUtil conf = ConfUtil.getDefaultConf();
+		ConfUtil conf = getConf();
 		boolean isStore = false;
-
 		String temp = conf.getProperties().getProperty("path_es_start");
 		if (null == temp) {
 			conf.getProperties().setProperty("path_es_start", path_es_start);
@@ -48,12 +80,7 @@ public class Store_ElasticSearch implements IStore {
 		}
 		if (isStore)
 			conf.store();
-		String save_path = conf.getProperties().getProperty("save_path");
-		String charset = conf.getProperties().getProperty("chatset");
-		File file = new File(save_path + "/download.log");
-		if (file.exists())
-			file.delete();
-		msgLog = new LogUtil().setLogFile(save_path + "/download.log").setChatset(charset);
+		refreshMsgLog();
 	}
 
 	@Override
@@ -129,34 +156,76 @@ public class Store_ElasticSearch implements IStore {
 				.replace("viewthread.php?action=printable&tid=", "");
 		String page = null == pages ? "1" : pages.select("strong").text();
 		String dat = null;
-		String f = "1";
-		for (org.jsoup.nodes.Element e : doument.select("div.mainbox")//// class=mainbox的div
-				.select("table")//
-				.select("tbody")//
-				.select("tr")//
-				.select("td.postcontent")//
-				.select("div.postinfo")//
-		) {
-			f = e.select("strong").first().ownText().replace("楼", "");
-			if ("1".equals(f))
-				dat = e.ownText().replace("发表于 ", "");
+		if (false) {
+			String f = "1";
+			for (org.jsoup.nodes.Element e : doument.select("div.mainbox")//// class=mainbox的div
+					.select("table")//
+					.select("tbody")//
+					.select("tr")//
+					.select("td.postcontent")//
+					.select("div.postinfo")//
+			) {
+				f = e.select("strong").first().ownText().replace("楼", "");
+				if ("1".equals(f))
+					dat = e.ownText().replace("发表于 ", "");
+			}
 		}
+		ESMap comments = ESMap.get();
+		{
+			for (org.jsoup.nodes.Element postcontent : doument.select("div.mainbox.viewthread")//// class=mainbox的div
+					.select("table")//
+					.select("tbody")//
+					.select("tr")//
+					.select("td.postcontent")//
+			//
+			) {
+				String floor = "";
+				for (org.jsoup.nodes.Element postinfo : postcontent.select("div.postinfo")) {
+					org.jsoup.nodes.Element temp = postinfo.select("strong").first();
+					if (null != temp) {
+						floor = temp.ownText();
+						if ("1楼".equals(floor)) {
+							dat = postinfo.ownText().replace("发表于 ", "");
+						}
+					}
+				}
+				if (floor.isEmpty() || "1楼".equals(floor))
+					continue;
+				String fm = comments.get(floor, String.class);
+				if (null == fm)
+					fm = "";
+				for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost").select("div.t_msgfont")) {
+					if (!fm.isEmpty())
+						fm += ",";
+					fm += comment.text();
+				}
+				comments.set(floor, fm);
+			}
+		}
+
 		boolean update = false;
 		if (update)
 			text = doument.html();
 		key = id + "_" + page;
 		Map<String, Object> json = new HashMap<>();
 		json.put("id", id);
-		if (null != dat) {
-			json.put("date_str", dat);
-			json.put("date", new SimpleDateFormat("yyyy-MM-dd").parse(dat));
-			json.put("datetime", new SimpleDateFormat("yyyy-MM-dd HH:mm").parse(dat));
+		json.put("date_str", dat);
+		try {
+			if (null != dat) {
+				SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+				Date dt = dtf.parse(dat);
+				json.put("date_str", dtf.format(dt));
+				json.put("date", new SimpleDateFormat("yyyy-MM-dd").parse(dat));
+				json.put("datetime", dt);
+			}
+		} catch (Exception e1) {
 		}
 		json.put("fid", 143);
 		json.put("type", type);
 		json.put("title", title);
 		json.put("page", page);
 		json.put("context", text);
+		json.put("comments", comments);
 		String r = connection.doPost(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json), new HashMap<>());
 	}
 
@@ -168,5 +237,32 @@ public class Store_ElasticSearch implements IStore {
 	@Override
 	public void err(Object pattern, Object... args) {
 		msg(pattern, args);
+	}
+
+	@Override
+	public void refreshMsgLog() {
+		try {
+			File file = new File(getLogName());
+			if (file.exists()) {
+				if (file.length() > 0) {// 有内容才备份
+					File dest = new File(getLogName().replace("/download.log", "/download_" + System.currentTimeMillis() + ".log"));
+					if (!dest.exists())
+						dest.createNewFile();
+					file.renameTo(dest);
+					file.delete();
+				}
+			}
+			if (null != msgLog) {
+				try {
+					Thread.sleep(30000l);// 休息半分钟够了，有重试机制
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+				msgLog.finish();
+			}
+			msgLog = new LogUtil().setLogFile(getLogName()).setChatset(getCharset());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }

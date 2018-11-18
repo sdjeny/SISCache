@@ -51,11 +51,8 @@ public class HttpFactory {
 	private int retry_time_second = 30;
 	private int timout_millisecond_connect = 10000;
 	private int timout_millisecond_connectionrequest = 10000;
-	private int timout_millisecond_socket = 10000;
 	private Set<String> proxy_urls = new HashSet<String>();
-	private PoolingHttpClientConnectionManager poolConnManager = null;
-	private int pool_max_total = 200;
-	private int pool_max_per_route = 20;
+	private static PoolingHttpClientConnectionManager poolConnManager = null;
 
 	public HttpFactory() throws IOException {
 		conf = ConfUtil.getDefaultConf();
@@ -82,24 +79,6 @@ public class HttpFactory {
 			timout_millisecond_connectionrequest = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_connectionrequest"));
 		} catch (Exception e) {
 			conf.getProperties().setProperty("timout_millisecond_connectionrequest", String.valueOf(timout_millisecond_connectionrequest));
-			isStore = true;
-		}
-		try {
-			timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
-		} catch (Exception e) {
-			conf.getProperties().setProperty("timout_millisecond_socket", String.valueOf(timout_millisecond_socket));
-			isStore = true;
-		}
-		try {
-			pool_max_total = Integer.valueOf(conf.getProperties().getProperty("pool_max_total"));
-		} catch (Exception e) {
-			conf.getProperties().setProperty("pool_max_total", String.valueOf(pool_max_total));
-			isStore = true;
-		}
-		try {
-			pool_max_per_route = Integer.valueOf(conf.getProperties().getProperty("pool_max_per_route"));
-		} catch (Exception e) {
-			conf.getProperties().setProperty("pool_max_per_route", String.valueOf(pool_max_per_route));
 			isStore = true;
 		}
 		try {
@@ -141,12 +120,6 @@ public class HttpFactory {
 						.register("https", sslsf)//
 						.build();
 			}
-			poolConnManager = new PoolingHttpClientConnectionManager(/* socketFactoryRegistry */);
-			// Increase max total connection to 200
-			poolConnManager.setMaxTotal(pool_max_total);
-			// Increase default max connection per route to 20
-			poolConnManager.setDefaultMaxPerRoute(pool_max_per_route);
-			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
 			requestConfig = getDefaultBuilder().build();
 			org.apache.http.client.config.RequestConfig.Builder builder = getDefaultBuilder();
 			try {
@@ -170,7 +143,8 @@ public class HttpFactory {
 				.setConnectionRequestTimeout(timout_millisecond_connectionrequest) // ���ô�connect
 				// Manager(���ӳ�)��ȡConnection
 				// ��ʱʱ�䣬��λ���롣����������¼ӵ����ԣ���ΪĿǰ�汾�ǿ��Թ������ӳصġ�
-				.setSocketTimeout(timout_millisecond_socket)// �����ȡ���ݵĳ�ʱʱ��(����Ӧʱ��)����λ���롣
+				// .setSocketTimeout(timout_millisecond_socket)//
+				// �����ȡ���ݵĳ�ʱʱ��(����Ӧʱ��)����λ���롣
 				// �������һ���ӿڣ�����ʱ�����޷��������ݣ���ֱ�ӷ����˴ε��á�
 				.setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
 				.setExpectContinueEnabled(true)// �ص��������֪����ɶ�õ�
@@ -204,21 +178,29 @@ public class HttpFactory {
 	private HttpRequestRetryHandler getHttpRequestRetryHandler() {
 		return new HttpRequestRetryHandler() {
 			public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
-				if (executionCount <= retry_times) {
+				if (exception instanceof java.net.SocketTimeoutException) {
+					return false;// Timeout
+				} else if (exception instanceof UnknownHostException) {
+					return false;// Unknown host
+				} else if (exception instanceof org.apache.http.NoHttpResponseException) {
+					return false;// Unknown host
+				} else if (exception instanceof javax.net.ssl.SSLHandshakeException) {
+					return false;// Unknown host
+				} else if (exception instanceof java.net.SocketException) {
+					return false;// Unknown host
+				} else if (executionCount <= retry_times) {
 					// from
 					// :https://blog.csdn.net/minicto/article/details/56677420
 					try {
-						Thread.sleep(1000l * retry_time_second * executionCount);
+						Thread.sleep(100l * executionCount);
 					} catch (InterruptedException e) {
 					}
 					return !(HttpClientContext.adapt(context).getRequest() instanceof HttpEntityEnclosingRequest);
 					// Retry if the request is considered idempotent
 					// Do not retry if over max retry count
-				} else if (false) {
+				} else if (false) {//
 					if (exception instanceof InterruptedIOException) {
 						return false;// Timeout
-					} else if (exception instanceof UnknownHostException) {
-						return false;// Unknown host
 					} else if (exception instanceof ConnectTimeoutException) {
 						return false;// Connection refused
 					} else if (exception instanceof SSLException) {
@@ -233,16 +215,16 @@ public class HttpFactory {
 	protected synchronized CloseableHttpClient getClient() {
 		if (null == client) {
 			// ʵ����CloseableHttpClient����
-			
-//			CloseableHttpClient httpClient
-//			= HttpClients
-//					.custom()
-//					.setConnectionManager(connManager)
-//					.setConnectionManagerShared(true)
-			//.build();
+
+			// CloseableHttpClient httpClient
+			// = HttpClients
+			// .custom()
+			// .setConnectionManager(connManager)
+			// .setConnectionManagerShared(true)
+			// .build();
 			client = HttpClients.custom()//
 					.setConnectionManagerShared(true)//
-					.setConnectionManager(poolConnManager)//
+					.setConnectionManager(getPoolConnManager())//
 					.setDefaultRequestConfig(requestConfig)//
 					.setRetryHandler(getHttpRequestRetryHandler())//
 					.build();
@@ -267,7 +249,7 @@ public class HttpFactory {
 			// ʵ����CloseableHttpClient����
 			proxyClient = HttpClients.custom()//
 					.setConnectionManagerShared(true)//
-					.setConnectionManager(poolConnManager)//
+					.setConnectionManager(getPoolConnManager())//
 					.setDefaultRequestConfig(proxyRequestConfig)//
 					.setRetryHandler(getHttpRequestRetryHandler())//
 					.build();
@@ -287,10 +269,46 @@ public class HttpFactory {
 		// client = null;
 		// proxyClient = null;
 		// ���ӳعر�
-		poolConnManager.close();
+		// poolConnManager.close();
 	}
 
-	public PoolingHttpClientConnectionManager getPoolConnManager() {
+	public static PoolingHttpClientConnectionManager getPoolConnManager() {
+		if (null == poolConnManager) {
+			int timout_millisecond_socket = 10000;
+			int pool_max_total = 200;
+			int pool_max_per_route = 20;
+			try {
+				boolean isStore = false;
+				ConfUtil conf = ConfUtil.getDefaultConf();
+				try {
+					timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
+				} catch (Exception e) {
+					conf.getProperties().setProperty("timout_millisecond_socket", String.valueOf(timout_millisecond_socket));
+					isStore = true;
+				}
+				try {
+					pool_max_total = Integer.valueOf(conf.getProperties().getProperty("pool_max_total"));
+				} catch (Exception e) {
+					conf.getProperties().setProperty("pool_max_total", String.valueOf(pool_max_total));
+					isStore = true;
+				}
+				try {
+					pool_max_per_route = Integer.valueOf(conf.getProperties().getProperty("pool_max_per_route"));
+				} catch (Exception e) {
+					conf.getProperties().setProperty("pool_max_per_route", String.valueOf(pool_max_per_route));
+					isStore = true;
+				}
+				if (isStore)
+					conf.store();
+			} catch (IOException e) {
+			}
+			poolConnManager = new PoolingHttpClientConnectionManager(/* socketFactoryRegistry */);
+			// Increase max total connection to 200
+			poolConnManager.setMaxTotal(pool_max_total);
+			// Increase default max connection per route to 20
+			poolConnManager.setDefaultMaxPerRoute(pool_max_per_route);
+			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
+		}
 		return poolConnManager;
 	}
 
@@ -437,7 +455,7 @@ public class HttpFactory {
 				HttpFactory.this.execute(uri, executor);
 				String result = executor.getResult();
 				if (null == result)
-					throw new Exception("ȡ����ʧ��");
+					throw new Exception("取不到数据	" + uri);
 			}
 		});
 		return executor.getResult();

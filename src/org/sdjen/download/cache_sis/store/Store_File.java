@@ -75,4 +75,13 @@ public abstract class Store_File implements IStore {
 	public void err(Object pattern, Object... args) {
 		LogUtil.errLog.showMsg(pattern, args);
 	}
+
+	@Override
+	public void refreshMsgLog() {
+		try {
+			LogUtil.refreshMsgLog();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 }

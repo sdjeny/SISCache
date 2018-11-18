@@ -19,4 +19,6 @@ public interface IStore {
 	void msg(Object obj, Object... params);
 
 	void err(Object obj, Object... params);
+	
+	void refreshMsgLog();
 }

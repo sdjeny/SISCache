@@ -27,17 +27,18 @@ public class DownloadList {
 		ConfUtil conf = ConfUtil.getDefaultConf();
 		int from = Integer.valueOf(conf.getProperties().getProperty("list_start"));
 		int to = Integer.valueOf(conf.getProperties().getProperty("list_end"));
-		new DownloadList(false).execute(from, to);
+		new DownloadList("").execute(from, to);
+		HttpFactory.getPoolConnManager().close();
 	}
 
 	boolean autoFirst;
 	HttpFactory httpUtil;
 	String list_url;
 	ConfUtil conf;
-	boolean cover;
+	String type;
 
-	public DownloadList(boolean cover) throws Throwable {
-		this.cover = cover;
+	public DownloadList(String type) throws Throwable {
+		this.type = null == type ? "" : type;
 		conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
 		downloadSingle = new DownloadSingle();
@@ -66,11 +67,11 @@ public class DownloadList {
 				for (int i = from; i <= to; i++) {
 					if (i != from && ((i - from) % pageU == 0)) {// 执行到一定数量重新下载3页，保证齐全
 						for (int j = 1; j < 3; j++) {
-							list(j, false);
+							list(j, "");
 						}
-						LogUtil.refreshMsgLog();
+						store.refreshMsgLog();
 					}
-					list(i, cover);
+					list(i, type);
 					if (autoFirst) {
 						conf.getProperties().setProperty("list_start", String.valueOf(i));
 						conf.store();// 自动记录最后一次执行完成
@@ -94,7 +95,7 @@ public class DownloadList {
 		return httpUtil.getHTML(uri);
 	}
 
-	protected void list(final int i, boolean cover) throws Throwable {
+	protected void list(final int i, String type) throws Throwable {
 		String uri = MessageFormat.format(list_url, String.valueOf(i));
 		LogUtil.lstLog.showMsg(uri);
 		store.msg(uri);
@@ -102,11 +103,11 @@ public class DownloadList {
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		ExecutorService executor = Executors.newFixedThreadPool(2);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
-		for (final org.jsoup.nodes.Element e : doument.select("tbody").select("tr")) {
+		for (final org.jsoup.nodes.Element element : doument.select("tbody").select("tr")) {
 			resultList.add(executor.submit(new Callable<Long>() {
 				public Long call() throws Exception {
 					String date = "";
-					for (org.jsoup.nodes.Element s : e.select("td.author")// class=author的td
+					for (org.jsoup.nodes.Element s : element.select("td.author")// class=author的td
 							.select("em")) {
 						String text = s.text();
 						try {
@@ -120,7 +121,7 @@ public class DownloadList {
 					Long result = null;
 					String id = null;
 					String title = null;
-					for (org.jsoup.nodes.Element s : e.select("th").select("span")) {//
+					for (org.jsoup.nodes.Element s : element.select("th").select("span")) {//
 						boolean threadpages = s.classNames().contains("threadpages");
 						for (org.jsoup.nodes.Element href : s.select("a[href]")) {
 							if (null == id) {
@@ -131,15 +132,15 @@ public class DownloadList {
 							String page = threadpages ? href.text() : "1";
 							String url = httpUtil.joinUrlPath(uri, href.attr("href"));
 							try {
-								if (startDownload(cover, id, page, title, date, url)) {
+								if (startDownload(type, id, page, title, date, url)) {
 									if (null == result)
 										result = 0l;
 									result += downloadSingle.getLength_download();
 									// break;
 								}
-							} catch (Throwable e1) {
+							} catch (Throwable e) {
 								store.err("异常	{0}	{1}", url, e);
-								e1.printStackTrace();
+								e.printStackTrace();
 							}
 						}
 					}
@@ -169,10 +170,10 @@ public class DownloadList {
 		// httpUtil.getPoolConnManager().closeExpiredConnections();
 	}
 
-	protected boolean startDownload(boolean cover, String id, String page, String title, String date, String url) throws Throwable {
+	protected boolean startDownload(String type, String id, String page, String title, String date, String url) throws Throwable {
 		// System.out.println(url + ":" + id + ":" + page + " " + date + ":" +
 		// title);
-		downloadSingle.startDownload(cover, id, page, url, title, date);
+		downloadSingle.startDownload(type, id, page, url, title, date);
 		return true;
 	}
 }

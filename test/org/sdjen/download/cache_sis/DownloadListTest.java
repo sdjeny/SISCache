@@ -12,7 +12,7 @@ public class DownloadListTest {
 
 	@Test
 	public void test() throws Throwable {
-		new DownloadList(true) {
+		new DownloadList("") {
 			protected String getHTML(String uri) throws Throwable {
 				return getContext(new File("b.htm"));
 			};

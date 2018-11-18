@@ -5,20 +5,24 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
@@ -117,25 +121,24 @@ public class SampleController {
 
 	@RequestMapping("/cache/{from}/{to}")
 	String cache(@PathVariable("from") int from, @PathVariable("to") int to) {
-		boolean cover = false;
+		final String type;
 		try {
 			ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
 			HttpServletRequest request = requestAttributes.getRequest();
-			cover = Boolean.valueOf(request.getParameter("cover"));
+			type = request.getParameter("type");
+			new Thread(new Runnable() {
+				public void run() {
+
+					try {
+						new DownloadList(type).execute(from, to);
+					} catch (Throwable e) {
+						logger.log(Level.SEVERE, e.getMessage(), e);
+					}
+				}
+			}).start();
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
-		boolean icover = cover;
-		new Thread(new Runnable() {
-			public void run() {
-
-				try {
-					new DownloadList(icover).execute(from, to);
-				} catch (Throwable e) {
-					logger.log(Level.SEVERE, e.getMessage(), e);
-				}
-			}
-		}).start();
 		return "redirect:/siscache/cache_result";
 	}
 
@@ -148,7 +151,7 @@ public class SampleController {
 	@RequestMapping("/list/{page}")
 	@ResponseBody
 	String list(@PathVariable("page") int page) {
-		return list("", page, 40);
+		return list(page, 50, "");
 	}
 
 	// @RequestMapping("/list/{search}")
@@ -157,10 +160,10 @@ public class SampleController {
 	// return list(search, 1, 40);
 	// }
 
-	@RequestMapping("/list/{search}/{page}")
+	@RequestMapping("/list/{page}/{size}")
 	@ResponseBody
-	String list(@PathVariable("search") String search, @PathVariable("page") int page) {
-		return list(search, page, 40);
+	String list(@PathVariable("page") int page, @PathVariable("size") int size) {
+		return list(page, size, "");
 	}
 
 	// @RequestMapping("/list/{page}/{size}")
@@ -170,69 +173,68 @@ public class SampleController {
 	// return list("", page, 40);
 	// }
 
-	@RequestMapping("/list/{search}/{page}/{size}")
+	@RequestMapping("/list/{page}/{size}/{search}")
 	@ResponseBody
-	String list(@PathVariable("search") String search, @PathVariable("page") int page, @PathVariable("size") int size) {
+	String list(@PathVariable("page") int page, @PathVariable("size") int size, @PathVariable("search") String search) {
+		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		HttpServletRequest request = requestAttributes.getRequest();
+		boolean debug = false;
+		String query = "";
+		// String fieldstr = "";
+		String temp;
+		if (null != (temp = request.getParameter("debug")))
+			debug = Boolean.valueOf(temp);
+		if (null != (temp = request.getParameter("q"))) {
+			query = temp;
+		}
+		String order = "";
 		Map<Object, Object> params = ESMap.get();
 		params.put("_source",
 				ESMap.get()//
 						.set("includes", Arrays.asList())//
 						.set("excludes", Arrays.asList("context"))//
 		);
-		if (search == null || search.trim().isEmpty()) {
-			params.put("query", ESMap.get().set("term", Collections.singletonMap("page", "1")));
-			params.put("sort", Arrays.asList(//
-					ESMap.get().set("id.keyword", Collections.singletonMap("order", "desc"))//
-			)//
-			);
+		List<ESMap> shoulds = new ArrayList<>();
+		List<ESMap> mustes = new ArrayList<>();
+		List<ESMap> mustNots = new ArrayList<>();
+		if (null != query && !query.isEmpty()) {
+			listAdv(query, shoulds, mustes, mustNots);
+		} else if (search == null || search.trim().isEmpty()) {
+			listAll(shoulds, mustes, mustNots);
+			order = "id.keyword:desc";
 		} else {
 			try {
-				Date date = new SimpleDateFormat("yyyy-MM-dd").parse(search);
-				params.put("query", ESMap.get().set("term", Collections.singletonMap("date", date)));
-				params.put("sort", Arrays.asList(//
-						ESMap.get().set("datetime", Collections.singletonMap("order", "desc"))//
-				)//
-				);
+				listDate(search, shoulds, mustes, mustNots);
+				order = "datetime:desc";
 			} catch (Exception e) {
-				// Collections.singletonMap("match",
-				// Collections.singletonMap("title", search))
-				List<ESMap> shoulds = new ArrayList<>();
-				for (java.util.Map.Entry<Object, Object> entry : ESMap.get().set(10, "phrase").set(5, "most_fields").entrySet()) {
-					for (String s : search.split(" ")) {
-						int boost = (Integer) entry.getKey();
-						ESMap item = ESMap.get()//
-								.set("fields", Arrays.asList("title^5", "context"));
-						if (s.contains("^")) {
-							String[] ss = s.split("\\^");
-							try {
-								boost += Integer.valueOf(ss[1]);
-								s = ss[0];
-							} catch (NumberFormatException e1) {
-							}
-						}
-						item.set("query", s);
-						item.set("boost", boost);
-						item.set("type", entry.getValue());
-						shoulds.add(ESMap.get().set("multi_match", item));
-					}
-				}
-				if (false) {
-					shoulds.add(ESMap.get().set("match"//
-							, ESMap.get().set("title", ESMap.get().set("query", search).set("boost", 2))//
-					)//
-					);
-					shoulds.add(ESMap.get().set("match"//
-							, ESMap.get().set("context", ESMap.get().set("query", search).set("boost", 1))//
-					));
-				}
-				params.put("query"//
-						, ESMap.get().set("bool", ESMap.get().set("should", shoulds)//
-						)//
-				);
+				listDef(search, shoulds, mustes, mustNots);
 			}
 		}
+		params.put("query"//
+				,
+				ESMap.get().set("bool",
+						ESMap.get()//
+								.set("must", mustes)//
+								.set("should", shoulds)//
+								.set("must_not", mustNots)//
+				)//
+		);
 		params.put("size", size);
 		params.put("from", (page - 1) * size);
+		if (null != (temp = request.getParameter("order"))) {
+			order = temp;
+		}
+		List<ESMap> orders = new ArrayList<>();
+		for (String o : order.split(" ")) {
+			if (o.isEmpty())
+				continue;
+			String[] ss = o.split(":");
+			orders.add(//
+					ESMap.get().set(ss[0], Collections.singletonMap("order", ss.length > 1 ? ss[1] : "desc"))//
+			);
+		}
+		if (!orders.isEmpty())
+			params.put("sort", orders);
 		StringBuffer rst = new StringBuffer();
 		String jsonParams = JsonUtil.toJson(params);
 		try {
@@ -245,25 +247,29 @@ public class SampleController {
 			rst.append(r.get("hits", ESMap.class).get("total"));
 			rst.append("&nbsp;Take:");
 			rst.append(l);
-			try {
-				ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-				HttpServletRequest request = requestAttributes.getRequest();
-				if (Boolean.valueOf(request.getParameter("debug"))) {
-					rst.append("&nbsp;");
-					rst.append(jsonParams);
-				}
-			} catch (Exception e) {
-				logger.log(Level.SEVERE, e.getMessage(), e);
+			if (debug) {
+				rst.append("&nbsp;");
+				rst.append(jsonParams);
 			}
 			rst.append("</br><table border='0'>");
 			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
+			SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+			SimpleDateFormat dformat = new SimpleDateFormat("yyyy-MM-dd");
+			SimpleDateFormat tformat = new SimpleDateFormat("HH:mm");
 			for (ESMap hit : hits) {
 				ESMap _source = hit.get("_source", ESMap.class);
 				rst.append("<tbody><tr>");
-				rst.append(String.format("<td>%s</td>", _source.get("date_str")));
-				rst.append(String.format("<td>%s</td>", "    "));
-				rst.append(String.format("<td><a href='/siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>", _source.get("id"),
-						_source.get("title")));
+				try {
+					Date date = format.parse((String) _source.get("date_str"));
+					rst.append(String.format("<td>%s</td>", dformat.format(date)));
+					rst.append(String.format("<td>%s</td>", tformat.format(date)));
+				} catch (Exception e) {
+					rst.append(String.format("<td>%s</td>", _source.get("date_str")));
+					rst.append(String.format("<td>%s</td>", "    "));
+				}
+				rst.append(String.format("<td align='center'>%s</td>", _source.get("type")));
+				rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+						, _source.get("id"), _source.get("page"), _source.get("title")));
 				rst.append("</tr></tbody>");
 				// rst.append("</br>");
 			}
@@ -277,6 +283,111 @@ public class SampleController {
 			}
 		}
 		return rst.toString();
+	}
+
+	private void listAll(List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
+		mustes.add(ESMap.get().set("term", Collections.singletonMap("page", "1")));
+	}
+
+	private void listDate(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) throws ParseException {
+		Date date = new SimpleDateFormat("yyyy-MM-dd").parse(search);
+		mustes.add(ESMap.get().set("match_phrase", Collections.singletonMap("date_str", search)));
+	}
+
+	private void listAdv(String query, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
+		// System.out.println("query:" + query);
+		for (String q : query.split(";")) {
+			if (q.isEmpty())
+				continue;
+			String[] ss = q.split(":");
+			String field = ss[0].replace("'", "^");
+			String vs = ss.length > 1 ? ss[1] : "";
+			for (String v : vs.split(" ")) {
+				if (v.isEmpty())
+					continue;
+				// String s = "and";
+				List<ESMap> list = mustes;
+				if (v.startsWith("~")) {
+					v = v.substring(1);
+					// s = "or";
+					list = shoulds;
+				} else if (v.startsWith("-")) {
+					v = v.substring(1);
+					// s = "not";
+					list = mustNots;
+				}
+				// System.out.println(s + " " + field + " " + v);
+				ESMap item = ESMap.get()//
+						.set("fields", Arrays.asList(field.split(",")));
+				item.set("query", v);
+				item.set("type", "phrase");
+				list.add(ESMap.get().set("multi_match", item));
+			}
+		}
+		// mustes.add(ESMap.get().set("term", Collections.singletonMap("page",
+		// "1")));
+	}
+
+	private void listDef(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
+		mustes.add(ESMap.get().set("term", ESMap.get().set("page", "1")));
+		for (String type : new String[] { "best_fields", "most_fields", "cross_fields" }) {
+			ESMap item = ESMap.get()//
+					.set("fields", Arrays.asList("title^3", "context"));
+			item.set("query", search);
+			item.set("boost", 1);
+			item.set("type", type);
+			shoulds.add(ESMap.get().set("multi_match", item));
+		}
+		if (false) {
+			shoulds.add(ESMap.get().set("match"//
+					, ESMap.get().set("title", ESMap.get().set("query", search).set("boost", 2))//
+			)//
+			);
+			shoulds.add(ESMap.get().set("match"//
+					, ESMap.get().set("context", ESMap.get().set("query", search).set("boost", 1))//
+			));
+		}
+		if (false) {
+			String fieldstr = "", opt = "";
+			// if (null != (temp = request.getParameter("fields"))) {
+			// adv = true;
+			// fieldstr = temp;
+			// fieldstr = fieldstr.replace('$', '^');
+			// }
+			Set<String> siFields = new HashSet<>();
+			Set<String> seFields = new HashSet<>();
+			for (String f : fieldstr.split(",")) {
+				if (f.startsWith("-")) {
+					seFields.add(f.substring(1));
+				} else {
+					siFields.add(f);
+				}
+			}
+			for (Collection[] cs : new Collection[][] { { "and".equalsIgnoreCase(opt) ? mustes : shoulds, siFields }, { mustNots, seFields } }) {
+				List<ESMap> list = (List<ESMap>) cs[0];
+				Set<String> set = (Set<String>) cs[1];
+				if (set.isEmpty())
+					continue;
+				for (String s : search.split(" ")) {
+					int boost = 1;
+					ESMap item = ESMap.get()//
+							.set("fields", set);
+					if (s.contains("^")) {
+						String[] ss = s.split("\\^");
+						try {
+							boost += Integer.valueOf(ss[1]);
+							s = ss[0];
+						} catch (NumberFormatException e1) {
+						}
+					}
+					item.set("query", s);
+					item.set("boost", boost);
+					item.set("type", "phrase");
+					list.add(ESMap.get().set("multi_match", item));
+				}
+			}
+			String order = "datetime:desc";
+		}
 	}
 
 	@RequestMapping("/s/{search}")
@@ -327,12 +438,21 @@ public class SampleController {
 	@RequestMapping("/detail/{id}")
 	@ResponseBody
 	String detail(@PathVariable("id") String id) {
-		return detail(id, "1");
+		if (id.startsWith("thread")) {
+			String[] ss = id.split("-");
+			return detail(ss[1], ss[2]);
+		} else
+			return detail(id, "1");
 	}
 
 	@RequestMapping("/detail/{id}/{page}")
 	@ResponseBody
 	String detail(@PathVariable("id") String id, @PathVariable("page") String page) {
+		if (page.startsWith("thread")) {
+			String[] ss = page.split("-");
+			if (ss.length > 2)
+				page = ss[2];
+		}
 		Map<String, Object> params = new HashMap<>();
 		Map<String, Object> _source = new HashMap<>();
 		_source.put("includes", Arrays.asList("context"));
@@ -358,10 +478,19 @@ public class SampleController {
 			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits")).get("hits");
 			for (Map<String, Object> hit : hits) {
 				_source = (Map<String, Object>) hit.get("_source");
-				rst.append(((String) _source.get("context"))
-				// .replace("<img src=\"../../images/", "<img
-				// src=\"../../../images/")
-				);
+				String text = (String) _source.get("context");
+				org.jsoup.nodes.Document doument = Jsoup.parse(text);
+				boolean update = false;
+				for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
+					String src = e.attr("src");
+					if (src.startsWith("../../images/20") || src.startsWith("../../torrent/20")) {
+						update = true;
+						e.attr("src", "../" + src);
+					}
+				}
+				if (update)
+					text = doument.html();
+				rst.append(text);
 			}
 		} catch (IOException e) {
 			rst.append(e.getMessage());

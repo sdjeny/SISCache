@@ -124,7 +124,7 @@ public class DownloadSingle {
 			// "2.jpg");
 			// util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg",
 			// "rr", "2.jpg");
-			util.downloadFile("https://e.piclect.com/o180829_110f6.jpg", "rr", "11.jpg");
+			util.downloadFile("https://e.piclect.com/o180829_110f6.jpg", "rr", "11.jpg", false);
 			// util.downloadFile("https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg",
 			// "rr", "11.jpg");
 			// https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg
@@ -140,7 +140,7 @@ public class DownloadSingle {
 		return new BigInteger(1, md5.digest(bytes)).toString(Character.MAX_RADIX);
 	}
 
-	public boolean startDownload(final boolean cover, final String id, final String page, final String url, String title, String dateStr)
+	public boolean startDownload(final String type, final String id, final String page, final String url, String title, String dateStr)
 			throws Throwable {
 		String subKey;
 		try {
@@ -153,9 +153,11 @@ public class DownloadSingle {
 		final String sub_torrent = "torrent/" + subKey;
 		title = getFileName(title);
 		String key = store.getKey(id, page, url, title, dateStr);
-		String tmp_html = store.getLocalHtml(key);// 获取本地文件
-		if (!cover && null != tmp_html)
-			return false;
+		String tmp_html = type.contains("cover")// 覆盖模式
+				? null // 不管是否存在，都重新读取
+				: store.getLocalHtml(key);// 否则获取本地文件
+		if (type.isEmpty() && null != tmp_html)// 不是特殊模式且文件已存在!"repair".equalsIgnoreCase(type)
+			return false;// 跳过
 		// File newFile = new File(save_path + "/" + sub_html + "/" + title);
 		// if (newFile.exists()) {
 		// return false;
@@ -184,13 +186,13 @@ public class DownloadSingle {
 		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
 			final String href = e.attr("href");
 			final String text = e.text();
-			if (href.startsWith("attachment.php?aid=")) {
+			if (href.contains("attachment.php?aid=")) {
 				resultList.add(executor.submit(new Callable<String[]>() {
 					public String[] call() throws Exception {
 						String newName = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + text);
 						String downloadUrl = httpUtil.joinUrlPath(url, href);
 						try {
-							newName = downloadFile(downloadUrl, sub_torrent, newName);
+							newName = downloadFile(downloadUrl, sub_torrent, newName, type.contains("torrent"));
 						} catch (Throwable e) {
 							store.err("异常	{0}	{1}", downloadUrl, e);
 						}
@@ -201,7 +203,7 @@ public class DownloadSingle {
 		}
 		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
 			final String src = e.attr("src");
-			if (src.startsWith("../../images/20"))
+			if (src.startsWith("../../../images/20"))
 				continue;// 本地缓存文件就过了吧
 			resultList.add(executor.submit(new Callable<String[]>() {
 				public String[] call() throws Exception {
@@ -213,7 +215,7 @@ public class DownloadSingle {
 						newName = ".jpg";
 					}
 					try {
-						newName = downloadFile(downloadUrl, sub_images, newName);
+						newName = downloadFile(downloadUrl, sub_images, newName, type.contains("image"));
 					} catch (Throwable e) {
 						store.err("异常	{0}	{1}", downloadUrl, e);
 					}
@@ -248,7 +250,7 @@ public class DownloadSingle {
 				return false;
 			}
 		} catch (Throwable e) {
-//			e.printStackTrace();
+			// e.printStackTrace();
 			store.err("异常	{0}	{1}		{2}", title, url, e);
 			return false;
 		} finally {
@@ -265,12 +267,14 @@ public class DownloadSingle {
 
 	private void replaceAll(String src, String targ) {
 		lock_w_replace.lock();
-		html = html.replace("\"" + src + "\"", "\"../../" + targ + "\"");
+		html = html.replace("\"" + src + "\"", "\"../../../" + targ + "\"");
 		lock_w_replace.unlock();
 	}
 
-	private String downloadFile(final String url, final String path, final String name) throws Throwable {
+	private String downloadFile(final String url, final String path, final String name, boolean reload) throws Throwable {
 		String result = store.getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
+		if (reload && result.equals(url))
+			result = null;
 		if (null == result) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {

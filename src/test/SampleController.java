@@ -486,6 +486,12 @@ public class SampleController {
 					if (src.startsWith("../../images/20") || src.startsWith("../../torrent/20")) {
 						update = true;
 						e.attr("src", "../" + src);
+					} else if (src.startsWith("../../images/20")) {
+						src = src.replace("../", "");
+						if (src.startsWith("http")) {
+							update = true;
+							e.attr("src", src);
+						}
 					}
 				}
 				if (update)

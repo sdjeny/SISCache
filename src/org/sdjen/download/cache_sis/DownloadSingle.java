@@ -183,7 +183,14 @@ public class DownloadSingle {
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		ExecutorService executor = Executors.newFixedThreadPool(download_threads);
 		List<Future<String[]>> resultList = new ArrayList<Future<String[]>>();
-		for (org.jsoup.nodes.Element e : doument.select("a[href]")) {
+		for (org.jsoup.nodes.Element e : doument//
+				.select("div.mainbox.viewthread")//
+				.select("td.postcontent")//
+				.select("div.postmessage.defaultpost")//
+				.select("div.box.postattachlist")//
+				.select("dl.t_attachlist")//
+				.select("a[href]")//
+		) {
 			final String href = e.attr("href");
 			final String text = e.text();
 			if (href.contains("attachment.php?aid=")) {
@@ -194,6 +201,7 @@ public class DownloadSingle {
 						try {
 							newName = downloadFile(downloadUrl, sub_torrent, newName, type.contains("torrent"));
 						} catch (Throwable e) {
+							e.printStackTrace();
 							store.err("异常	{0}	{1}", downloadUrl, e);
 						}
 						return new String[] { href, newName };
@@ -267,13 +275,17 @@ public class DownloadSingle {
 
 	private void replaceAll(String src, String targ) {
 		lock_w_replace.lock();
-		html = html.replace("\"" + src + "\"", "\"../../../" + targ + "\"");
+		if (targ.startsWith("http")) {
+			html = html.replace("\"" + src + "\"", "\"" + targ + "\"");
+		} else {
+			html = html.replace("\"" + src + "\"", "\"../../../" + targ + "\"");
+		}
 		lock_w_replace.unlock();
 	}
 
 	private String downloadFile(final String url, final String path, final String name, boolean reload) throws Throwable {
 		String result = store.getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
-		if (reload && result.equals(url))
+		if (null != result && reload && result.equals(url))
 			result = null;
 		if (null == result) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {

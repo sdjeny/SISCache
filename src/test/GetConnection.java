@@ -1,23 +1,24 @@
-package org.sdjen.download.cache_sis.es;
+package test;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.http.Header;
+import org.apache.http.HttpEntity;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
@@ -31,22 +32,34 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
+import org.sdjen.download.cache_sis.http.HttpFactory;
 
 /**
- * ClassName:GetConnection Date: 2018Äê3ÔÂ20ÈÕ ÏÂÎç8:12:07
+ * 
  * 
  * @author xbq
  * @version
  * @since JDK 1.8
  */
-public class GetConnection {
-	private final static Logger logger = Logger.getLogger(GetConnection.class.toString());
+public class GetConnection extends HttpFactory {
+	private static GetConnection connection;
+
+	public static synchronized GetConnection getConnection() throws IOException {
+		if (null == connection)
+			connection = new GetConnection();
+		return connection;
+	}
+
+	public GetConnection() throws IOException {
+		super();
+	}
+
+	static Log logger = LogFactory.getLog(GetConnection.class.getClass());
 
 	/**
-	 * postÇëÇó json²ÎÊý
+	 * 
 	 *
 	 * @param url
 	 * @param bodyJsonParams
@@ -54,9 +67,9 @@ public class GetConnection {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doPost(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
+	public String doPost(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
 		HttpPost httpPost = new HttpPost(url);
-//		httpPost.addHeader("Content-Type", "application/json");
+		httpPost.addHeader("Content-Type", "application/json");
 		httpPost.setEntity(new StringEntity(bodyJsonParams, Charset.forName("UTF-8")));
 
 		addHeader(httpPost, headers);
@@ -64,15 +77,14 @@ public class GetConnection {
 	}
 
 	/**
-	 * post k-v²ÎÊý
-	 *
+	 * 
 	 * @param url
 	 * @param params
 	 * @param headers
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doPost(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
+	public String doPost(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
 		HttpPost httpPost = new HttpPost(url);
 		if (params != null && params.keySet().isEmpty()) {
 			httpPost.setEntity(getUrlEncodedFormEntity(params));
@@ -82,15 +94,14 @@ public class GetConnection {
 	}
 
 	/**
-	 * patch json²ÎÊý
-	 *
+	 * 
 	 * @param url
 	 * @param bodyJsonParams
 	 * @param headers
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doPatch(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
+	public String doPatch(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
 		HttpPatch httpPatch = new HttpPatch(url);
 		httpPatch.setEntity(new StringEntity(bodyJsonParams));
 		addHeader(httpPatch, headers);
@@ -98,15 +109,14 @@ public class GetConnection {
 	}
 
 	/**
-	 * patch k-v²ÎÊý
-	 *
+	 * 
 	 * @param url
 	 * @param params
 	 * @param headers
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doPatch(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
+	public String doPatch(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
 		HttpPatch httpPatch = new HttpPatch(url);
 		if (params != null && !params.isEmpty()) {
 			httpPatch.setEntity(getUrlEncodedFormEntity(params));
@@ -115,16 +125,21 @@ public class GetConnection {
 		return execute(httpPatch);
 	}
 
+	@Override
+	public void finish() {
+		connection = null;
+		super.finish();
+	}
+
 	/**
-	 * PUT JSON²ÎÊý
-	 *
+	 * 
 	 * @param url
 	 * @param bodyJsonParams
 	 * @param headers
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doPut(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
+	public String doPut(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
 		HttpPut httpPut = new HttpPut(url);
 		httpPut.addHeader("Content-Type", "application/json");
 		httpPut.setEntity(new StringEntity(bodyJsonParams, Charset.forName("UTF-8")));
@@ -134,15 +149,14 @@ public class GetConnection {
 	}
 
 	/**
-	 * put k-v²ÎÊý
-	 *
+	 * 
 	 * @param url
 	 * @param params
 	 * @param headers
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doPut(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
+	public String doPut(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
 		HttpPut httpPut = new HttpPut(url);
 		if (params != null && params.keySet().isEmpty()) {
 			httpPut.setEntity(getUrlEncodedFormEntity(params));
@@ -152,7 +166,7 @@ public class GetConnection {
 	}
 
 	/**
-	 * Delete json ²ÎÊý
+	 * Delete json ï¿½ï¿½ï¿½ï¿½
 	 *
 	 * @param url
 	 * @param bodyJsonParams
@@ -160,7 +174,7 @@ public class GetConnection {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doDeletedoPut(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
+	public String doDeletedoPut(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
 		HttpDeleteWithEntity httpDelete = new HttpDeleteWithEntity(url);
 		httpDelete.setEntity(new StringEntity(bodyJsonParams));
 		addHeader(httpDelete, headers);
@@ -168,15 +182,14 @@ public class GetConnection {
 	}
 
 	/**
-	 * delete k-v²ÎÊý
-	 *
+	 * 
 	 * @param url
 	 * @param params
 	 * @param headers
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doDelete(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
+	public String doDelete(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
 		HttpDeleteWithEntity httpDelete = new HttpDeleteWithEntity(url);
 		addHeader(httpDelete, headers);
 		if (params != null && !params.isEmpty()) {
@@ -186,7 +199,7 @@ public class GetConnection {
 	}
 
 	/**
-	 * options json²ÎÊý
+	 * options jsonï¿½ï¿½ï¿½ï¿½
 	 *
 	 * @param url
 	 * @param bodyJsonParams
@@ -194,7 +207,7 @@ public class GetConnection {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doOptions(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
+	public String doOptions(String url, String bodyJsonParams, Map<String, String> headers) throws IOException {
 		HttpOptionsWithEntity httpOptions = new HttpOptionsWithEntity(url);
 		addHeader(httpOptions, headers);
 		httpOptions.setEntity(new StringEntity(bodyJsonParams));
@@ -202,7 +215,6 @@ public class GetConnection {
 	}
 
 	/**
-	 * options k-v²ÎÊý
 	 *
 	 * @param url
 	 * @param params
@@ -210,7 +222,7 @@ public class GetConnection {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doOptions(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
+	public String doOptions(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
 		HttpOptionsWithEntity httpOptions = new HttpOptionsWithEntity(url);
 		addHeader(httpOptions, headers);
 		if (params != null && !params.isEmpty()) {
@@ -220,14 +232,13 @@ public class GetConnection {
 	}
 
 	/**
-	 * headÇëÇó
-	 *
+	 * 
 	 * @param url
 	 * @param headers
 	 * @return
 	 * @throws IOException
 	 */
-	public static String doHeader(String url, Map<String, String> headers) throws IOException {
+	public String doHeader(String url, Map<String, String> headers) throws IOException {
 		HttpHead httpHead = new HttpHead(url);
 		addHeader(httpHead, headers);
 		return execute(httpHead);
@@ -235,8 +246,7 @@ public class GetConnection {
 	}
 
 	/**
-	 * getÇëÇó
-	 *
+	 * 
 	 * @param url
 	 * @param params
 	 * @param headers
@@ -244,8 +254,8 @@ public class GetConnection {
 	 * @throws IOException
 	 * @throws ClientProtocolException
 	 */
-	public static String doGet(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
-		// ²ÎÊý
+	public String doGet(String url, Map<String, String> params, Map<String, String> headers) throws IOException {
+
 		StringBuilder paramsBuilder = new StringBuilder(url);
 
 		if (params != null && params.keySet().isEmpty()) {
@@ -271,46 +281,103 @@ public class GetConnection {
 	}
 
 	/**
-	 * Ö´ÐÐÇëÇó²¢·µ»ØstringÖµ
 	 *
 	 * @param httpUriRequest
 	 * @return
 	 * @throws IOException
 	 */
-	private static String execute(HttpUriRequest httpUriRequest) throws IOException {
-		try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-			CloseableHttpResponse response = httpClient.execute(httpUriRequest);
+	private String execute(HttpUriRequest httpUriRequest) throws IOException {
+		try (CloseableHttpClient httpClient = getClient()) {
+			if (false) {
+				CloseableHttpResponse response = httpClient.execute(httpUriRequest);
 
-			// if (response.getStatusLine().getStatusCode() == 200) {// ÇëÇó³É¹¦×´Ì¬
-			// try (BufferedReader bufferedReader = new BufferedReader(
-			// new InputStreamReader(response.getEntity().getContent()))) {
-			// StringBuilder sb = new StringBuilder();
-			// String tmp;
-			// while ((tmp = bufferedReader.readLine()) != null) {
-			// sb.append(tmp);
-			// }
-			// return sb.toString();
-			// }
-			// }
-			Header type = response.getEntity().getContentType();
-			logger.log(Level.INFO, "Type:" + type.getValue());
-			String defaultCharset = "UTF-8";
-			String charset = getCharSet(type.getValue());
-			if (null != charset && charset.isEmpty()) {
-				defaultCharset = charset;
+				// if (response.getStatusLine().getStatusCode() == 200) {//
+				// ï¿½ï¿½ï¿½ï¿½É¹ï¿½×´Ì¬
+				// try (BufferedReader bufferedReader = new BufferedReader(
+				// new InputStreamReader(response.getEntity().getContent()))) {
+				// StringBuilder sb = new StringBuilder();
+				// String tmp;
+				// while ((tmp = bufferedReader.readLine()) != null) {
+				// sb.append(tmp);
+				// }
+				// return sb.toString();
+				// }
+				// }
+				Header type = response.getEntity().getContentType();
+				logger.debug("Type:" + type.getValue());
+				String defaultCharset = "UTF-8";
+				String charset = getCharSet(type.getValue());
+				if (null != charset && charset.isEmpty()) {
+					defaultCharset = charset;
+				}
+				return EntityUtils.toString(response.getEntity(), defaultCharset);
+			} else {
+				InputStream in = null;
+				org.apache.http.client.methods.CloseableHttpResponse response = null;
+				HttpEntity entity = null;
+				try {
+					try {
+						response = getClient().execute(httpUriRequest);
+					} catch (IOException e) {// ï¿½ï¿½ï¿½Ð¾ï¿½Ê¹ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
+						httpUriRequest.abort();
+						throw e;
+					}
+					// if (response.getStatusLine().getStatusCode() !=
+					// HttpStatus.SC_OK) {
+					// httpUriRequest.abort();
+					// }
+					entity = response.getEntity();
+					if (entity != null) {
+						in = entity.getContent();
+						ByteArrayOutputStream result = new ByteArrayOutputStream();
+						byte[] buffer = new byte[1024];
+						int length;
+						while ((length = in.read(buffer)) != -1) {
+							result.write(buffer, 0, length);
+						}
+						Header type = entity.getContentType();
+						logger.debug("Type:" + type.getValue());
+						String defaultCharset = "UTF-8";
+						String charset = getCharSet(type.getValue());
+						if (null != charset && charset.isEmpty()) {
+							defaultCharset = charset;
+						}
+						return result.toString(defaultCharset);
+					}
+					return null;
+				} catch (Exception e) {
+					if (null != httpUriRequest)
+						httpUriRequest.abort();
+					throw e;
+				} finally {
+					if (in != null) {
+						try {
+							in.close();
+						} catch (IOException e) {
+						}
+					}
+					if (entity != null) {
+						EntityUtils.consumeQuietly(entity);// ï¿½Ë´ï¿½ï¿½ï¿½ï¿½Ü£ï¿½Í¨ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½EntityUtilsï¿½Ç·ï¿½ï¿½ï¿½ï¿½HttpEntity
+					}
+					if (null != response) {
+						try {
+							response.close();
+						} catch (IOException e) {
+						}
+					}
+				}
+
 			}
-			return EntityUtils.toString(response.getEntity(), defaultCharset);
 		}
 		// return null;
 	}
 
 	/**
-	 * Ìí¼ÓÇëÇóÍ·²¿
-	 *
+	 * 
 	 * @param httpUriRequest
 	 * @param headers
 	 */
-	private static void addHeader(HttpUriRequest httpUriRequest, Map<String, String> headers) {
+	private void addHeader(HttpUriRequest httpUriRequest, Map<String, String> headers) {
 		if (httpUriRequest != null) {
 			if (headers != null && !headers.keySet().isEmpty()) {
 				Set<String> keySet = headers.keySet();
@@ -325,13 +392,12 @@ public class GetConnection {
 	}
 
 	/**
-	 * »ñÈ¡ UrlEncodedFormEntity ²ÎÊýÊµÌå
-	 *
+	 * 
 	 * @param params
 	 * @return
 	 * @throws UnsupportedEncodingException
 	 */
-	private static UrlEncodedFormEntity getUrlEncodedFormEntity(Map<String, String> params) throws UnsupportedEncodingException {
+	private UrlEncodedFormEntity getUrlEncodedFormEntity(Map<String, String> params) throws UnsupportedEncodingException {
 		if (params != null && params.keySet().isEmpty()) {
 			List<NameValuePair> list = new ArrayList<>();
 
@@ -348,12 +414,11 @@ public class GetConnection {
 	}
 
 	/**
-	 * ¸ù¾ÝHTTP ÏìÓ¦Í·²¿µÄcontent type×¥È¡ÏìÓ¦µÄ×Ö·û¼¯±àÂë
-	 *
+	 * 
 	 * @param content
 	 * @return
 	 */
-	private static String getCharSet(String content) {
+	private String getCharSet(String content) {
 		String regex = ".*charset=([^;]*).*";
 		Pattern pattern = Pattern.compile(regex);
 		Matcher matcher = pattern.matcher(content);
@@ -364,10 +429,10 @@ public class GetConnection {
 	}
 
 	/**
-	 * ½â¾öhttpclient µÄDELETEÄ¬ÈÏ²»Ö§³ÖsetEntity
+	 * 
 	 */
-	static class HttpDeleteWithEntity extends HttpEntityEnclosingRequestBase {
-		public static final String METHOD_NAME = "DELETE";
+	class HttpDeleteWithEntity extends HttpEntityEnclosingRequestBase {
+		public final String METHOD_NAME = "DELETE";
 
 		@Override
 		public String getMethod() {
@@ -390,10 +455,10 @@ public class GetConnection {
 	}
 
 	/**
-	 * ½â¾öhttpclient µÄOPTIONSÄ¬ÈÏ²»Ö§³ÖsetEntity
+	 * 
 	 */
-	static class HttpOptionsWithEntity extends HttpEntityEnclosingRequestBase {
-		public static final String METHOD_NAME = "OPTIONS";
+	class HttpOptionsWithEntity extends HttpEntityEnclosingRequestBase {
+		public final String METHOD_NAME = "OPTIONS";
 
 		@Override
 		public String getMethod() {
@@ -416,11 +481,19 @@ public class GetConnection {
 	}
 
 	public static void main(String[] args) throws IOException {
-		
+
 		// Map<String, String >headers = new HashMap<>();
 		// "Content-Type", "application/json"
-//		String rep = doPost("http://127.0.0.1:9200/_search?pretty", new HashMap<>(), Collections.singletonMap("Content-Type", "application/json"));
-		String rep = doPost("http://192.168.0.237:9200/test/a", "{\"k\":\"v\"}", Collections.singletonMap("Content-Type", "application/json"));
-		logger.log(Level.INFO, rep);
+		// String rep = doPost("http://127.0.0.1:9200/_search?pretty", new
+		// HashMap<>(), Collections.singletonMap("Content-Type",
+		// "application/json"));
+		GetConnection connection = new GetConnection();
+		String rep;
+		// rep= connection.doDelete("http://192.168.0.237:9200/test_md/", new
+		// HashMap<>(), new HashMap<>());
+		// logger.info(rep);
+		rep = connection.doDelete("http://192.168.0.237:9200/test_html/", new HashMap<>(), new HashMap<>());
+		logger.info(rep);
+		connection.finish();
 	}
 }

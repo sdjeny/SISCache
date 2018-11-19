@@ -1,6 +1,7 @@
 package org.sdjen.download.cache_sis.http;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -50,11 +51,8 @@ public class HttpFactory {
 	private int retry_time_second = 30;
 	private int timout_millisecond_connect = 10000;
 	private int timout_millisecond_connectionrequest = 10000;
-	private int timout_millisecond_socket = 10000;
 	private Set<String> proxy_urls = new HashSet<String>();
-	private PoolingHttpClientConnectionManager poolConnManager = null;
-	private int pool_max_total = 200;
-	private int pool_max_per_route = 20;
+	private static PoolingHttpClientConnectionManager poolConnManager = null;
 
 	public HttpFactory() throws IOException {
 		conf = ConfUtil.getDefaultConf();
@@ -84,24 +82,6 @@ public class HttpFactory {
 			isStore = true;
 		}
 		try {
-			timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
-		} catch (Exception e) {
-			conf.getProperties().setProperty("timout_millisecond_socket", String.valueOf(timout_millisecond_socket));
-			isStore = true;
-		}
-		try {
-			pool_max_total = Integer.valueOf(conf.getProperties().getProperty("pool_max_total"));
-		} catch (Exception e) {
-			conf.getProperties().setProperty("pool_max_total", String.valueOf(pool_max_total));
-			isStore = true;
-		}
-		try {
-			pool_max_per_route = Integer.valueOf(conf.getProperties().getProperty("pool_max_per_route"));
-		} catch (Exception e) {
-			conf.getProperties().setProperty("pool_max_per_route", String.valueOf(pool_max_per_route));
-			isStore = true;
-		}
-		try {
 			for (String s : conf.getProperties().getProperty("proxy_urls").split(",")) {
 				proxy_urls.add(s.trim());
 			}
@@ -125,7 +105,7 @@ public class HttpFactory {
 				}
 				// new String[] { "SSLv2Hello", "SSLv3", "TLSv1", "TLSv1.2" }
 				sslsf = new SSLConnectionSocketFactory(SSLContexts.custom().loadTrustMaterial(null, new TrustSelfSignedStrategy()).build(),
-				        supportedProtocols.split(","), null, NoopHostnameVerifier.INSTANCE);
+						supportedProtocols.split(","), null, NoopHostnameVerifier.INSTANCE);
 				// sslsf =
 				// org.apache.http.conn.ssl.SSLConnectionSocketFactory.getSocketFactory();
 				// sslsf = new
@@ -133,25 +113,20 @@ public class HttpFactory {
 				// new
 				// TrustSelfSignedStrategy()).build(),
 				// NoopHostnameVerifier.INSTANCE);
-				// sslsf = new SSLConnectionSocketFactory(SSLContext.getDefault());
-				Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-				        .register("http", PlainConnectionSocketFactory.getSocketFactory())//
-				        .register("https", sslsf)//
-				        .build();
+				// sslsf = new
+				// SSLConnectionSocketFactory(SSLContext.getDefault());
+				Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory> create()
+						.register("http", PlainConnectionSocketFactory.getSocketFactory())//
+						.register("https", sslsf)//
+						.build();
 			}
-			poolConnManager = new PoolingHttpClientConnectionManager(/* socketFactoryRegistry */);
-			// Increase max total connection to 200
-			poolConnManager.setMaxTotal(pool_max_total);
-			// Increase default max connection per route to 20
-			poolConnManager.setDefaultMaxPerRoute(pool_max_per_route);
-			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
 			requestConfig = getDefaultBuilder().build();
 			org.apache.http.client.config.RequestConfig.Builder builder = getDefaultBuilder();
 			try {
 				String[] s = conf.getProperties().getProperty("proxy").split(":");
-				HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// ÉèÖÃ´úÀíIP¡¢¶Ë¿Ú¡¢Ð­Òé£¨Çë·Ö±ðÌæ»»£©
-				builder.setProxy(proxy);// °Ñ´úÀíÉèÖÃµ½ÇëÇóÅäÖÃ
-				// showMsg("´úÀí£º{0}", proxy);
+				HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");// ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½IPï¿½ï¿½ï¿½Ë¿Ú¡ï¿½Ð­ï¿½é£¨ï¿½ï¿½Ö±ï¿½ï¿½æ»»ï¿½ï¿½
+				builder.setProxy(proxy);// ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+				// showMsg("ï¿½ï¿½ï¿½ï¿½{0}", proxy);
 			} catch (Exception e) {
 			}
 			proxyRequestConfig = builder.build();
@@ -164,22 +139,23 @@ public class HttpFactory {
 
 	private org.apache.http.client.config.RequestConfig.Builder getDefaultBuilder() {
 		return RequestConfig.custom()//
-		        .setConnectTimeout(timout_millisecond_connect)// ÉèÖÃÁ¬½Ó³¬Ê±Ê±¼ä£¬µ¥Î»ºÁÃë¡£
-		        .setConnectionRequestTimeout(timout_millisecond_connectionrequest) // ÉèÖÃ´Óconnect
-		        // Manager(Á¬½Ó³Ø)»ñÈ¡Connection
-		        // ³¬Ê±Ê±¼ä£¬µ¥Î»ºÁÃë¡£Õâ¸öÊôÐÔÊÇÐÂ¼ÓµÄÊôÐÔ£¬ÒòÎªÄ¿Ç°°æ±¾ÊÇ¿ÉÒÔ¹²ÏíÁ¬½Ó³ØµÄ¡£
-		        .setSocketTimeout(timout_millisecond_socket)// ÇëÇó»ñÈ¡Êý¾ÝµÄ³¬Ê±Ê±¼ä(¼´ÏìÓ¦Ê±¼ä)£¬µ¥Î»ºÁÃë¡£
-		        // Èç¹û·ÃÎÊÒ»¸ö½Ó¿Ú£¬¶àÉÙÊ±¼äÄÚÎÞ·¨·µ»ØÊý¾Ý£¬¾ÍÖ±½Ó·ÅÆú´Ë´Îµ÷ÓÃ¡£
-		        .setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
-		        .setExpectContinueEnabled(true)// ÖØµã²ÎÊý£¬²»ÖªµÀ¸ÉÉ¶ÓÃµÄ
-		// .setStaleConnectionCheckEnabled(true)//ÖØµã²ÎÊý£¬ÔÚÇëÇóÖ®Ç°Ð£ÑéÁ´½ÓÊÇ·ñÓÐÐ§
+				.setConnectTimeout(timout_millisecond_connect)// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ï¿½Ê±Ê±ï¿½ä£¬ï¿½ï¿½Î»ï¿½ï¿½ï¿½ë¡£
+				.setConnectionRequestTimeout(timout_millisecond_connectionrequest) // ï¿½ï¿½ï¿½Ã´ï¿½connect
+				// Manager(ï¿½ï¿½ï¿½Ó³ï¿½)ï¿½ï¿½È¡Connection
+				// ï¿½ï¿½Ê±Ê±ï¿½ä£¬ï¿½ï¿½Î»ï¿½ï¿½ï¿½ë¡£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼Óµï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ÎªÄ¿Ç°ï¿½æ±¾ï¿½Ç¿ï¿½ï¿½Ô¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ØµÄ¡ï¿½
+				// .setSocketTimeout(timout_millisecond_socket)//
+				// ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ÝµÄ³ï¿½Ê±Ê±ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½Ó¦Ê±ï¿½ï¿½)ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ë¡£
+				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ó¿Ú£ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½Ö±ï¿½Ó·ï¿½ï¿½ï¿½ï¿½Ë´Îµï¿½ï¿½Ã¡ï¿½
+				.setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
+				.setExpectContinueEnabled(true)// ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öªï¿½ï¿½ï¿½ï¿½É¶ï¿½Ãµï¿½
+		// .setStaleConnectionCheckEnabled(true)//ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®Ç°Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ð§
 		;
 	}
 
 	private org.apache.http.client.ServiceUnavailableRetryStrategy getServiceUnavailableRetryStrategy() {
 		return new org.apache.http.client.ServiceUnavailableRetryStrategy() {
 			/**
-			 * retryÂß¼­
+			 * retryï¿½ß¼ï¿½
 			 */
 			@Override
 			public boolean retryRequest(HttpResponse response, int executionCount, HttpContext context) {
@@ -190,7 +166,7 @@ public class HttpFactory {
 			}
 
 			/**
-			 * retry¼ä¸ôÊ±¼ä
+			 * retryï¿½ï¿½ï¿½Ê±ï¿½ï¿½
 			 */
 			@Override
 			public long getRetryInterval() {
@@ -202,20 +178,29 @@ public class HttpFactory {
 	private HttpRequestRetryHandler getHttpRequestRetryHandler() {
 		return new HttpRequestRetryHandler() {
 			public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
-				if (executionCount <= retry_times) {
-					// from :https://blog.csdn.net/minicto/article/details/56677420
+				if (exception instanceof java.net.SocketTimeoutException) {
+					return false;// Timeout
+				} else if (exception instanceof UnknownHostException) {
+					return false;// Unknown host
+				} else if (exception instanceof org.apache.http.NoHttpResponseException) {
+					return false;// Unknown host
+				} else if (exception instanceof javax.net.ssl.SSLHandshakeException) {
+					return false;// Unknown host
+				} else if (exception instanceof java.net.SocketException) {
+					return false;// Unknown host
+				} else if (executionCount <= retry_times) {
+					// from
+					// :https://blog.csdn.net/minicto/article/details/56677420
 					try {
-						Thread.sleep(1000l * retry_time_second * executionCount);
+						Thread.sleep(100l * executionCount);
 					} catch (InterruptedException e) {
 					}
 					return !(HttpClientContext.adapt(context).getRequest() instanceof HttpEntityEnclosingRequest);
 					// Retry if the request is considered idempotent
 					// Do not retry if over max retry count
-				} else if (false) {
+				} else if (false) {//
 					if (exception instanceof InterruptedIOException) {
 						return false;// Timeout
-					} else if (exception instanceof UnknownHostException) {
-						return false;// Unknown host
 					} else if (exception instanceof ConnectTimeoutException) {
 						return false;// Connection refused
 					} else if (exception instanceof SSLException) {
@@ -227,14 +212,22 @@ public class HttpFactory {
 		};
 	}
 
-	private synchronized CloseableHttpClient getClient() {
+	protected synchronized CloseableHttpClient getClient() {
 		if (null == client) {
-			// ÊµÀý»¯CloseableHttpClient¶ÔÏó
+			// Êµï¿½ï¿½ï¿½ï¿½CloseableHttpClientï¿½ï¿½ï¿½ï¿½
+
+			// CloseableHttpClient httpClient
+			// = HttpClients
+			// .custom()
+			// .setConnectionManager(connManager)
+			// .setConnectionManagerShared(true)
+			// .build();
 			client = HttpClients.custom()//
-			        .setConnectionManager(poolConnManager)//
-			        .setDefaultRequestConfig(requestConfig)//
-			        .setRetryHandler(getHttpRequestRetryHandler())//
-			        .build();
+					.setConnectionManagerShared(true)//
+					.setConnectionManager(getPoolConnManager())//
+					.setDefaultRequestConfig(requestConfig)//
+					.setRetryHandler(getHttpRequestRetryHandler())//
+					.build();
 		}
 		return client;
 	}
@@ -244,19 +237,22 @@ public class HttpFactory {
 			// org.apache.http.client.config.RequestConfig.Builder builder =
 			// getDefaultBuilder();
 			// try {
-			// String[] s = conf.getProperties().getProperty("proxy").split(":");
-			// HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]), "http");//
-			// ÉèÖÃ´úÀíIP¡¢¶Ë¿Ú¡¢Ð­Òé£¨Çë·Ö±ðÌæ»»£©
-			// builder.setProxy(proxy);// °Ñ´úÀíÉèÖÃµ½ÇëÇóÅäÖÃ
-			// // showMsg("´úÀí£º{0}", proxy);
+			// String[] s =
+			// conf.getProperties().getProperty("proxy").split(":");
+			// HttpHost proxy = new HttpHost(s[0], Integer.valueOf(s[1]),
+			// "http");//
+			// ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½IPï¿½ï¿½ï¿½Ë¿Ú¡ï¿½Ð­ï¿½é£¨ï¿½ï¿½Ö±ï¿½ï¿½æ»»ï¿½ï¿½
+			// builder.setProxy(proxy);// ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+			// // showMsg("ï¿½ï¿½ï¿½ï¿½{0}", proxy);
 			// } catch (Exception e) {
 			// }
-			// ÊµÀý»¯CloseableHttpClient¶ÔÏó
+			// Êµï¿½ï¿½ï¿½ï¿½CloseableHttpClientï¿½ï¿½ï¿½ï¿½
 			proxyClient = HttpClients.custom()//
-			        .setConnectionManager(poolConnManager)//
-			        .setDefaultRequestConfig(proxyRequestConfig)//
-			        .setRetryHandler(getHttpRequestRetryHandler())//
-			        .build();
+					.setConnectionManagerShared(true)//
+					.setConnectionManager(getPoolConnManager())//
+					.setDefaultRequestConfig(proxyRequestConfig)//
+					.setRetryHandler(getHttpRequestRetryHandler())//
+					.build();
 		}
 		return proxyClient;
 	}
@@ -272,11 +268,47 @@ public class HttpFactory {
 		// }
 		// client = null;
 		// proxyClient = null;
-		// Á¬½Ó³Ø¹Ø±Õ
-		poolConnManager.close();
+		// ï¿½ï¿½ï¿½Ó³Ø¹Ø±ï¿½
+		// poolConnManager.close();
 	}
 
-	public PoolingHttpClientConnectionManager getPoolConnManager() {
+	public static PoolingHttpClientConnectionManager getPoolConnManager() {
+		if (null == poolConnManager) {
+			int timout_millisecond_socket = 10000;
+			int pool_max_total = 200;
+			int pool_max_per_route = 20;
+			try {
+				boolean isStore = false;
+				ConfUtil conf = ConfUtil.getDefaultConf();
+				try {
+					timout_millisecond_socket = Integer.valueOf(conf.getProperties().getProperty("timout_millisecond_socket"));
+				} catch (Exception e) {
+					conf.getProperties().setProperty("timout_millisecond_socket", String.valueOf(timout_millisecond_socket));
+					isStore = true;
+				}
+				try {
+					pool_max_total = Integer.valueOf(conf.getProperties().getProperty("pool_max_total"));
+				} catch (Exception e) {
+					conf.getProperties().setProperty("pool_max_total", String.valueOf(pool_max_total));
+					isStore = true;
+				}
+				try {
+					pool_max_per_route = Integer.valueOf(conf.getProperties().getProperty("pool_max_per_route"));
+				} catch (Exception e) {
+					conf.getProperties().setProperty("pool_max_per_route", String.valueOf(pool_max_per_route));
+					isStore = true;
+				}
+				if (isStore)
+					conf.store();
+			} catch (IOException e) {
+			}
+			poolConnManager = new PoolingHttpClientConnectionManager(/* socketFactoryRegistry */);
+			// Increase max total connection to 200
+			poolConnManager.setMaxTotal(pool_max_total);
+			// Increase default max connection per route to 20
+			poolConnManager.setDefaultMaxPerRoute(pool_max_per_route);
+			poolConnManager.setDefaultSocketConfig(SocketConfig.custom().setSoTimeout(timout_millisecond_socket).build());
+		}
 		return poolConnManager;
 	}
 
@@ -314,11 +346,11 @@ public class HttpFactory {
 		try {
 			get = new HttpGet(uri);
 			boolean needProxy = needProxy(uri);
-			try {// ÏÈ²»Òª´úÀíÍæÒ»´Î
+			try {// ï¿½È²ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 				response = (needProxy ? getProxyClient() : getClient()).execute(get);
-			} catch (IOException e) {// ²»ÐÐ¾ÍÊ¹ÓÃ´úÀíÔÙÍæÒ»´Î
+			} catch (IOException e) {// ï¿½ï¿½ï¿½Ð¾ï¿½Ê¹ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 				get.abort();
-				if (!needProxy) {// Èç¹ûÊÇÖ±ßB·½Ê½£¬“Q´úÀí·½Ê½Ô‡Ò»´Î
+				if (!needProxy) {// ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½Bï¿½ï¿½Ê½ï¿½ï¿½ï¿½Qï¿½ï¿½ï¿½ï¿½Ê½Ô‡Ò»ï¿½ï¿½
 					get = new HttpGet(uri);
 					try {
 						response = getProxyClient().execute(get);
@@ -326,7 +358,7 @@ public class HttpFactory {
 						get.abort();
 						throw e1;
 					}
-					// È»ºó°ÑµØÖ·¼ÓÈëÐèÒª´úÀí¶ÓÁÐÀï
+					// È»ï¿½ï¿½Ñµï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 					int index = uri.indexOf('/', 9);
 					String proxy_url;
 					if (-1 != index)
@@ -339,7 +371,7 @@ public class HttpFactory {
 						conf.store();
 						LogUtil.errLog.showMsg("ADD:	{0}", proxy_url);
 					}
-				} else {// Èç¹ûÒÑ½›ÊÇ´úÀí·½Ê½£¬ÄÇ¾ÍÕæßB²»ÉÏÁË¡£
+				} else {// ï¿½ï¿½ï¿½ï¿½Ñ½ï¿½ï¿½Ç´ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ç¾ï¿½ï¿½ï¿½ï¿½Bï¿½ï¿½ï¿½ï¿½ï¿½Ë¡ï¿½
 					throw e;
 				}
 			}
@@ -350,7 +382,7 @@ public class HttpFactory {
 			entity = response.getEntity();
 			if (entity != null) {
 				executor.execute(in = entity.getContent());
-				// EntityUtils.consumeQuietly(entity);//´Ë´¦¸ßÄÜ£¬Í¨¹ýÔ´Âë·ÖÎö£¬ÓÉEntityUtilsÊÇ·ñ»ØÊÕHttpEntity
+				// EntityUtils.consumeQuietly(entity);//ï¿½Ë´ï¿½ï¿½ï¿½ï¿½Ü£ï¿½Í¨ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½EntityUtilsï¿½Ç·ï¿½ï¿½ï¿½ï¿½HttpEntity
 			}
 		} catch (Exception e) {
 			if (null != get)
@@ -364,7 +396,7 @@ public class HttpFactory {
 				}
 			}
 			if (entity != null) {
-				EntityUtils.consumeQuietly(entity);// ´Ë´¦¸ßÄÜ£¬Í¨¹ýÔ´Âë·ÖÎö£¬ÓÉEntityUtilsÊÇ·ñ»ØÊÕHttpEntity
+				EntityUtils.consumeQuietly(entity);// ï¿½Ë´ï¿½ï¿½ï¿½ï¿½Ü£ï¿½Í¨ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½EntityUtilsï¿½Ç·ï¿½ï¿½ï¿½ï¿½HttpEntity
 			}
 			if (null != response) {
 				try {
@@ -376,17 +408,17 @@ public class HttpFactory {
 	}
 
 	// private InputStream getInputStream(String uri) throws IOException {
-	// // ÇëÇó·µ»Ø
+	// // ï¿½ï¿½ï¿½ó·µ»ï¿½
 	// return client.execute(new HttpGet(uri)).getEntity().getContent();
 	// }
 	/**
-	 * ¸ù¾ÝÖ¸¶¨µÄURLÏÂÔØhtml´úÂë
+	 * ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½URLï¿½ï¿½ï¿½ï¿½htmlï¿½ï¿½ï¿½ï¿½
 	 * 
 	 * @param uri
-	 *            ÍøÒ³µÄµØÖ·
+	 *            ï¿½ï¿½Ò³ï¿½Äµï¿½Ö·
 	 * @param encoding
-	 *            ±àÂë·½Ê½
-	 * @return ·µ»ØÍøÒ³µÄhtmlÄÚÈÝ
+	 *            ï¿½ï¿½ï¿½ë·½Ê½
+	 * @return ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ï¿½ï¿½htmlï¿½ï¿½ï¿½ï¿½
 	 * @throws IOException
 	 */
 	public String getHTML(final String uri) throws Throwable {
@@ -394,15 +426,25 @@ public class HttpFactory {
 			public void execute(InputStream inputStream) {
 				try {
 					setResult(null);
-					StringBuffer pageHTML = new StringBuffer();
-					BufferedReader br;
-					br = new BufferedReader(new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
-					String line = null;
-					while ((line = br.readLine()) != null) {
-						pageHTML.append(line);
-						pageHTML.append("\r\n");
+					if (true) {
+						ByteArrayOutputStream result = new ByteArrayOutputStream();
+						byte[] buffer = new byte[1024];
+						int length;
+						while ((length = inputStream.read(buffer)) != -1) {
+							result.write(buffer, 0, length);
+						}
+						setResult(result.toString(conf.getProperties().getProperty("chatset")));
+					} else {
+						StringBuffer pageHTML = new StringBuffer();
+						BufferedReader br;
+						br = new BufferedReader(new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
+						String line = null;
+						while ((line = br.readLine()) != null) {
+							pageHTML.append(line);
+							pageHTML.append("\r\n");
+						}
+						setResult(pageHTML.toString());
 					}
-					setResult(pageHTML.toString());
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -413,7 +455,7 @@ public class HttpFactory {
 				HttpFactory.this.execute(uri, executor);
 				String result = executor.getResult();
 				if (null == result)
-					throw new Exception("È¡ÄÚÈÝÊ§°Ü");
+					throw new Exception("å–ä¸åˆ°æ•°æ®	" + uri);
 			}
 		});
 		return executor.getResult();
@@ -439,34 +481,34 @@ public class HttpFactory {
 	}
 
 	/**
-	 * »ñÈ¡URLÖÐ×îºóÃæµÄÕæÊµÎÄ¼þÃû
+	 * ï¿½ï¿½È¡URLï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½Ä¼ï¿½ï¿½ï¿½
 	 * 
 	 * @param uri
-	 *            Èç£ºhttp://www.hua.com/bg.jpg
-	 * @return ·µ»Øbg.jpg
+	 *            ï¿½ç£ºhttp://www.hua.com/bg.jpg
+	 * @return ï¿½ï¿½ï¿½ï¿½bg.jpg
 	 */
 	private String getUrlFileName(String uri) {
 		return uri.split("/")[uri.split("/").length - 1];
 	}
 
 	/**
-	 * »ñÈ¡URL²»´øÎÄ¼þÃûµÄÂ·¾¶
+	 * ï¿½ï¿½È¡URLï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½
 	 * 
 	 * @param uri
-	 *            Èç£ºhttp://www.hua.com/bg.jpg
-	 * @return ·µ»Ø http://www.hua.com
+	 *            ï¿½ç£ºhttp://www.hua.com/bg.jpg
+	 * @return ï¿½ï¿½ï¿½ï¿½ http://www.hua.com
 	 */
 	private String getUrlPath(String uri) {
 		return uri.replaceAll("/" + getUrlFileName(uri), "");
 	}
 
 	/**
-	 * Æ´½ÓURLÂ·¾¶ºÍÎÄ¼þÃû£¬×¢Òâ£ºÒÔ../»òÕß/¿ªÍ·µÄfileName¶¼ÒªÍËÒ»²ãÄ¿Â¼
+	 * Æ´ï¿½ï¿½URLÂ·ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½â£ºï¿½ï¿½../ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½Í·ï¿½ï¿½fileNameï¿½ï¿½Òªï¿½ï¿½Ò»ï¿½ï¿½Ä¿Â¼
 	 * 
 	 * @param uri
-	 *            Èç£ºhttp://www.hua.com/product/9010753.html
+	 *            ï¿½ç£ºhttp://www.hua.com/product/9010753.html
 	 * @param fileName
-	 *            Èç£º../skins/default/css/base.css
+	 *            ï¿½ç£º../skins/default/css/base.css
 	 * @return http://www.hua.com/skins/default/css/base.css
 	 */
 	public String joinUrlPath(String uri, String fileName) {
@@ -474,11 +516,11 @@ public class HttpFactory {
 		// showMsg("fileName:"+fileName);
 		if (fileName.startsWith("http://") || fileName.startsWith("https://"))
 			return fileName;
-		// Èç¹ûÈ¥µô¡°http://¡±Ç°×ººó»¹°üº¬¡°/¡±·û£¬ËµÃ÷ÒªÍËÒ»²ãÄ¿Â¼£¬¼´È¥µôµ±Ç°ÎÄ¼þÃû
+		// ï¿½ï¿½ï¿½È¥ï¿½ï¿½ï¿½ï¿½http://ï¿½ï¿½Ç°×ºï¿½ó»¹°ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½Òªï¿½ï¿½Ò»ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Ä¼ï¿½ï¿½ï¿½
 		if (uri.replaceAll("http://", "").replaceAll("https://", "").contains("/"))
 			uri = getUrlPath(uri);
 		if (fileName.startsWith("../") || fileName.startsWith("/")) {
-			// Ö»ÓÐµ±Ç°URL°üº¬¶à²ãÄ¿Â¼²ÅÄÜºóÍË£¬Èç¹ûÖ»ÊÇhttp://www.hua.com£¬ÏëºóÍË¶¼²»ÐÐ
+			// Ö»ï¿½Ðµï¿½Ç°URLï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½Üºï¿½ï¿½Ë£ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½http://www.hua.comï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¶ï¿½ï¿½ï¿½ï¿½ï¿½
 			if (uri.replaceAll("http://", "").replaceAll("https://", "").contains("/"))
 				uri = getUrlPath(uri);
 			fileName = fileName.substring(fileName.indexOf("/") + 1);

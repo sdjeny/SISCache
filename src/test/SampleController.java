@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -481,17 +482,31 @@ public class SampleController {
 				String text = (String) _source.get("context");
 				org.jsoup.nodes.Document doument = Jsoup.parse(text);
 				boolean update = false;
+				for (org.jsoup.nodes.Element e : doument//
+						.select("div.mainbox.viewthread")//
+						.select("td.postcontent")//
+						.select("div.postmessage.defaultpost")//
+						.select("div.box.postattachlist")//
+						.select("dl.t_attachlist")//
+						.select("a[href]")//
+				) {
+					String href = e.attr("href");
+					if (href.startsWith("../../torrent/20")) {
+						update = true;
+						e.attr("href", "../" + href);
+					} else if (href.startsWith("../")) {
+						href = href.replace("../", "");
+						if (href.startsWith("http")) {
+							update = true;
+							e.attr("href", href);
+						}
+					}
+				}
 				for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
 					String src = e.attr("src");
-					if (src.startsWith("../../images/20") || src.startsWith("../../torrent/20")) {
+					if (src.startsWith("../../images/20")) {
 						update = true;
 						e.attr("src", "../" + src);
-					} else if (src.startsWith("../../images/20")) {
-						src = src.replace("../", "");
-						if (src.startsWith("http")) {
-							update = true;
-							e.attr("src", src);
-						}
 					}
 				}
 				if (update)

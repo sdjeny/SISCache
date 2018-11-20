@@ -13,6 +13,7 @@ import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
+import org.sdjen.download.cache_sis.tool.ZipUtil;
 
 public class ListES {
 	GetConnection connection;
@@ -132,15 +133,15 @@ public class ListES {
 		int total = (int) h.get("total");
 		// System.out.println(total);
 		List<ESMap> hits = (List<ESMap>) h.get("hits");
-		if (total > 1) {
+		if (true || total > 1) {
 			for (ESMap hit : hits) {
 				ESMap _source = hit.get("_source", ESMap.class);
 				String context = _source.get("context", String.class);
-				System.out.println(hit.get("_id", String.class));
-				getStore().saveHtml(hit.get("_id", String.class), context);
+				// getStore().saveHtml(hit.get("_id", String.class), context);
+				org.jsoup.nodes.Document doument = Jsoup.parse(context);
+				ESMap comments = ESMap.get();
 				{
-					org.jsoup.nodes.Document doument = Jsoup.parse(context);
-					for (org.jsoup.nodes.Element e : doument.select("div.mainbox.viewthread")//// class=mainbox的div
+					for (org.jsoup.nodes.Element postcontent : doument.select("div.mainbox.viewthread")//// class=mainbox的div
 							.select("table")//
 							.select("tbody")//
 							.select("tr")//
@@ -148,23 +149,34 @@ public class ListES {
 					//
 					) {
 						String floor = "";
-						try {
-							org.jsoup.nodes.Element temp = e.select("div.postinfo").select("strong").first();
+						for (org.jsoup.nodes.Element postinfo : postcontent.select("div.postinfo")) {
+							org.jsoup.nodes.Element temp = postinfo.select("strong").first();
 							if (null != temp) {
 								floor = temp.ownText();
 							}
-						} catch (Exception e1) {
 						}
-						if (floor.isEmpty() || "1楼".equals(floor))
+						if (floor.isEmpty())
 							continue;
-						System.out.println(floor);
-						for (org.jsoup.nodes.Element postmessage : e.select("div.postmessage.defaultpost").select("div.t_msgfont")) {
-							System.out.println(postmessage.text());
+						String fm = comments.get(floor, String.class);
+						if (null == fm)
+							fm = "";
+						for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost").select("div.t_msgfont")) {
+							if (!fm.isEmpty())
+								fm += ",";
+							fm += comment.text();
 						}
+						comments.set(floor, fm);
 					}
 				}
+				String json = JsonUtil.toJson(comments);
+				// System.out.println(ZipUtil.uncompress(ZipUtil.compress(json)));deplop_
+				System.out.println(context.getBytes().length//
+						+ "	VS	" + (ZipUtil.zipString(context).getBytes().length + json.getBytes().length)//
+						+ "	VS	" + (ZipUtil.compress(context).getBytes().length + json.getBytes().length)//
+						+ "	VS	" + (ZipUtil.compress(context, 1).getBytes().length + json.getBytes().length)//
+				);
 			}
-			throw new Exception("test");
+			// throw new Exception("test");
 		}
 	}
 }

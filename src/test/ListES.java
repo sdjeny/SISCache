@@ -6,11 +6,15 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.DataFormatException;
 
 import org.jsoup.Jsoup;
+import org.sdjen.download.cache_sis.DownloadSingle;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
@@ -19,17 +23,36 @@ public class ListES {
 	GetConnection connection;
 	ConfUtil conf;
 	private String path_es_start;
+	private DownloadSingle downloadSingle;
 
 	private IStore store;
 
 	public static void main(String[] args) throws Throwable {
 		ListES listES = new ListES();
-		String min = "0";
-		String rs = min;
-		do {
-			min = rs;
-			rs = listES.list(min);
-		} while (rs.compareTo(min) > 0);
+		listES.execute();
+	}
+
+	private void execute() throws Throwable {
+		LogUtil.init();
+		HttpFactory httpUtil = new HttpFactory();
+		downloadSingle = new DownloadSingle();
+		downloadSingle.setHttpUtil(httpUtil);
+		int i = 0;
+		getStore().refreshMsgLog();
+		try {
+			String min = "0";
+			String rs = min;
+			do {
+				min = rs;
+				rs = list(min);
+				getStore().msg("{0}	~	{1}", min, rs);
+				if (i++ % 20 == 0)
+					getStore().refreshMsgLog();
+			} while (rs.compareTo(min) > 0);
+		} finally {
+			httpUtil.finish();
+			LogUtil.finishAll();
+		}
 	}
 
 	public IStore getStore() throws Exception {
@@ -89,7 +112,7 @@ public class ListES {
 				// .set("page.keyword", ESMap.get().set("order", "asc"))//
 				)//
 		);
-		params.put("size", 20);
+		params.put("size", 50);
 		params.put("from", 0);
 		String jsonParams = JsonUtil.toJson(params);
 		// System.out.println(jsonParams);
@@ -103,21 +126,19 @@ public class ListES {
 			// System.out.println(hit.get("_id", String.class));
 			ESMap _source = hit.get("_source", ESMap.class);
 			String id = _source.get("id", String.class);
-			System.out.println(id);
 			result = id.compareTo(result) > 0 ? id : result;
+			getStore().msg(id);
 			解析(id);
 		}
-		System.out.println("-----------------------------------");
 		return result;
 	}
 
 	private void 解析(String id) throws Throwable {
 		ESMap params = ESMap.get()//
-				// .set("_source", ESMap.get()//
-				// // .set("includes",
-				// // Arrays.asList("id"))//
+				.set("_source", ESMap.get()//
+						.set("includes", Arrays.asList("page", "title", "date_str"))//
 				// .set("excludes", Arrays.asList("context"))//
-				// )//
+				)//
 				.set("query", ESMap.get().set("term", ESMap.get().set("id", id)))//
 				.set("sort", Arrays.asList(ESMap.get().set("page.keyword", ESMap.get().set("order", "asc"))))//
 				.set("size", 100)//
@@ -133,50 +154,24 @@ public class ListES {
 		int total = (int) h.get("total");
 		// System.out.println(total);
 		List<ESMap> hits = (List<ESMap>) h.get("hits");
-		if (true || total > 1) {
-			for (ESMap hit : hits) {
-				ESMap _source = hit.get("_source", ESMap.class);
-				String context = _source.get("context", String.class);
-				// getStore().saveHtml(hit.get("_id", String.class), context);
-				org.jsoup.nodes.Document doument = Jsoup.parse(context);
-				ESMap comments = ESMap.get();
-				{
-					for (org.jsoup.nodes.Element postcontent : doument.select("div.mainbox.viewthread")//// class=mainbox的div
-							.select("table")//
-							.select("tbody")//
-							.select("tr")//
-							.select("td.postcontent")//
-					//
-					) {
-						String floor = "";
-						for (org.jsoup.nodes.Element postinfo : postcontent.select("div.postinfo")) {
-							org.jsoup.nodes.Element temp = postinfo.select("strong").first();
-							if (null != temp) {
-								floor = temp.ownText();
-							}
-						}
-						if (floor.isEmpty())
-							continue;
-						String fm = comments.get(floor, String.class);
-						if (null == fm)
-							fm = "";
-						for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost").select("div.t_msgfont")) {
-							if (!fm.isEmpty())
-								fm += ",";
-							fm += comment.text();
-						}
-						comments.set(floor, fm);
-					}
-				}
-				String json = JsonUtil.toJson(comments);
-				// System.out.println(ZipUtil.uncompress(ZipUtil.compress(json)));deplop_
-				System.out.println(context.getBytes().length//
-						+ "	VS	" + (ZipUtil.zipString(context).getBytes().length + json.getBytes().length)//
-						+ "	VS	" + (ZipUtil.compress(context).getBytes().length + json.getBytes().length)//
-						+ "	VS	" + (ZipUtil.compress(context, 1).getBytes().length + json.getBytes().length)//
-				);
-			}
-			// throw new Exception("test");
+		for (ESMap hit : hits) {
+			ESMap _source = hit.get("_source", ESMap.class);
+			String page = _source.get("page", String.class);
+			String title = _source.get("title", String.class);
+			String dateStr = _source.get("date_str", String.class);
+			if (null != dateStr && dateStr.contains(" "))
+				dateStr = dateStr.substring(0, dateStr.indexOf(" ")).trim();
+			// String context = _source.get("context", String.class);
+			// String context_zip = _source.get("context_zip",
+			// String.class);
+			// ESMap context_comments = _source.get("context_comments",
+			// ESMap.class);
+			downloadSingle.startDownload("torrent", id, page//
+					, String.format("http://www.sexinsex.net/bbs/viewthread.php?tid=%s&page=%s", id, page)//
+					// http://www.sexinsex.net/bbs/thread-%s-%s-300.html
+					, title, dateStr);
 		}
+		// throw new Exception("test");
+
 	}
 }

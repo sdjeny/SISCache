@@ -8,12 +8,15 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.DataFormatException;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
+import org.sdjen.download.cache_sis.tool.ZipUtil;
 
 import test.GetConnection;
 
@@ -94,7 +97,18 @@ public class Store_ElasticSearch implements IStore {
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
 		ESMap _source = esMap.get("_source", ESMap.class);
 		if (null != _source) {
-			return _source.get("context", String.class);
+			String text = _source.get("context_zip", String.class);
+			if (null != text) {
+				try {
+					return ZipUtil.uncompress(text);
+				} catch (DataFormatException e1) {
+					e1.printStackTrace();
+					text = null;
+				}
+			}
+			if (null == text) {
+				return  _source.get("context", String.class);
+			}
 		}
 		return null;
 	}
@@ -156,6 +170,7 @@ public class Store_ElasticSearch implements IStore {
 				.replace("viewthread.php?action=printable&tid=", "");
 		String page = null == pages ? "1" : pages.select("strong").text();
 		String dat = null;
+		String context = null;
 		if (false) {
 			String f = "1";
 			for (org.jsoup.nodes.Element e : doument.select("div.mainbox")//// class=mainbox的div
@@ -189,21 +204,38 @@ public class Store_ElasticSearch implements IStore {
 						}
 					}
 				}
-				if (floor.isEmpty() || "1楼".equals(floor))
+				if (floor.isEmpty())
 					continue;
-				String fm = comments.get(floor, String.class);
-				if (null == fm)
-					fm = "";
-				for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost").select("div.t_msgfont")) {
-					if (!fm.isEmpty())
-						fm += ",";
-					fm += comment.text();
+				if ("1楼".equals(floor)) {
+					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")) {
+						context = comment.html();
+					}
+				} else {
+					String fm = comments.get(floor, String.class);
+					if (null == fm)
+						fm = "";
+					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost").select("div.t_msgfont")) {
+						if (!fm.isEmpty())
+							fm += ",";
+						fm += comment.text();
+					}
+					comments.set(floor, fm);
 				}
-				comments.set(floor, fm);
 			}
 		}
 
 		boolean update = false;
+
+		for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
+			// if (!e.text().isEmpty()) {
+			update = true;
+			e.text("");
+			// }
+		}
+		for (org.jsoup.nodes.Element e : doument.select("head").select("script")) {
+			update = true;
+			e.remove();
+		}
 		if (update)
 			text = doument.html();
 		key = id + "_" + page;
@@ -224,8 +256,9 @@ public class Store_ElasticSearch implements IStore {
 		json.put("type", type);
 		json.put("title", title);
 		json.put("page", page);
-		json.put("context", text);
-		json.put("comments", comments);
+		json.put("context", context);
+		json.put("context_zip", ZipUtil.compress(text));
+		json.put("context_comments", comments);
 		String r = connection.doPost(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json), new HashMap<>());
 	}
 

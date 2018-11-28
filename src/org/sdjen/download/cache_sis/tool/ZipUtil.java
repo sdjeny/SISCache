@@ -49,7 +49,7 @@ public class ZipUtil {
 			zout.putNextEntry(new ZipEntry("0"));
 			zout.write(primStr.getBytes(CHARSET));
 			zout.closeEntry();
-			return new BASE64Encoder().encode(out.toByteArray());
+			return bytesToString(out.toByteArray());
 		} catch (IOException e) {
 			log.error("对字符串进行加压加密操作失败：", e);
 			return null;
@@ -80,7 +80,7 @@ public class ZipUtil {
 		ZipInputStream zin = null;
 		String decompressed = null;
 		try {
-			byte[] compressed = new BASE64Decoder().decodeBuffer(compressedStr);
+			byte[] compressed = stringToBytes(compressedStr);
 			out = new ByteArrayOutputStream();
 			in = new ByteArrayInputStream(compressed);
 			zin = new ZipInputStream(in);
@@ -120,11 +120,11 @@ public class ZipUtil {
 		return decompressed;
 	}
 
-	public static String compress(String primStr) throws UnsupportedEncodingException {
-		return compress(primStr,9);
+	public static String compress(String primStr) throws IOException {
+		return compress(primStr, 9);
 	}
 
-	public static String compress(String primStr, int level) throws UnsupportedEncodingException {
+	public static String compress(String primStr, int level) throws IOException {
 		byte input[] = primStr.getBytes(CHARSET);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		Deflater compressor = new Deflater(level);
@@ -139,11 +139,21 @@ public class ZipUtil {
 		} finally {
 			compressor.end();
 		}
-		return new BASE64Encoder().encode(bos.toByteArray());
+		return bytesToString(bos.toByteArray());
+	}
+
+	public static String bytesToString(byte[] bytes) throws IOException {
+		 return new BASE64Encoder().encode(bytes);
+//		return new String(bytes, CHARSET);
+	}
+
+	public static byte[] stringToBytes(String str) throws IOException {
+		 return new BASE64Decoder().decodeBuffer(str);
+//		return str.getBytes(CHARSET);
 	}
 
 	public static String uncompress(String compressedStr) throws DataFormatException, IOException {
-		byte[] input = new BASE64Decoder().decodeBuffer(compressedStr);
+		byte[] input = stringToBytes(compressedStr);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		Inflater decompressor = new Inflater();
 		try {

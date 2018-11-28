@@ -178,21 +178,24 @@ public class HttpFactory {
 	private HttpRequestRetryHandler getHttpRequestRetryHandler() {
 		return new HttpRequestRetryHandler() {
 			public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
-				if (exception instanceof java.net.SocketTimeoutException) {
-					return false;// Timeout
-				} else if (exception instanceof UnknownHostException) {
-					return false;// Unknown host
-				} else if (exception instanceof org.apache.http.NoHttpResponseException) {
-					return false;// Unknown host
-				} else if (exception instanceof javax.net.ssl.SSLHandshakeException) {
-					return false;// Unknown host
-				} else if (exception instanceof java.net.SocketException) {
-					return false;// Unknown host
-				} else if (executionCount <= retry_times) {
+				// if (exception instanceof java.net.SocketTimeoutException) {
+				// return false;// Timeout
+				// } else if (exception instanceof UnknownHostException) {
+				// return false;// Unknown host
+				// } else if (exception instanceof
+				// org.apache.http.NoHttpResponseException) {
+				// return false;// Unknown host
+				// } else if (exception instanceof
+				// javax.net.ssl.SSLHandshakeException) {
+				// return false;// Unknown host
+				// } else if (exception instanceof java.net.SocketException) {
+				// return false;// Unknown host
+				// } else
+				if (executionCount <= retry_times) {
 					// from
 					// :https://blog.csdn.net/minicto/article/details/56677420
 					try {
-						Thread.sleep(100l * executionCount);
+						Thread.sleep(1000l * executionCount);
 					} catch (InterruptedException e) {
 					}
 					return !(HttpClientContext.adapt(context).getRequest() instanceof HttpEntityEnclosingRequest);
@@ -407,21 +410,11 @@ public class HttpFactory {
 		}
 	}
 
-	// private InputStream getInputStream(String uri) throws IOException {
-	// // ���󷵻�
-	// return client.execute(new HttpGet(uri)).getEntity().getContent();
-	// }
-	/**
-	 * ����ָ����URL����html����
-	 * 
-	 * @param uri
-	 *            ��ҳ�ĵ�ַ
-	 * @param encoding
-	 *            ���뷽ʽ
-	 * @return ������ҳ��html����
-	 * @throws IOException
-	 */
 	public String getHTML(final String uri) throws Throwable {
+		return getHTML(uri, conf.getProperties().getProperty("chatset"));
+	}
+
+	public String getHTML(final String uri, final String chatset) throws Throwable {
 		final Executor<String> executor = new Executor<String>() {
 			public void execute(InputStream inputStream) {
 				try {
@@ -433,11 +426,11 @@ public class HttpFactory {
 						while ((length = inputStream.read(buffer)) != -1) {
 							result.write(buffer, 0, length);
 						}
-						setResult(result.toString(conf.getProperties().getProperty("chatset")));
+						setResult(result.toString(chatset));
 					} else {
 						StringBuffer pageHTML = new StringBuffer();
 						BufferedReader br;
-						br = new BufferedReader(new InputStreamReader(inputStream, conf.getProperties().getProperty("chatset")));
+						br = new BufferedReader(new InputStreamReader(inputStream, chatset));
 						String line = null;
 						while ((line = br.readLine()) != null) {
 							pageHTML.append(line);
@@ -499,7 +492,12 @@ public class HttpFactory {
 	 * @return ���� http://www.hua.com
 	 */
 	private String getUrlPath(String uri) {
-		return uri.replaceAll("/" + getUrlFileName(uri), "");
+		// return uri.replaceAll("/" + getUrlFileName(uri), "");
+		return uri.substring(0, uri.lastIndexOf("/"));
+	}
+
+	public static void main(String[] args) throws IOException {
+		System.out.println(new HttpFactory().joinUrlPath("http://www.sexinsex.net/bbs/viewthread.php?tid=111&page=11", "呵呵呵"));
 	}
 
 	/**

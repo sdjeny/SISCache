@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.DataFormatException;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -27,7 +28,9 @@ import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.stereotype.Controller;
@@ -122,11 +125,12 @@ public class SampleController {
 
 	@RequestMapping("/cache/{from}/{to}")
 	String cache(@PathVariable("from") int from, @PathVariable("to") int to) {
-		final String type;
+		return cache(from, to, "");
+	}
+
+	@RequestMapping("/cache/{from}/{to}/{type}")
+	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type) {
 		try {
-			ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-			HttpServletRequest request = requestAttributes.getRequest();
-			type = request.getParameter("type");
 			new Thread(new Runnable() {
 				public void run() {
 
@@ -193,7 +197,7 @@ public class SampleController {
 		params.put("_source",
 				ESMap.get()//
 						.set("includes", Arrays.asList())//
-						.set("excludes", Arrays.asList("context"))//
+						.set("excludes", Arrays.asList("context*"))//
 		);
 		List<ESMap> shoulds = new ArrayList<>();
 		List<ESMap> mustes = new ArrayList<>();
@@ -202,7 +206,7 @@ public class SampleController {
 			listAdv(query, shoulds, mustes, mustNots);
 		} else if (search == null || search.trim().isEmpty()) {
 			listAll(shoulds, mustes, mustNots);
-			order = "id.keyword:desc";
+			order = "datetime:desc";
 		} else {
 			try {
 				listDate(search, shoulds, mustes, mustNots);
@@ -456,7 +460,7 @@ public class SampleController {
 		}
 		Map<String, Object> params = new HashMap<>();
 		Map<String, Object> _source = new HashMap<>();
-		_source.put("includes", Arrays.asList("context"));
+		_source.put("includes", Arrays.asList("context*"));
 		_source.put("excludes", Arrays.asList());
 		params.put("_source", _source);
 		params.put("query",
@@ -479,9 +483,27 @@ public class SampleController {
 			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits")).get("hits");
 			for (Map<String, Object> hit : hits) {
 				_source = (Map<String, Object>) hit.get("_source");
-				String text = (String) _source.get("context");
+				String text = (String) _source.get("context_zip");
+				if (null != text) {
+					try {
+						text = ZipUtil.uncompress(text);
+					} catch (DataFormatException e1) {
+						e1.printStackTrace();
+						text = null;
+					}
+				}
+				if (null == text) {
+					text = (String) _source.get("context");
+				}
+				long length_org = text.getBytes().length;
 				org.jsoup.nodes.Document doument = Jsoup.parse(text);
 				boolean update = false;
+				for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
+					if (e.text().isEmpty()) {
+						update = true;
+						e.text(DefaultCss.getCss());
+					}
+				}
 				for (org.jsoup.nodes.Element e : doument//
 						.select("div.mainbox.viewthread")//
 						.select("td.postcontent")//
@@ -509,8 +531,9 @@ public class SampleController {
 						e.attr("src", "../" + src);
 					}
 				}
-				if (update)
+				if (update) {
 					text = doument.html();
+				}
 				rst.append(text);
 			}
 		} catch (IOException e) {

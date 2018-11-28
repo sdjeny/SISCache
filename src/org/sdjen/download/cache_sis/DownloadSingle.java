@@ -18,6 +18,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
@@ -151,25 +152,29 @@ public class DownloadSingle {
 		final String sub_images = "images/" + subKey;
 		String sub_html = "html/" + subKey;
 		final String sub_torrent = "torrent/" + subKey;
+		final String sub_bttrack = "bttrack/" + subKey;
 		title = getFileName(title);
 		String key = store.getKey(id, page, url, title, dateStr);
 		String tmp_html = type.contains("cover")// 覆盖模式
 				? null // 不管是否存在，都重新读取
 				: store.getLocalHtml(key);// 否则获取本地文件
-		if (type.isEmpty() && null != tmp_html)// 不是特殊模式且文件已存在!"repair".equalsIgnoreCase(type)
+		if (type.isEmpty() && null != tmp_html)// 不是特殊模式且文件已存在!
 			return false;// 跳过
 		// File newFile = new File(save_path + "/" + sub_html + "/" + title);
 		// if (newFile.exists()) {
 		// return false;
 		// }
-		if (null == tmp_html)
+		if (null == tmp_html && null != url && !url.isEmpty())
 			tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
+		if (null == tmp_html)
+			return false;
 		lock_w_html.lock();
 		File savePath = new File(save_path);
 		if (!savePath.exists())
 			savePath.mkdirs();
 		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
 				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+				, sub_bttrack//
 				, sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
@@ -183,7 +188,7 @@ public class DownloadSingle {
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		ExecutorService executor = Executors.newFixedThreadPool(download_threads);
 		List<Future<String[]>> resultList = new ArrayList<Future<String[]>>();
-		for (org.jsoup.nodes.Element e : doument//
+		for (org.jsoup.nodes.Element a : doument//
 				.select("div.mainbox.viewthread")//
 				.select("td.postcontent")//
 				.select("div.postmessage.defaultpost")//
@@ -191,8 +196,11 @@ public class DownloadSingle {
 				.select("dl.t_attachlist")//
 				.select("a[href]")//
 		) {
-			final String href = e.attr("href");
-			final String text = e.text();
+			String href_temp = a.attr("href");
+			if (href_temp.startsWith("../"))
+				href_temp = href_temp.replace("../", "");
+			String href = href_temp;
+			final String text = a.text();
 			if (href.contains("attachment.php?aid=")) {
 				resultList.add(executor.submit(new Callable<String[]>() {
 					public String[] call() throws Exception {
@@ -207,6 +215,21 @@ public class DownloadSingle {
 						return new String[] { href, newName };
 					}
 				}));
+			} else if (href.contains("bttrack.php?aid=")) {
+				resultList.add(executor.submit(new Callable<String[]>() {
+					public String[] call() throws Exception {
+						String newName = getFileName("bttrack_" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ".html");
+						String downloadUrl = httpUtil.joinUrlPath(url, href);
+						try {
+							newName = downloadFile(downloadUrl, sub_bttrack, newName, type.contains("torrent"));
+						} catch (Throwable e) {
+							e.printStackTrace();
+							store.err("异常	{0}	{1}", downloadUrl, e);
+						}
+						return new String[] { href, newName };
+					}
+				}));
+
 			}
 		}
 		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
@@ -248,9 +271,13 @@ public class DownloadSingle {
 			}
 		}
 		try {
+			int cssLen = 0;
+			for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
+				cssLen += e.text().getBytes().length;
+			}
 			int length = html.length();
 			length_download += html.length();
-			if (html.length() > 78000) {
+			if ((html.length() - cssLen) > (70000 - DefaultCss.getLength())) {
 				store.saveHtml(key, html);
 				// newFile.createNewFile();
 			} else {
@@ -344,9 +371,13 @@ public class DownloadSingle {
 			};
 			executor.setResult(null);
 			try {
-				httpUtil.execute(url, executor);
-				result = executor.getResult();
-			} catch (Exception e) {
+				if (path.startsWith("bttrack"))
+					result = downloadBttrack(url, path, name);
+				else {
+					httpUtil.execute(url, executor);
+					result = executor.getResult();
+				}
+			} catch (Throwable e) {
 				store.err("异常	{0}	{1}", url, e);
 				e.printStackTrace();
 			}
@@ -355,6 +386,43 @@ public class DownloadSingle {
 			store.saveURL(url, result);
 		}
 		// store.msg("+ {0} {1}", result, url);
+		return result;
+	}
+
+	private String downloadBttrack(final String url, final String path, final String name) throws Throwable {
+		String html = httpUtil.getHTML(url, "utf-8");
+		org.jsoup.nodes.Document doument = Jsoup.parse(html);
+		org.jsoup.nodes.Element forumlist = doument.select("div.mainbox.forumlist").select("table").first();
+		if (null != forumlist)
+			html = forumlist.html();
+		byte[] bytes = html.getBytes(chatset);
+		String md5 = getMD5(bytes);
+		String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
+		if (null == result) {
+			result = path;
+			result += "/";
+			if (name.startsWith("."))
+				result += md5;
+			result += name;
+			File file = new File(save_path + "/" + result);
+			if (!file.exists()) {
+				FileOutputStream fos = new FileOutputStream(file);
+				try {
+					fos.write(bytes);
+				} finally {
+					try {
+						fos.close();
+					} catch (Exception e) {
+					}
+				}
+				length_download += bytes.length;
+			}
+			// lock_w_mapdb.lock();
+			// MapDBFactory.getFileDB().put(md5, result);
+			// mapDBUtil.commit();
+			// lock_w_mapdb.unlock();
+			store.saveMD5(md5, result);
+		}
 		return result;
 	}
 }

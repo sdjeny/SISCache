@@ -97,7 +97,6 @@ public class DownloadList {
 
 	protected void list(final int i, String type) throws Throwable {
 		String uri = MessageFormat.format(list_url, String.valueOf(i));
-		LogUtil.lstLog.showMsg(uri);
 		store.msg(uri);
 		String html = getHTML(uri);
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);

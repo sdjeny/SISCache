@@ -29,10 +29,10 @@ public class ListES {
 
 	public static void main(String[] args) throws Throwable {
 		ListES listES = new ListES();
-		listES.execute();
+		listES.execute((null == args || args.length < 1) ? "0" : Integer.valueOf(args[0]).toString());
 	}
 
-	private void execute() throws Throwable {
+	private void execute(String min) throws Throwable {
 		LogUtil.init();
 		HttpFactory httpUtil = new HttpFactory();
 		downloadSingle = new DownloadSingle();
@@ -40,7 +40,6 @@ public class ListES {
 		int i = 0;
 		getStore().refreshMsgLog();
 		try {
-			String min = "0";
 			String rs = min;
 			do {
 				min = rs;

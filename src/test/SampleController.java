@@ -206,11 +206,11 @@ public class SampleController {
 			listAdv(query, shoulds, mustes, mustNots);
 		} else if (search == null || search.trim().isEmpty()) {
 			listAll(shoulds, mustes, mustNots);
-			order = "datetime:desc";
+			order = "id:desc";
 		} else {
 			try {
 				listDate(search, shoulds, mustes, mustNots);
-				order = "datetime:desc";
+				order = "id:desc";
 			} catch (Exception e) {
 				listDef(search, shoulds, mustes, mustNots);
 			}
@@ -265,7 +265,7 @@ public class SampleController {
 				ESMap _source = hit.get("_source", ESMap.class);
 				rst.append("<tbody><tr>");
 				try {
-					Date date = format.parse((String) _source.get("date_str"));
+					Date date = format.parse((String) _source.get("datetime"));
 					rst.append(String.format("<td>%s</td>", dformat.format(date)));
 					rst.append(String.format("<td>%s</td>", tformat.format(date)));
 				} catch (Exception e) {
@@ -291,12 +291,16 @@ public class SampleController {
 	}
 
 	private void listAll(List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
-		mustes.add(ESMap.get().set("term", Collections.singletonMap("page", "1")));
+		mustes.add(ESMap.get().set("term", Collections.singletonMap("page", 1)));
 	}
 
 	private void listDate(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) throws ParseException {
-		Date date = new SimpleDateFormat("yyyy-MM-dd").parse(search);
-		mustes.add(ESMap.get().set("match_phrase", Collections.singletonMap("date_str", search)));
+		try {
+			new SimpleDateFormat("yyyy-MM-dd").parse(search);
+		} catch (Exception e) {
+			new SimpleDateFormat("yyyy-MM").parse(search);
+		}
+		mustes.add(ESMap.get().set("match_phrase", Collections.singletonMap("datetime", search)));
 	}
 
 	private void listAdv(String query, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
@@ -334,7 +338,7 @@ public class SampleController {
 	}
 
 	private void listDef(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
-		mustes.add(ESMap.get().set("term", ESMap.get().set("page", "1")));
+		mustes.add(ESMap.get().set("term", ESMap.get().set("page", 1)));
 		for (String type : new String[] { "best_fields", "most_fields", "cross_fields" }) {
 			ESMap item = ESMap.get()//
 					.set("fields", Arrays.asList("title^3", "context"));
@@ -391,7 +395,7 @@ public class SampleController {
 					list.add(ESMap.get().set("multi_match", item));
 				}
 			}
-			String order = "datetime:desc";
+			String order = "id:desc";
 		}
 	}
 

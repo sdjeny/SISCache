@@ -152,7 +152,6 @@ public class DownloadSingle {
 		final String sub_images = "images/" + subKey;
 		String sub_html = "html/" + subKey;
 		final String sub_torrent = "torrent/" + subKey;
-		final String sub_bttrack = "bttrack/" + subKey;
 		title = getFileName(title);
 		String key = store.getKey(id, page, url, title, dateStr);
 		String tmp_html = type.contains("cover")// 覆盖模式
@@ -174,7 +173,7 @@ public class DownloadSingle {
 			savePath.mkdirs();
 		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
 				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
-				, sub_bttrack//
+				// , sub_bttrack//
 				, sub_html }) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
@@ -196,10 +195,7 @@ public class DownloadSingle {
 				.select("dl.t_attachlist")//
 				.select("a[href]")//
 		) {
-			String href_temp = a.attr("href");
-			if (href_temp.startsWith("../"))
-				href_temp = href_temp.replace("../", "");
-			String href = href_temp;
+			String href = a.attr("href");
 			final String text = a.text();
 			if (href.contains("attachment.php?aid=")) {
 				resultList.add(executor.submit(new Callable<String[]>() {
@@ -212,29 +208,17 @@ public class DownloadSingle {
 							e.printStackTrace();
 							store.err("异常	{0}	{1}", downloadUrl, e);
 						}
+						replace(a, "href", newName);
 						return new String[] { href, newName };
 					}
 				}));
-			} else if (href.contains("bttrack.php?aid=")) {
-				resultList.add(executor.submit(new Callable<String[]>() {
-					public String[] call() throws Exception {
-						String newName = getFileName("bttrack_" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ".html");
-						String downloadUrl = httpUtil.joinUrlPath(url, href);
-						try {
-							newName = downloadFile(downloadUrl, sub_bttrack, newName, type.contains("torrent"));
-						} catch (Throwable e) {
-							e.printStackTrace();
-							store.err("异常	{0}	{1}", downloadUrl, e);
-						}
-						return new String[] { href, newName };
-					}
-				}));
-
 			}
 		}
 		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
 			final String src = e.attr("src");
-			if (src.startsWith("../../../images/20"))
+			if (src.contains("../images/20") //
+					|| src.contains("../images/unknow")//
+			)
 				continue;// 本地缓存文件就过了吧
 			resultList.add(executor.submit(new Callable<String[]>() {
 				public String[] call() throws Exception {
@@ -252,6 +236,7 @@ public class DownloadSingle {
 					}
 					// if (!newName.equals(downloadUrl))
 					// replaceAll(src, newName);
+					replace(e, "src", newName);
 					return new String[] { src, newName };
 				}
 			}));
@@ -261,7 +246,7 @@ public class DownloadSingle {
 			try {
 				String[] names = fs.get(1, TimeUnit.MINUTES);// 1分钟超时
 				if (null != names && !names[0].equals(names[1])) {
-					replaceAll(names[0], names[1]);
+					// replaceAll(names[0], names[1]);
 				}
 			} catch (java.util.concurrent.TimeoutException e) {
 				fs.cancel(false);
@@ -271,13 +256,14 @@ public class DownloadSingle {
 			}
 		}
 		try {
+			html = doument.html();
 			int cssLen = 0;
 			for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
 				cssLen += e.text().getBytes().length;
 			}
 			int length = html.length();
 			length_download += html.length();
-			if ((html.length() - cssLen) > (70000 - DefaultCss.getLength())) {
+			if ((html.length() - cssLen) > (68000 - DefaultCss.getLength())) {
 				store.saveHtml(key, html);
 				// newFile.createNewFile();
 			} else {
@@ -300,6 +286,16 @@ public class DownloadSingle {
 		return length_download;
 	}
 
+	private synchronized void replace(org.jsoup.nodes.Element element, String attributeKey, String newAttribute) {
+		String s = element.attr(attributeKey);
+		if (!newAttribute.equals(s)) {
+			newAttribute = "../../../" + newAttribute;
+			// System.out.println(attributeKey + " " + s + " -> " +
+			// newAttribute);
+			element.attr(attributeKey, newAttribute);
+		}
+	}
+
 	private void replaceAll(String src, String targ) {
 		lock_w_replace.lock();
 		if (targ.startsWith("http")) {
@@ -314,7 +310,9 @@ public class DownloadSingle {
 		String result = store.getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
 		if (null != result && reload && result.equals(url))
 			result = null;
-		if (null == result) {
+		List<String> ls = new ArrayList<>();
+		ls.add("->	" + result);
+		if (null == result || !new File(save_path + "/" + result).exists()) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {
 					setResult(null);
@@ -332,7 +330,8 @@ public class DownloadSingle {
 						}
 						String md5 = getMD5(bytes);
 						String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
-						if (null == result) {
+						ls.add("->	" + result);
+						if (null == result || !new File(save_path + "/" + result).exists()) {
 							result = path;
 							if (bytes.length < length_flag_min_byte)
 								result += "/min";
@@ -362,6 +361,7 @@ public class DownloadSingle {
 							// mapDBUtil.commit();
 							// lock_w_mapdb.unlock();
 							store.saveMD5(md5, result);
+							ls.add("->	" + result);
 						}
 						setResult(result);
 					} catch (Throwable e) {
@@ -385,6 +385,7 @@ public class DownloadSingle {
 				result = url;
 			store.saveURL(url, result);
 		}
+		// System.out.println("↓ " + url + " " + ls);
 		// store.msg("+ {0} {1}", result, url);
 		return result;
 	}

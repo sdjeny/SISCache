@@ -414,7 +414,7 @@ public class HttpFactory {
 		return getHTML(uri, conf.getProperties().getProperty("chatset"));
 	}
 
-	public String getHTML(final String uri, final String chatset) throws Throwable {
+	public synchronized String getHTML(final String uri, final String chatset) throws Throwable {
 		final Executor<String> executor = new Executor<String>() {
 			public void execute(InputStream inputStream) {
 				try {
@@ -465,10 +465,10 @@ public class HttpFactory {
 				// closeClient();
 				count++;
 				Thread.sleep(1000l * retry_time_second * count);
-				LogUtil.errLog.showMsg("Retry	{0}	{1}", count, e);
 				stop = count >= retry_times;
 				if (stop)
 					throw e;
+				LogUtil.errLog.showMsg("Retry	{0}	{1}", count, e);
 			}
 		} while (!stop);
 	}

@@ -84,6 +84,39 @@ public class Store_ElasticSearch implements IStore {
 		if (isStore)
 			conf.store();
 		refreshMsgLog();
+		{// html.context_zip字段不参与检索
+			StringBuilder postStr = new StringBuilder();
+			postStr.append(JsonUtil.toJson(ESMap.get().set("index", ESMap.get().set("_id", "test"))));
+			postStr.append("\n{}\n");
+			postStr.append(JsonUtil.toJson(ESMap.get().set("delete", ESMap.get().set("_id", "test"))));
+			postStr.append("\n");
+			String rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+			msg(rst);
+			rst = connection.doPost(path_es_start + "html/_doc/_mapping/"//
+					,
+					JsonUtil.toJson(//
+							ESMap.get()//
+									.set("properties",
+											ESMap.get()//
+													.set("context_zip",
+															ESMap.get()//
+																	.set("type", "text")//
+																	.set("index", false)//
+																	.set("norms", false)//
+																	.set("fields",
+																			ESMap.get()//
+																					.set("keyword",
+																							ESMap.get()//
+																									.set("type", "keyword")//
+																									.set("ignore_above", 256)//
+																			)//
+															)//
+											)//
+							)//
+					)//
+					, new HashMap<>());
+			msg(rst);
+		}
 	}
 
 	@Override
@@ -97,6 +130,8 @@ public class Store_ElasticSearch implements IStore {
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
 		ESMap _source = esMap.get("_source", ESMap.class);
 		if (null != _source) {
+			if (1 != Integer.valueOf(_source.get("page").toString()))
+				return "";
 			String text = _source.get("context_zip", String.class);
 			if (null != text) {
 				try {
@@ -107,7 +142,7 @@ public class Store_ElasticSearch implements IStore {
 				}
 			}
 			if (null == text) {
-				return  _source.get("context", String.class);
+				return _source.get("context", String.class);
 			}
 		}
 		return null;
@@ -171,6 +206,7 @@ public class Store_ElasticSearch implements IStore {
 		String page = null == pages ? "1" : pages.select("strong").text();
 		String dat = null;
 		String context = null;
+		String author = null;
 		if (false) {
 			String f = "1";
 			for (org.jsoup.nodes.Element e : doument.select("div.mainbox")//// class=mainbox的div
@@ -184,6 +220,29 @@ public class Store_ElasticSearch implements IStore {
 				if ("1".equals(f))
 					dat = e.ownText().replace("发表于 ", "");
 			}
+		}
+		for (org.jsoup.nodes.Element tbody : doument.select("div.mainbox.viewthread")//// class=mainbox的div
+				.select("table")//
+				.select("tbody")//
+				.select("tr")//
+		//
+		) {
+
+			String floor = "";
+			for (org.jsoup.nodes.Element postinfo : tbody.select("td.postcontent").select("div.postinfo")) {
+				org.jsoup.nodes.Element temp = postinfo.select("strong").first();
+				if (null != temp) {
+					floor = temp.ownText();
+					if ("1楼".equals(floor)) {
+						dat = postinfo.ownText().replace("发表于 ", "");
+						for (org.jsoup.nodes.Element postauthor : tbody.select("td.postauthor").select("cite").select("a[href]")) {
+							author = postauthor.text();
+						}
+					}
+				}
+			}
+			if (null != author)
+				break;
 		}
 		ESMap comments = ESMap.get();
 		{
@@ -240,25 +299,29 @@ public class Store_ElasticSearch implements IStore {
 			text = doument.html();
 		key = id + "_" + page;
 		Map<String, Object> json = new HashMap<>();
-		json.put("id", id);
-		json.put("date_str", dat);
-		try {
-			if (null != dat) {
-				SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-				Date dt = dtf.parse(dat);
-				json.put("date_str", dtf.format(dt));
-				json.put("date", new SimpleDateFormat("yyyy-MM-dd").parse(dat));
-				json.put("datetime", dt);
-			}
-		} catch (Exception e1) {
-		}
-		json.put("fid", 143);
-		json.put("type", type);
-		json.put("title", title);
-		json.put("page", page);
-		json.put("context", context);
-		json.put("context_zip", ZipUtil.compress(text));
+		json.put("id", Long.valueOf(id));
+		json.put("page", Long.valueOf(page));
 		json.put("context_comments", comments);
+		json.put("title", title);
+		if (page.equals("1")) {
+			json.put("datetime", dat);
+			try {
+				if (null != dat) {
+					SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+					Date dt = dtf.parse(dat);
+					json.put("datetime", dtf.format(dt));
+					// json.put("date", new
+					// SimpleDateFormat("yyyy-MM-dd").parse(dat));
+					// json.put("datetime", dt);
+				}
+			} catch (Exception e1) {
+			}
+			json.put("fid", 143);
+			json.put("type", type);
+			json.put("context", context);
+			json.put("context_zip", ZipUtil.compress(text));
+			json.put("author", author);
+		}
 		String r = connection.doPost(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json), new HashMap<>());
 	}
 

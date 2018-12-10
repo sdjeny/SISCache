@@ -178,20 +178,17 @@ public class HttpFactory {
 	private HttpRequestRetryHandler getHttpRequestRetryHandler() {
 		return new HttpRequestRetryHandler() {
 			public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
-				// if (exception instanceof java.net.SocketTimeoutException) {
-				// return false;// Timeout
-				// } else if (exception instanceof UnknownHostException) {
-				// return false;// Unknown host
-				// } else if (exception instanceof
-				// org.apache.http.NoHttpResponseException) {
-				// return false;// Unknown host
-				// } else if (exception instanceof
-				// javax.net.ssl.SSLHandshakeException) {
-				// return false;// Unknown host
-				// } else if (exception instanceof java.net.SocketException) {
-				// return false;// Unknown host
-				// } else
-				if (executionCount <= retry_times) {
+				if (exception instanceof java.net.SocketTimeoutException) {
+					return false;// Timeout
+				} else if (exception instanceof UnknownHostException) {
+					return false;// Unknown host
+				} else if (exception instanceof org.apache.http.NoHttpResponseException) {
+					return false;// Unknown host
+				} else if (exception instanceof javax.net.ssl.SSLHandshakeException) {
+					return false;// Unknown host
+				} else if (exception instanceof java.net.SocketException) {
+					return false;// Unknown host
+				} else if (executionCount <= 2) {
 					// from
 					// :https://blog.csdn.net/minicto/article/details/56677420
 					try {

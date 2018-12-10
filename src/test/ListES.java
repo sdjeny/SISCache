@@ -119,7 +119,7 @@ public class ListES {
 		ESMap r = JsonUtil.toObject(js, ESMap.class);
 		ESMap h = r.get("hits", ESMap.class);
 		List<ESMap> hits = (List<ESMap>) h.get("hits");
-		ExecutorService executor = Executors.newFixedThreadPool(3);
+		ExecutorService executor = Executors.newFixedThreadPool(5);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
 		for (ESMap hit : hits) {
 			// System.out.println(hit.get("_id", String.class));
@@ -152,6 +152,7 @@ public class ListES {
 			} finally {
 			}
 		}
+		HttpFactory.getPoolConnManager().closeExpiredConnections();
 		return result;
 	}
 

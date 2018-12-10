@@ -131,10 +131,11 @@ public class DownloadList {
 							String page = threadpages ? href.text() : "1";
 							String url = httpUtil.joinUrlPath(uri, href.attr("href"));
 							try {
-								if (startDownload(type, id, page, title, date, url)) {
+								Long length = downloadSingle.startDownload(type, id, page, url, title, date);
+								if (null != length) {
 									if (null == result)
 										result = 0l;
-									result += downloadSingle.getLength_download();
+									result += length;
 									// break;
 								}
 							} catch (Throwable e) {
@@ -165,14 +166,8 @@ public class DownloadList {
 			} finally {
 			}
 		}
+		HttpFactory.getPoolConnManager().closeExpiredConnections();
 		store.msg("本页下载	{0} byte,	{1} 项", length_download, count);
 		// httpUtil.getPoolConnManager().closeExpiredConnections();
-	}
-
-	protected boolean startDownload(String type, String id, String page, String title, String date, String url) throws Throwable {
-		// System.out.println(url + ":" + id + ":" + page + " " + date + ":" +
-		// title);
-		downloadSingle.startDownload(type, id, page, url, title, date);
-		return true;
 	}
 }

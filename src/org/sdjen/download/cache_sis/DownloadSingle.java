@@ -6,6 +6,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.text.MessageFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -16,10 +18,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.jboss.logging.Message;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpFactory;
+import org.sdjen.download.cache_sis.http.HttpFactory.Retry;
 import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
 import org.sdjen.download.cache_sis.store.IStore;
@@ -28,7 +32,7 @@ import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 import org.springframework.boot.autoconfigure.amqp.RabbitProperties.Template;
 
 public class DownloadSingle {
-	private String html = "";
+	// private String html = "";
 	public String chatset = "utf8";
 	private String save_path = "WEBCACHE";
 	// private String sub_images = "images";
@@ -36,13 +40,14 @@ public class DownloadSingle {
 	// private String sub_torrent = "torrent";
 	private HttpFactory httpUtil;
 	private MessageDigest md5;
-	private long length_download;
+	// private long length_download;
 	private long length_flag_min_byte = 20000;
 	private long length_flag_max_byte = 70000;
-	private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
+	// private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
 	// private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
 	private int download_threads = 6;
+	private int count = 0;
 	// private org.sdjen.download.cache_sis.log.CassandraFactory
 	// cassandraFactory;
 	private IStore store = null;
@@ -141,8 +146,56 @@ public class DownloadSingle {
 		return new BigInteger(1, md5.digest(bytes)).toString(Character.MAX_RADIX);
 	}
 
-	public boolean startDownload(final String type, final String id, final String page, final String url, String title, String dateStr)
+	public Long startDownload(final String type, final String id, final String page, final String url, String title, String dateStr)
 			throws Throwable {
+		long startTime = System.currentTimeMillis();
+		title = getFileName(title);
+		String key = store.getKey(id, page, url, title, dateStr);
+		String tmp_html = type.contains("cover")// 覆盖模式
+				? null // 不管是否存在，都重新读取
+				: store.getLocalHtml(key);// 否则获取本地文件
+		if (type.isEmpty() && null != tmp_html)// 不是特殊模式且文件已存在!
+			return null;// 跳过
+		// File newFile = new File(save_path + "/" + sub_html + "/" + title);
+		// if (newFile.exists()) {
+		// return false;
+		// }
+		if (null == tmp_html && null != url && !url.isEmpty()) {
+			lock_w_html.lock();
+			tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
+			lock_w_html.unlock();
+		}
+		if (null == tmp_html)
+			return null;
+		String html = tmp_html;
+		org.jsoup.nodes.Document doument = Jsoup.parse(html);
+		if (null == title) {
+			org.jsoup.nodes.Element h1 = doument.select("div.mainbox").select("h1").first();
+			if (null != h1)
+				title = h1.ownText();
+		}
+		if (null == dateStr && "1".equals(page)) {
+			for (org.jsoup.nodes.Element postinfo : doument.select("div.mainbox.viewthread")//// class=mainbox的div
+					.select("table")//
+					.select("tbody")//
+					.select("tr")//
+					.select("td.postcontent")//
+					.select("div.postinfo")//
+			) {
+				String floor = "";
+				org.jsoup.nodes.Element temp = postinfo.select("strong").first();
+				if (null != temp) {
+					floor = temp.ownText();
+					if ("1楼".equals(floor)) {
+						dateStr = postinfo.ownText().replace("发表于 ", "");
+						dateStr = dateStr.substring(0, dateStr.indexOf(" ")).trim();
+						SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+						dateStr = dateFormat.format(dateFormat.parse(dateStr));
+						break;
+					}
+				}
+			}
+		}
 		String subKey;
 		try {
 			subKey = dateStr.substring(0, Math.min(7, dateStr.length())) + "/" + dateStr.substring(8, dateStr.length()).replace("-", "");
@@ -150,23 +203,8 @@ public class DownloadSingle {
 			subKey = "unknow";
 		}
 		final String sub_images = "images/" + subKey;
-		String sub_html = "html/" + subKey;
+		// String sub_html = "html/" + subKey;
 		final String sub_torrent = "torrent/" + subKey;
-		title = getFileName(title);
-		String key = store.getKey(id, page, url, title, dateStr);
-		String tmp_html = type.contains("cover")// 覆盖模式
-				? null // 不管是否存在，都重新读取
-				: store.getLocalHtml(key);// 否则获取本地文件
-		if (type.isEmpty() && null != tmp_html)// 不是特殊模式且文件已存在!
-			return false;// 跳过
-		// File newFile = new File(save_path + "/" + sub_html + "/" + title);
-		// if (newFile.exists()) {
-		// return false;
-		// }
-		if (null == tmp_html && null != url && !url.isEmpty())
-			tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
-		if (null == tmp_html)
-			return false;
 		lock_w_html.lock();
 		File savePath = new File(save_path);
 		if (!savePath.exists())
@@ -174,17 +212,17 @@ public class DownloadSingle {
 		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
 				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
 				// , sub_bttrack//
-				, sub_html }) {
+				// , sub_html //
+		}) {
 			File f = new File(savePath + "/" + sub);
 			if (!f.exists()) {
 				f.mkdirs();
 				store.msg("{0}创建文件夹", f);
 			}
 		}
-		length_download = 0;
-		store.msg("{0} {1}	{2}", dateStr, title, url);
-		html = tmp_html;
-		org.jsoup.nodes.Document doument = Jsoup.parse(html);
+		lock_w_html.unlock();
+		Long length_download = 0l;
+		StringBuilder msg = new StringBuilder(MessageFormat.format("{0} {1}	{2}", dateStr, title, url));
 		ExecutorService executor = Executors.newFixedThreadPool(download_threads);
 		List<Future<String[]>> resultList = new ArrayList<Future<String[]>>();
 		for (org.jsoup.nodes.Element a : doument//
@@ -204,11 +242,11 @@ public class DownloadSingle {
 						String downloadUrl = httpUtil.joinUrlPath(url, href);
 						try {
 							newName = downloadFile(downloadUrl, sub_torrent, newName, type.contains("torrent"));
+							replace(a, "href", newName);
 						} catch (Throwable e) {
 							e.printStackTrace();
 							store.err("异常	{0}	{1}", downloadUrl, e);
 						}
-						replace(a, "href", newName);
 						return new String[] { href, newName };
 					}
 				}));
@@ -221,6 +259,7 @@ public class DownloadSingle {
 			)
 				continue;// 本地缓存文件就过了吧
 			resultList.add(executor.submit(new Callable<String[]>() {
+
 				public String[] call() throws Exception {
 					String downloadUrl = httpUtil.joinUrlPath(url, src);
 					String newName;// = getMD5(downloadUrl.getBytes("utf-8"));
@@ -231,18 +270,20 @@ public class DownloadSingle {
 					}
 					try {
 						newName = downloadFile(downloadUrl, sub_images, newName, type.contains("image"));
+						replace(e, "src", newName);
 					} catch (Throwable e) {
 						store.err("异常	{0}	{1}", downloadUrl, e);
 					}
 					// if (!newName.equals(downloadUrl))
 					// replaceAll(src, newName);
-					replace(e, "src", newName);
 					return new String[] { src, newName };
 				}
 			}));
 		}
 		executor.shutdown();
-		for (Future<String[]> fs : resultList) {
+		for (
+
+		Future<String[]> fs : resultList) {
 			try {
 				String[] names = fs.get(1, TimeUnit.MINUTES);// 1分钟超时
 				if (null != names && !names[0].equals(names[1])) {
@@ -262,48 +303,59 @@ public class DownloadSingle {
 				cssLen += e.text().getBytes().length;
 			}
 			int length = html.length();
-			length_download += html.length();
-			if ((html.length() - cssLen) > (68000 - DefaultCss.getLength())) {
+			length_download += length;
+			if ((html.length() - cssLen) > (60000 - DefaultCss.getLength())) {
 				store.saveHtml(key, html);
 				// newFile.createNewFile();
 			} else {
+				msg.append(MessageFormat.format("	长度过短	{0}	{1}({2})", length, title, (60000 - DefaultCss.getLength())));
 				store.err("长度过短	{0}	{1}	{2}", length, title, url);
-				return false;
+				return null;
 			}
 		} catch (Throwable e) {
 			// e.printStackTrace();
+			msg.append(MessageFormat.format("异常	{0}", e));
 			store.err("异常	{0}	{1}		{2}", title, url, e);
-			return false;
+			return null;
 		} finally {
-			httpUtil.getPoolConnManager().closeExpiredConnections();
-			store.msg("本次下载	{0} byte", length_download);
+			// store.msg("本次下载 {0} byte", length_download);
+			lock_w_html.lock();
+			store.msg("{0}	耗时:{1}	{2}", (++count), (System.currentTimeMillis() - startTime), msg);
 			lock_w_html.unlock();
+			// lock_w_html.unlock();
 		}
-		return true;
-	}
-
-	public long getLength_download() {
 		return length_download;
 	}
+
+	// public long getLength_download() {
+	// return length_download;
+	// }
+
+	// private void replaceAll(String src, String targ) {
+	// lock_w_replace.lock();
+	// if (targ.startsWith("http")) {
+	// html = html.replace("\"" + src + "\"", "\"" + targ + "\"");
+	// } else {
+	// html = html.replace("\"" + src + "\"", "\"../../../" + targ + "\"");
+	// }
+	// lock_w_replace.unlock();
+	// }
 
 	private synchronized void replace(org.jsoup.nodes.Element element, String attributeKey, String newAttribute) {
 		String s = element.attr(attributeKey);
 		if (!newAttribute.equals(s)) {
-			newAttribute = "../../../" + newAttribute;
+			if (!newAttribute.startsWith("http"))
+				newAttribute = "../../../" + newAttribute;
 			// System.out.println(attributeKey + " " + s + " -> " +
 			// newAttribute);
 			element.attr(attributeKey, newAttribute);
 		}
 	}
 
-	private void replaceAll(String src, String targ) {
-		lock_w_replace.lock();
-		if (targ.startsWith("http")) {
-			html = html.replace("\"" + src + "\"", "\"" + targ + "\"");
-		} else {
-			html = html.replace("\"" + src + "\"", "\"../../../" + targ + "\"");
-		}
-		lock_w_replace.unlock();
+	private boolean checkFile(boolean reload, String path) {
+		if (!reload && path.startsWith("http"))
+			return true;// 不需要重加载且路径为网址的，不校验
+		return new File(save_path + "/" + path).exists();
 	}
 
 	private String downloadFile(final String url, final String path, final String name, boolean reload) throws Throwable {
@@ -312,7 +364,7 @@ public class DownloadSingle {
 			result = null;
 		List<String> ls = new ArrayList<>();
 		ls.add("->	" + result);
-		if (null == result || !new File(save_path + "/" + result).exists()) {
+		if (null == result || !checkFile(reload, result)) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) {
 					setResult(null);
@@ -331,7 +383,7 @@ public class DownloadSingle {
 						String md5 = getMD5(bytes);
 						String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
 						ls.add("->	" + result);
-						if (null == result || !new File(save_path + "/" + result).exists()) {
+						if (null == result || !checkFile(reload, result)) {
 							result = path;
 							if (bytes.length < length_flag_min_byte)
 								result += "/min";
@@ -354,7 +406,7 @@ public class DownloadSingle {
 									} catch (Exception e) {
 									}
 								}
-								length_download += bytes.length;
+								// length_download += bytes.length;
 							}
 							// lock_w_mapdb.lock();
 							// MapDBFactory.getFileDB().put(md5, result);
@@ -370,16 +422,24 @@ public class DownloadSingle {
 				}
 			};
 			executor.setResult(null);
+			boolean needLock = path.startsWith("torrent");
 			try {
-				if (path.startsWith("bttrack"))
-					result = downloadBttrack(url, path, name);
-				else {
+				if (needLock) {
+					lock_w_html.lock();
+					httpUtil.retry(new Retry() {
+						public void execute() throws Throwable {
+							httpUtil.execute(url, executor);
+						}
+					});
+				} else
 					httpUtil.execute(url, executor);
-					result = executor.getResult();
-				}
+				result = executor.getResult();
 			} catch (Throwable e) {
 				store.err("异常	{0}	{1}", url, e);
-				e.printStackTrace();
+				// e.printStackTrace();
+			} finally {
+				if (needLock)
+					lock_w_html.unlock();
 			}
 			if (null == result)
 				result = url;
@@ -390,40 +450,43 @@ public class DownloadSingle {
 		return result;
 	}
 
-	private String downloadBttrack(final String url, final String path, final String name) throws Throwable {
-		String html = httpUtil.getHTML(url, "utf-8");
-		org.jsoup.nodes.Document doument = Jsoup.parse(html);
-		org.jsoup.nodes.Element forumlist = doument.select("div.mainbox.forumlist").select("table").first();
-		if (null != forumlist)
-			html = forumlist.html();
-		byte[] bytes = html.getBytes(chatset);
-		String md5 = getMD5(bytes);
-		String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
-		if (null == result) {
-			result = path;
-			result += "/";
-			if (name.startsWith("."))
-				result += md5;
-			result += name;
-			File file = new File(save_path + "/" + result);
-			if (!file.exists()) {
-				FileOutputStream fos = new FileOutputStream(file);
-				try {
-					fos.write(bytes);
-				} finally {
-					try {
-						fos.close();
-					} catch (Exception e) {
-					}
-				}
-				length_download += bytes.length;
-			}
-			// lock_w_mapdb.lock();
-			// MapDBFactory.getFileDB().put(md5, result);
-			// mapDBUtil.commit();
-			// lock_w_mapdb.unlock();
-			store.saveMD5(md5, result);
-		}
-		return result;
-	}
+	// private String downloadBttrack(final String url, final String path, final
+	// String name) throws Throwable {
+	// String html = httpUtil.getHTML(url, "utf-8");
+	// org.jsoup.nodes.Document doument = Jsoup.parse(html);
+	// org.jsoup.nodes.Element forumlist =
+	// doument.select("div.mainbox.forumlist").select("table").first();
+	// if (null != forumlist)
+	// html = forumlist.html();
+	// byte[] bytes = html.getBytes(chatset);
+	// String md5 = getMD5(bytes);
+	// String result = store.getMD5_Path(md5);//
+	// MapDBFactory.getFileDB().get(md5);
+	// if (null == result) {
+	// result = path;
+	// result += "/";
+	// if (name.startsWith("."))
+	// result += md5;
+	// result += name;
+	// File file = new File(save_path + "/" + result);
+	// if (!file.exists()) {
+	// FileOutputStream fos = new FileOutputStream(file);
+	// try {
+	// fos.write(bytes);
+	// } finally {
+	// try {
+	// fos.close();
+	// } catch (Exception e) {
+	// }
+	// }
+	// length_download += bytes.length;
+	// }
+	// // lock_w_mapdb.lock();
+	// // MapDBFactory.getFileDB().put(md5, result);
+	// // mapDBUtil.commit();
+	// // lock_w_mapdb.unlock();
+	// store.saveMD5(md5, result);
+	// }
+	// return result;
+	// }
 }

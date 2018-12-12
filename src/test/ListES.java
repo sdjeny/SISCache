@@ -86,8 +86,7 @@ public class ListES {
 	}
 
 	private Long list(Long min) throws Throwable {
-		getStore().msg("from " + min);
-		Long result = min;
+		Long result = min, startTime = System.currentTimeMillis();
 		Map<Object, Object> params = ESMap.get();
 		// params.put("_source",
 		// ESMap.get()//
@@ -109,7 +108,7 @@ public class ListES {
 								.set("id", ESMap.get().set("order", "asc"))//
 				)//
 		);
-		params.put("size", 50);
+		params.put("size", 100);
 		params.put("from", 0);
 		String jsonParams = JsonUtil.toJson(params);
 		long l = System.currentTimeMillis();
@@ -119,7 +118,7 @@ public class ListES {
 		ESMap r = JsonUtil.toObject(js, ESMap.class);
 		ESMap h = r.get("hits", ESMap.class);
 		List<ESMap> hits = (List<ESMap>) h.get("hits");
-		ExecutorService executor = Executors.newFixedThreadPool(5);
+		ExecutorService executor = Executors.newFixedThreadPool(3);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
 		for (ESMap hit : hits) {
 			// System.out.println(hit.get("_id", String.class));
@@ -140,7 +139,7 @@ public class ListES {
 				}
 			}));
 		}
-		getStore().msg("{0}	~	{1}	total:{2}", min, result, h.get("total"));
+		getStore().msg("耗时:{3}ms	{0}~{1}	total:{2}", min, result, h.get("total"), (System.currentTimeMillis() - startTime));
 		executor.shutdown();
 		for (Future<Long> fs : resultList) {
 			try {
@@ -163,8 +162,8 @@ public class ListES {
 		String title = _source.get("title", String.class);
 		for (Long page = min; page <= Math.min(max, 30); page++) {
 			String url = String.format("http://www.sexinsex.net/bbs/viewthread.php?tid=%s&page=%s", id.toString(), page.toString());
-			// System.out.println(url);torrent
-			downloadSingle.startDownload("", id.toString(), page.toString()//
+			// System.out.println(url);torrent cover
+			downloadSingle.startDownload("torrent", id.toString(), page.toString()//
 					, url// http://www.sexinsex.net/bbs/thread-%s-%s-300.html
 					, title, null);
 		}

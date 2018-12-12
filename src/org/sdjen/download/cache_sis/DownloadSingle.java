@@ -29,6 +29,7 @@ import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.store.Store_Cassandra;
 import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
+import org.sdjen.download.cache_sis.tool.Comparor;
 import org.springframework.boot.autoconfigure.amqp.RabbitProperties.Template;
 
 public class DownloadSingle {
@@ -44,10 +45,10 @@ public class DownloadSingle {
 	private long length_flag_min_byte = 20000;
 	private long length_flag_max_byte = 70000;
 	// private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
-	// private Lock lock_w_mapdb = new ReentrantReadWriteLock().writeLock();
+	private Lock lock_w_db = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
 	private int download_threads = 6;
-	private int count = 0;
+	private long count = 0;
 	// private org.sdjen.download.cache_sis.log.CassandraFactory
 	// cassandraFactory;
 	private IStore store = null;
@@ -130,7 +131,8 @@ public class DownloadSingle {
 			// "2.jpg");
 			// util.downloadFile("https://www.caribbeancom.com/moviepages/022712-953/images/l_l.jpg",
 			// "rr", "2.jpg");
-			util.downloadFile("https://e.piclect.com/o180829_110f6.jpg", "rr", "11.jpg", false);
+			// util.downloadFile("https://e.piclect.com/o180829_110f6.jpg",
+			// "rr", "11.jpg", false);
 			// util.downloadFile("https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg",
 			// "rr", "11.jpg");
 			// https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg
@@ -154,16 +156,19 @@ public class DownloadSingle {
 		String tmp_html = type.contains("cover")// 覆盖模式
 				? null // 不管是否存在，都重新读取
 				: store.getLocalHtml(key);// 否则获取本地文件
-		if (type.isEmpty() && null != tmp_html)// 不是特殊模式且文件已存在!
+		if ((type.isEmpty() || Integer.valueOf(page) > 1) && null != tmp_html)// 不是特殊模式且文件已存在!
 			return null;// 跳过
 		// File newFile = new File(save_path + "/" + sub_html + "/" + title);
 		// if (newFile.exists()) {
 		// return false;
 		// }
 		if (null == tmp_html && null != url && !url.isEmpty()) {
-			lock_w_html.lock();
-			tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
-			lock_w_html.unlock();
+			try {
+				lock_w_html.lock();
+				tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
+			} finally {
+				lock_w_html.unlock();
+			}
 		}
 		if (null == tmp_html)
 			return null;
@@ -205,22 +210,25 @@ public class DownloadSingle {
 		final String sub_images = "images/" + subKey;
 		// String sub_html = "html/" + subKey;
 		final String sub_torrent = "torrent/" + subKey;
-		lock_w_html.lock();
-		File savePath = new File(save_path);
-		if (!savePath.exists())
-			savePath.mkdirs();
-		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
-				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
-				// , sub_bttrack//
-				// , sub_html //
-		}) {
-			File f = new File(savePath + "/" + sub);
-			if (!f.exists()) {
-				f.mkdirs();
-				store.msg("{0}创建文件夹", f);
+		try {
+			lock_w_html.lock();
+			File savePath = new File(save_path);
+			if (!savePath.exists())
+				savePath.mkdirs();
+			for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
+					, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+					// , sub_bttrack//
+					// , sub_html //
+			}) {
+				File f = new File(savePath + "/" + sub);
+				if (!f.exists()) {
+					f.mkdirs();
+					store.msg("{0}创建文件夹", f);
+				}
 			}
+		} finally {
+			lock_w_html.unlock();
 		}
-		lock_w_html.unlock();
 		Long length_download = 0l;
 		StringBuilder msg = new StringBuilder(MessageFormat.format("{0} {1}	{2}", dateStr, title, url));
 		ExecutorService executor = Executors.newFixedThreadPool(download_threads);
@@ -238,7 +246,8 @@ public class DownloadSingle {
 			if (href.contains("attachment.php?aid=")) {
 				resultList.add(executor.submit(new Callable<String[]>() {
 					public String[] call() throws Exception {
-						String newName = getFileName("(" + href.substring(href.lastIndexOf("=") + 1, href.length()) + ")" + text);
+						String newName = href.contains("&") ? href.substring(0, href.indexOf("&")) : href;
+						newName = getFileName("(" + newName.substring(newName.lastIndexOf("=") + 1, newName.length()) + ")" + text);
 						String downloadUrl = httpUtil.joinUrlPath(url, href);
 						try {
 							newName = downloadFile(downloadUrl, sub_torrent, newName, type.contains("torrent"));
@@ -256,6 +265,8 @@ public class DownloadSingle {
 			final String src = e.attr("src");
 			if (src.contains("../images/20") //
 					|| src.contains("../images/unknow")//
+					|| src.contains("../torrent/20") //
+					|| src.contains("../torrent/unknow")//
 			)
 				continue;// 本地缓存文件就过了吧
 			resultList.add(executor.submit(new Callable<String[]>() {
@@ -296,8 +307,15 @@ public class DownloadSingle {
 			} finally {
 			}
 		}
+		tmp_html = doument.html();
+		if (!type.isEmpty()// 特殊模式
+				&& !type.contains("cover")// 非覆盖模式
+				&& Comparor.equals(tmp_html, html)// 没变化
+		) {
+			return null;
+		}
 		try {
-			html = doument.html();
+			html = tmp_html;
 			int cssLen = 0;
 			for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
 				cssLen += e.text().getBytes().length;
@@ -305,23 +323,31 @@ public class DownloadSingle {
 			int length = html.length();
 			length_download += length;
 			if ((html.length() - cssLen) > (60000 - DefaultCss.getLength())) {
-				store.saveHtml(key, html);
+				try {
+					lock_w_db.lock();
+					store.saveHtml(key, html);
+				} finally {
+					lock_w_db.unlock();
+				}
 				// newFile.createNewFile();
 			} else {
-				msg.append(MessageFormat.format("	长度过短	{0}	{1}({2})", length, title, (60000 - DefaultCss.getLength())));
+				msg.append(MessageFormat.format("	长度过短	{0}	{1}({2}/{3})", length, title, length, (60000 - DefaultCss.getLength())));
 				store.err("长度过短	{0}	{1}	{2}", length, title, url);
 				return null;
 			}
 		} catch (Throwable e) {
 			// e.printStackTrace();
-			msg.append(MessageFormat.format("异常	{0}", e));
+			msg.append(MessageFormat.format("	异常	{0}", e));
 			store.err("异常	{0}	{1}		{2}", title, url, e);
 			return null;
 		} finally {
 			// store.msg("本次下载 {0} byte", length_download);
-			lock_w_html.lock();
-			store.msg("{0}	耗时:{1}	{2}", (++count), (System.currentTimeMillis() - startTime), msg);
-			lock_w_html.unlock();
+			try {
+				lock_w_html.lock();
+				store.msg("{0}	耗时:{1}	{2}", (++count), (System.currentTimeMillis() - startTime), msg);
+			} finally {
+				lock_w_html.unlock();
+			}
 			// lock_w_html.unlock();
 		}
 		return length_download;

@@ -11,7 +11,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.DownloadSingle;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
@@ -22,16 +25,40 @@ import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 
 public class ListES {
+	private final static Logger logger = Logger.getLogger(ListES.class.toString());
 	GetConnection connection;
 	ConfUtil conf;
 	private String path_es_start;
 	private DownloadSingle downloadSingle;
 
 	private IStore store;
+	private static int size = 300;
+	private static int limit = 20;
+	private static String type = "";
 
 	public static void main(String[] args) throws Throwable {// 6047836
+		if (null == args)
+			return;
 		ListES listES = new ListES();
-		listES.execute((null == args || args.length < 1) ? "0" : Integer.valueOf(args[0]).toString());
+		String from = "0";
+		if (args.length > 0)
+			from = args[0];
+		if (args.length > 1)
+			size = Integer.valueOf(args[1]);
+		if (args.length > 2)
+			limit = Integer.valueOf(args[2]);
+		if (args.length > 3)
+			type = args[3];
+		try {
+			Integer.valueOf(from);
+			listES.execute(from);
+		} catch (Exception e1) {
+			try {
+				new DownloadList(type).execute(size, limit + size);
+			} catch (Throwable e) {
+				logger.log(Level.SEVERE, e.getMessage(), e);
+			}
+		}
 	}
 
 	private void execute(String mins) throws Throwable {
@@ -51,7 +78,7 @@ public class ListES {
 			do {
 				min = rs;
 				rs = list(min);
-				if (++i % 20 == 0)
+				if (++i % limit == 0)
 					getStore().refreshMsgLog();
 			} while (rs.compareTo(min) > 0);
 		} finally {
@@ -108,7 +135,7 @@ public class ListES {
 								.set("id", ESMap.get().set("order", "asc"))//
 				)//
 		);
-		params.put("size", 100);
+		params.put("size", size);
 		params.put("from", 0);
 		String jsonParams = JsonUtil.toJson(params);
 		long l = System.currentTimeMillis();
@@ -139,7 +166,7 @@ public class ListES {
 				}
 			}));
 		}
-		getStore().msg("耗时:{3}ms	{0}~{1}	total:{2}", min, result, h.get("total"), (System.currentTimeMillis() - startTime));
+		long sTime = System.currentTimeMillis() - startTime;
 		executor.shutdown();
 		for (Future<Long> fs : resultList) {
 			try {
@@ -151,6 +178,7 @@ public class ListES {
 			} finally {
 			}
 		}
+		getStore().msg("查:{3}ms	共:{4}ms	{0}~{1}	total:{2}", min, result, h.get("total"), sTime, (System.currentTimeMillis() - startTime));
 		HttpFactory.getPoolConnManager().closeExpiredConnections();
 		return result;
 	}
@@ -163,7 +191,7 @@ public class ListES {
 		for (Long page = min; page <= Math.min(max, 30); page++) {
 			String url = String.format("http://www.sexinsex.net/bbs/viewthread.php?tid=%s&page=%s", id.toString(), page.toString());
 			// System.out.println(url);torrent cover
-			downloadSingle.startDownload("torrent", id.toString(), page.toString()//
+			downloadSingle.startDownload(type, id.toString(), page.toString()//
 					, url// http://www.sexinsex.net/bbs/thread-%s-%s-300.html
 					, title, null);
 		}

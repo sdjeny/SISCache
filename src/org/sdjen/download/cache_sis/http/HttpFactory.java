@@ -315,7 +315,7 @@ public class HttpFactory {
 	public static abstract class Executor<R> {
 		private R result;
 
-		public abstract void execute(InputStream inputStream);
+		public abstract void execute(InputStream inputStream) throws Throwable;
 
 		public void setResult(R result) {
 			this.result = result;
@@ -338,7 +338,7 @@ public class HttpFactory {
 		return false;
 	}
 
-	public void execute(String uri, Executor<?> executor) throws Exception {
+	public void execute(String uri, Executor<?> executor) throws Throwable {
 		InputStream in = null;
 		HttpGet get = null;
 		org.apache.http.client.methods.CloseableHttpResponse response = null;
@@ -384,7 +384,7 @@ public class HttpFactory {
 				executor.execute(in = entity.getContent());
 				// EntityUtils.consumeQuietly(entity);//�˴����ܣ�ͨ��Դ���������EntityUtils�Ƿ����HttpEntity
 			}
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			if (null != get)
 				get.abort();
 			throw e;
@@ -413,31 +413,28 @@ public class HttpFactory {
 
 	public synchronized String getHTML(final String uri, final String chatset) throws Throwable {
 		final Executor<String> executor = new Executor<String>() {
-			public void execute(InputStream inputStream) {
-				try {
-					setResult(null);
-					if (true) {
-						ByteArrayOutputStream result = new ByteArrayOutputStream();
-						byte[] buffer = new byte[1024];
-						int length;
-						while ((length = inputStream.read(buffer)) != -1) {
-							result.write(buffer, 0, length);
-						}
-						setResult(result.toString(chatset));
-					} else {
-						StringBuffer pageHTML = new StringBuffer();
-						BufferedReader br;
-						br = new BufferedReader(new InputStreamReader(inputStream, chatset));
-						String line = null;
-						while ((line = br.readLine()) != null) {
-							pageHTML.append(line);
-							pageHTML.append("\r\n");
-						}
-						setResult(pageHTML.toString());
+			public void execute(InputStream inputStream) throws Throwable {
+				setResult(null);
+				if (true) {
+					ByteArrayOutputStream result = new ByteArrayOutputStream();
+					byte[] buffer = new byte[1024];
+					int length;
+					while ((length = inputStream.read(buffer)) != -1) {
+						result.write(buffer, 0, length);
 					}
-				} catch (Exception e) {
-					e.printStackTrace();
+					setResult(result.toString(chatset));
+				} else {
+					StringBuffer pageHTML = new StringBuffer();
+					BufferedReader br;
+					br = new BufferedReader(new InputStreamReader(inputStream, chatset));
+					String line = null;
+					while ((line = br.readLine()) != null) {
+						pageHTML.append(line);
+						pageHTML.append("\r\n");
+					}
+					setResult(pageHTML.toString());
 				}
+
 			}
 		};
 		retry(new Retry() {

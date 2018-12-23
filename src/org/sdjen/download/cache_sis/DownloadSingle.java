@@ -3,6 +3,7 @@ package org.sdjen.download.cache_sis;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -150,6 +151,11 @@ public class DownloadSingle {
 
 	public Long startDownload(final String type, final String id, final String page, final String url, String title, String dateStr)
 			throws Throwable {
+		try {
+			if (Integer.valueOf(page) > 30)
+				return null;
+		} catch (Exception e2) {
+		}
 		long startTime = System.currentTimeMillis();
 		title = getFileName(title);
 		String key = store.getKey(id, page, url, title, dateStr);
@@ -322,7 +328,7 @@ public class DownloadSingle {
 			}
 			int length = html.length();
 			length_download += length;
-			if ((html.length() - cssLen) > (60000 - DefaultCss.getLength())) {
+			if ((html.length() - cssLen) > (59000 - DefaultCss.getLength())) {
 				try {
 					lock_w_db.lock();
 					store.saveHtml(key, html);
@@ -392,84 +398,83 @@ public class DownloadSingle {
 		ls.add("->	" + result);
 		if (null == result || !checkFile(reload, result)) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
-				public void execute(InputStream inputStream) {
+				public void execute(InputStream inputStream) throws Throwable {
 					setResult(null);
 					ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
 					byte[] buffer = new byte[1024];
-					try {
-						int len = 0;
-						while ((len = inputStream.read(buffer)) != -1) {
-							arrayOutputStream.write(buffer, 0, len);
-						}
-						byte[] bytes = arrayOutputStream.toByteArray();
-						try {
-							arrayOutputStream.close();
-						} catch (Exception e) {
-						}
-						String md5 = getMD5(bytes);
-						String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
-						ls.add("->	" + result);
-						if (null == result || !checkFile(reload, result)) {
-							result = path;
-							if (bytes.length < length_flag_min_byte)
-								result += "/min";
-							else if (bytes.length > length_flag_max_byte)
-								result += "/max";
-							else
-								result += "/mid";
-							result += "/";
-							if (name.startsWith("."))
-								result += md5;
-							result += name;
-							File file = new File(save_path + "/" + result);
-							if (!file.exists()) {
-								FileOutputStream fos = new FileOutputStream(file);
-								try {
-									fos.write(bytes);
-								} finally {
-									try {
-										fos.close();
-									} catch (Exception e) {
-									}
-								}
-								// length_download += bytes.length;
-							}
-							// lock_w_mapdb.lock();
-							// MapDBFactory.getFileDB().put(md5, result);
-							// mapDBUtil.commit();
-							// lock_w_mapdb.unlock();
-							store.saveMD5(md5, result);
-							ls.add("->	" + result);
-						}
-						setResult(result);
-					} catch (Throwable e) {
-						e.printStackTrace();
+					int len = 0;
+					while ((len = inputStream.read(buffer)) != -1) {
+						arrayOutputStream.write(buffer, 0, len);
 					}
+					byte[] bytes = arrayOutputStream.toByteArray();
+					try {
+						arrayOutputStream.close();
+					} catch (Exception e) {
+					}
+					String md5 = getMD5(bytes);
+					String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
+					ls.add("->	" + result);
+					if (null == result || !checkFile(reload, result)) {
+						result = path;
+						if (bytes.length < length_flag_min_byte)
+							result += "/min";
+						else if (bytes.length > length_flag_max_byte)
+							result += "/max";
+						else
+							result += "/mid";
+						result += "/";
+						if (name.startsWith("."))
+							result += md5;
+						result += name;
+						File file = new File(save_path + "/" + result);
+						if (!file.exists()) {
+							FileOutputStream fos = new FileOutputStream(file);
+							try {
+								fos.write(bytes);
+							} finally {
+								try {
+									fos.close();
+								} catch (Exception e) {
+								}
+							}
+							// length_download += bytes.length;
+						}
+						// lock_w_mapdb.lock();
+						// MapDBFactory.getFileDB().put(md5, result);
+						// mapDBUtil.commit();
+						// lock_w_mapdb.unlock();
+						store.saveMD5(md5, result);
+						ls.add("->	" + result);
+					}
+					setResult(result);
 				}
 			};
 			executor.setResult(null);
-			boolean needLock = path.startsWith("torrent");
 			try {
-				if (needLock) {
-					lock_w_html.lock();
-					httpUtil.retry(new Retry() {
-						public void execute() throws Throwable {
-							httpUtil.execute(url, executor);
-						}
-					});
+				result = null;
+				if (path.startsWith("torrent")) {
+					try {
+						lock_w_html.lock();
+						httpUtil.retry(new Retry() {
+							public void execute() throws Throwable {
+								httpUtil.execute(url, executor);
+							}
+						});
+					} finally {
+						lock_w_html.unlock();
+					}
 				} else
 					httpUtil.execute(url, executor);
 				result = executor.getResult();
 			} catch (Throwable e) {
+				result = url;
 				store.err("异常	{0}	{1}", url, e);
 				// e.printStackTrace();
 			} finally {
-				if (needLock)
-					lock_w_html.unlock();
+				if (null == result)
+					result = url;
+				store.saveURL(url, result);
 			}
-			if (null == result)
-				result = url;
-			store.saveURL(url, result);
 		}
 		// System.out.println("↓ " + url + " " + ls);
 		// store.msg("+ {0} {1}", result, url);

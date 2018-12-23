@@ -17,6 +17,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -550,6 +552,51 @@ public class SampleController {
 	}
 
 	public static void main(String[] args) throws Exception {
+		// SpringApplication springApplication = new
+		// SpringApplication(SampleController.class);
+		// springApplication.addListeners(new ApplicationStartup());
+		// springApplication.run(args);
+		Timer timer = new Timer("定时下载");
+		timer.schedule(new TimerTask() {
+			Long times = 0l;
+
+			@Override
+			public void run() {
+				synchronized (times) {
+					String type;
+					int from = 1, to = 30;
+					switch ((int) (times % 4)) {
+					case 1:
+						type = "torrent";
+						from = 1;
+						to = 5;
+						break;
+					case 2:
+						type = "torrent,image";
+						from = 1;
+						to = 5;
+						break;
+					case 3:
+						type = "cover";
+						from = 5;
+						to = 10;
+						break;
+					default:
+						type = "";
+						from = 1;
+						break;
+					}
+					logger.log(Level.INFO, times + "	" + type + "	" + from + "	" + to);
+					try {
+						new DownloadList(type).execute(from, to);
+					} catch (Throwable e) {
+						e.printStackTrace();
+					} finally {
+					}
+					times++;
+				}
+			}
+		}, 30000, 21600000);// 6hours
 		SpringApplication.run(SampleController.class, args);
 	}
 }

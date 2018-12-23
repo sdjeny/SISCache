@@ -66,7 +66,7 @@ public class DownloadList {
 			try {
 				for (int i = from; i <= to; i++) {
 					if (i != from && ((i - from) % pageU == 0)) {// 执行到一定数量重新下载3页，保证齐全
-						for (int j = 1; j < 3; j++) {
+						for (int j = 2; j < 3; j++) {
 							list(j, "");
 						}
 						store.refreshMsgLog();
@@ -96,8 +96,8 @@ public class DownloadList {
 	}
 
 	protected void list(final int i, String type) throws Throwable {
+		long t = System.currentTimeMillis();
 		String uri = MessageFormat.format(list_url, String.valueOf(i));
-		store.msg(uri);
 		String html = getHTML(uri);
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -167,7 +167,7 @@ public class DownloadList {
 			}
 		}
 		HttpFactory.getPoolConnManager().closeExpiredConnections();
-		store.msg("本页下载	{0} byte,	{1} 项", length_download, count);
+		store.msg("耗时{3}	下载	{0} byte,	{1} 项	{2}", length_download, count, uri, (System.currentTimeMillis() - t));
 		// httpUtil.getPoolConnManager().closeExpiredConnections();
 	}
 }

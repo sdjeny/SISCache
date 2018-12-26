@@ -3,7 +3,6 @@ package org.sdjen.download.cache_sis;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -18,8 +17,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import org.jboss.logging.Message;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
@@ -28,12 +28,11 @@ import org.sdjen.download.cache_sis.http.HttpFactory.Retry;
 import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.store.Store_Cassandra;
 import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 import org.sdjen.download.cache_sis.tool.Comparor;
-import org.springframework.boot.autoconfigure.amqp.RabbitProperties.Template;
 
 public class DownloadSingle {
+	private final static Logger logger = Logger.getLogger(DownloadSingle.class.toString());
 	// private String html = "";
 	public String chatset = "utf8";
 	private String save_path = "WEBCACHE";
@@ -328,7 +327,7 @@ public class DownloadSingle {
 			}
 			int length = html.length();
 			length_download += length;
-			if ((html.length() - cssLen) > (59000 - DefaultCss.getLength())) {
+			if ((html.length() - cssLen) > (55000 - DefaultCss.getLength())) {
 				try {
 					lock_w_db.lock();
 					store.saveHtml(key, html);
@@ -394,8 +393,6 @@ public class DownloadSingle {
 		String result = store.getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
 		if (null != result && reload && result.equals(url))
 			result = null;
-		List<String> ls = new ArrayList<>();
-		ls.add("->	" + result);
 		if (null == result || !checkFile(reload, result)) {
 			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
 				public void execute(InputStream inputStream) throws Throwable {
@@ -413,7 +410,6 @@ public class DownloadSingle {
 					}
 					String md5 = getMD5(bytes);
 					String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
-					ls.add("->	" + result);
 					if (null == result || !checkFile(reload, result)) {
 						result = path;
 						if (bytes.length < length_flag_min_byte)
@@ -444,7 +440,7 @@ public class DownloadSingle {
 						// mapDBUtil.commit();
 						// lock_w_mapdb.unlock();
 						store.saveMD5(md5, result);
-						ls.add("->	" + result);
+						logger.log(Level.INFO, MessageFormat.format("	+{0}	->{1}", url, result));
 					}
 					setResult(result);
 				}

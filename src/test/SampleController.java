@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -465,7 +466,7 @@ public class SampleController {
 				page = ss[2];
 		}
 		Map<String, Object> params = new HashMap<>();
-		Map<String, Object> _source = new HashMap<>();
+		ESMap _source = ESMap.get();
 		_source.put("includes", Arrays.asList("context*"));
 		_source.put("excludes", Arrays.asList());
 		params.put("_source", _source);
@@ -484,22 +485,34 @@ public class SampleController {
 			logger.log(Level.FINE, jsonParams);
 			String js = getConnection().doPost(getPath_es_start() + "html/_doc/_search", jsonParams, new HashMap<>());
 			logger.log(Level.FINE, js);
-			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
-
-			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits")).get("hits");
-			for (Map<String, Object> hit : hits) {
-				_source = (Map<String, Object>) hit.get("_source");
-				String text = (String) _source.get("context_zip");
-				if (null != text) {
-					try {
-						text = ZipUtil.uncompress(text);
-					} catch (DataFormatException e1) {
-						e1.printStackTrace();
-						text = null;
+			ESMap r = JsonUtil.toObject(js, ESMap.class);
+			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
+			for (ESMap hit : hits) {
+				_source = hit.get("_source", ESMap.class);
+				String text;
+				if (page.compareTo("1") > 0) {
+					rst.append("</br><table border='0'>");
+					for (Entry<Object, Object> e : _source.get("context_comments", ESMap.class).entrySet()) {
+						rst.append("<tbody><tr>");
+						rst.append(String.format("<td>%s</td>", e.getKey()));
+						rst.append(String.format("<td>%s</td>", e.getValue()));
+						rst.append("</tr></tbody>");
 					}
-				}
-				if (null == text) {
-					text = (String) _source.get("context");
+					rst.append("</table>");
+					text = rst.toString();
+				} else {
+					text = (String) _source.get("context_zip");
+					if (null != text) {
+						try {
+							text = ZipUtil.uncompress(text);
+						} catch (DataFormatException e1) {
+							e1.printStackTrace();
+							text = null;
+						}
+					}
+					if (null == text) {
+						text = (String) _source.get("context");
+					}
 				}
 				long length_org = text.getBytes().length;
 				org.jsoup.nodes.Document doument = Jsoup.parse(text);
@@ -589,11 +602,11 @@ public class SampleController {
 					logger.log(Level.INFO, times + "	" + type + "	" + from + "	" + to);
 					try {
 						new DownloadList(type).execute(from, to);
+						times++;
 					} catch (Throwable e) {
 						e.printStackTrace();
 					} finally {
 					}
-					times++;
 				}
 			}
 		}, 30000, 21600000);// 6hours

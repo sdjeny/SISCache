@@ -609,7 +609,7 @@ public class SampleController {
 					}
 				}
 			}
-		}, 30000, 21600000);// 6hours
+		}, 30000, 10800000);// 3hours
 		SpringApplication.run(SampleController.class, args);
 	}
 }

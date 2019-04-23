@@ -90,7 +90,14 @@ public class Store_ElasticSearch implements IStore {
 			postStr.append("\n{}\n");
 			postStr.append(JsonUtil.toJson(ESMap.get().set("delete", ESMap.get().set("_id", "test"))));
 			postStr.append("\n");
-			String rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+			String rst;
+			try {
+				rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+			} catch (Exception e) {
+				msg("ES未启动，5分钟后重试1次");
+				Thread.sleep(300000);
+				rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+			}
 			msg(rst);
 			rst = connection.doPost(path_es_start + "html/_doc/_mapping/"//
 					,

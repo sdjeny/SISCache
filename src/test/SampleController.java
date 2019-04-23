@@ -72,10 +72,32 @@ public class SampleController {
 		return connection;
 	}
 
-	@RequestMapping("/hello")
+	@RequestMapping("/help")
 	@ResponseBody
-	String home() {
-		return "Hello World!";
+	String help() {
+		StringBuilder rst = new StringBuilder();
+		rst.append("</br><table border='0'>");
+		{
+			rst.append("<tbody><tr>");
+			rst.append(String.format("<td>%s</td>", "Fields"));
+			rst.append(String.format("<td>%s</td>", "id,fid,datetime,type,title,page,context,context_comments,context_zip,author"));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append(String.format("<td>%s</td>", "Search(eg.)"));
+			rst.append(String.format("<td>%s</td>", "q=type:新片;title:碧 ~筱 -白"));
+			rst.append(String.format("<td>%s</td>", "~:or -:not"));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append(String.format("<td>%s</td>", "Order"));
+			rst.append(String.format("<td>%s</td>", "order=datetime.keyword:desc id"));
+			rst.append("</tr></tbody>");
+		}
+		rst.append("</table>");
+		return rst.toString(); // XXX
 	}
 
 	File cacheResultFile;
@@ -148,6 +170,15 @@ public class SampleController {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
 		return "redirect:/siscache/cache_result";
+	}
+
+	@RequestMapping("/restart/{hours}")
+	@ResponseBody
+	String restart(@PathVariable("hours") int hours) {
+		timer.cancel();
+		timer.purge();
+		(timer = new Timer("定时下载" + System.currentTimeMillis())).schedule(getTimerTask(), 0, hours * 3600000);// 2hours
+		return list(1);
 	}
 
 	@RequestMapping("/list")
@@ -564,13 +595,10 @@ public class SampleController {
 		return rst.toString();
 	}
 
-	public static void main(String[] args) throws Exception {
-		// SpringApplication springApplication = new
-		// SpringApplication(SampleController.class);
-		// springApplication.addListeners(new ApplicationStartup());
-		// springApplication.run(args);
-		Timer timer = new Timer("定时下载");
-		timer.schedule(new TimerTask() {
+	private static Timer timer;
+
+	public static TimerTask getTimerTask() {
+		return new TimerTask() {
 			Long times = 0l;
 
 			@Override
@@ -591,6 +619,10 @@ public class SampleController {
 						break;
 					case 3:
 						type = "cover";
+						try {
+							new DownloadList(type).execute(1, 4);
+						} catch (Throwable e1) {
+						}
 						from = 5;
 						to = 10;
 						break;
@@ -609,7 +641,16 @@ public class SampleController {
 					}
 				}
 			}
-		}, 30000, 10800000);// 3hours
+		};
+	}
+
+	public static void main(String[] args) throws Exception {
+		// SpringApplication springApplication = new
+		// SpringApplication(SampleController.class);
+		// springApplication.addListeners(new ApplicationStartup());
+		// springApplication.run(args);
+		timer = new Timer("定时下载");
+		timer.schedule(getTimerTask(), 30000, 7200000);// 2hours
 		SpringApplication.run(SampleController.class, args);
 	}
 }

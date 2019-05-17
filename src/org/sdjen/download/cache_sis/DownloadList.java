@@ -27,7 +27,7 @@ public class DownloadList {
 		ConfUtil conf = ConfUtil.getDefaultConf();
 		String type = args.length > 0 ? args[0] : "torrent";
 		int from = Integer.valueOf(args.length > 1 ? args[1] : conf.getProperties().getProperty("list_start"));
-		int to = Integer.valueOf(args.length > 1 ? args[1] : conf.getProperties().getProperty("list_end"));
+		int to = Integer.valueOf(args.length > 2 ? args[2] : conf.getProperties().getProperty("list_end"));
 		new DownloadList(type).execute(from, to);
 		HttpFactory.getPoolConnManager().close();
 	}

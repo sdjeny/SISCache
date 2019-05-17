@@ -618,11 +618,11 @@ public class SampleController {
 						to = 5;
 						break;
 					case 3:
-						type = "cover";
 						try {
-							new DownloadList(type).execute(1, 4);
+							new DownloadList("torrent,image").execute(1, 4);
 						} catch (Throwable e1) {
 						}
+						type = "cover";
 						from = 5;
 						to = 10;
 						break;

@@ -25,9 +25,10 @@ public class DownloadList {
 
 	public static void main(String[] args) throws Throwable {
 		ConfUtil conf = ConfUtil.getDefaultConf();
-		int from = Integer.valueOf(conf.getProperties().getProperty("list_start"));
-		int to = Integer.valueOf(conf.getProperties().getProperty("list_end"));
-		new DownloadList("").execute(from, to);
+		String type = args.length > 0 ? args[0] : "torrent";
+		int from = Integer.valueOf(args.length > 1 ? args[1] : conf.getProperties().getProperty("list_start"));
+		int to = Integer.valueOf(args.length > 1 ? args[1] : conf.getProperties().getProperty("list_end"));
+		new DownloadList(type).execute(from, to);
 		HttpFactory.getPoolConnManager().close();
 	}
 

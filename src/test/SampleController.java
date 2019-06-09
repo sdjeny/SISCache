@@ -79,21 +79,44 @@ public class SampleController {
 		rst.append("</br><table border='0'>");
 		{
 			rst.append("<tbody><tr>");
-			rst.append(String.format("<td>%s</td>", "Fields"));
-			rst.append(String.format("<td>%s</td>", "id,fid,datetime,type,title,page,context,context_comments,context_zip,author"));
+			rst.append("<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>list</a></td>");
+			rst.append(String.format("<td>%s</td>", "list"));
+			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
 		}
 		{
 			rst.append("<tbody><tr>");
-			rst.append(String.format("<td>%s</td>", "Search(eg.)"));
+			rst.append(String.format("<td>%s</td>", "Fields"));
+			rst.append(String.format("<td>%s</td>", "id,fid,datetime,type,title,page,context,context_comments,context_zip,author"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Search(eg.)</a></td>");
 			rst.append(String.format("<td>%s</td>", "q=type:新片;title:碧 ~筱 -白"));
 			rst.append(String.format("<td>%s</td>", "~:or -:not"));
 			rst.append("</tr></tbody>");
 		}
 		{
 			rst.append("<tbody><tr>");
-			rst.append(String.format("<td>%s</td>", "Order"));
+			rst.append("<td><a href='/siscache/list/1/100?debug=true&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Order</a></td>");
 			rst.append(String.format("<td>%s</td>", "order=datetime.keyword:desc id"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/restart/2' title='新窗口打开' target='_blank'>restart</a></td>");
+			rst.append(String.format("<td>%s</td>", "restart/hours"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/cache/1/30/torrent,image' title='新窗口打开' target='_blank'>reload</a></td>");
+			rst.append(String.format("<td>%s</td>", "cache/from/to/[torrent,image,cover]"));
+			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
 		}
 		rst.append("</table>");
@@ -169,7 +192,8 @@ public class SampleController {
 		} catch (Exception e) {
 			logger.log(Level.SEVERE, e.getMessage(), e);
 		}
-		return "redirect:/siscache/cache_result";
+		return list(1);
+		// return "redirect:/siscache/cache_result";
 	}
 
 	@RequestMapping("/restart/{hours}")

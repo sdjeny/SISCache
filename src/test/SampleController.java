@@ -79,7 +79,7 @@ public class SampleController {
 		rst.append("</br><table border='0'>");
 		{
 			rst.append("<tbody><tr>");
-			rst.append("<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>list</a></td>");
+			rst.append("<td><a href='/siscache/list/1/100?debug=true' title='新窗口打开' target='_blank'>list</a></td>");
 			rst.append(String.format("<td>%s</td>", "list"));
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");

@@ -178,20 +178,17 @@ public class SampleController {
 
 	@RequestMapping("/cache/{from}/{to}/{type}")
 	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type) {
-		try {
-			new Thread(new Runnable() {
-				public void run() {
+		new Thread(new Runnable() {
+			public void run() {
 
-					try {
-						new DownloadList(type).execute(from, to);
-					} catch (Throwable e) {
-						logger.log(Level.SEVERE, e.getMessage(), e);
-					}
+				try {
+					logger.log(Level.INFO, type + "	" + from + "	" + to);
+					new DownloadList(type).execute(from, to);
+				} catch (Throwable e) {
+					logger.log(Level.SEVERE, e.getMessage(), e);
 				}
-			}).start();
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, e.getMessage(), e);
-		}
+			}
+		}).start();
 		return list(1);
 		// return "redirect:/siscache/cache_result";
 	}

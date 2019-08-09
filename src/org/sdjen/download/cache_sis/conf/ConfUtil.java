@@ -35,6 +35,10 @@ public class ConfUtil {
 		}
 		return defaultConf;
 	}
+	
+	public static void reload() {
+		defaultConf = null;
+	}
 
 	public ConfUtil(String path) throws IOException {
 		properties = new Properties();

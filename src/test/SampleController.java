@@ -177,7 +177,9 @@ public class SampleController {
 	}
 
 	@RequestMapping("/cache/{from}/{to}/{type}")
+	@ResponseBody
 	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type) {
+		ConfUtil.reload();
 		new Thread(new Runnable() {
 			public void run() {
 

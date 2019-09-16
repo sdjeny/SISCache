@@ -326,7 +326,7 @@ public class Store_ElasticSearch implements IStore {
 			json.put("fid", 143);
 			json.put("type", type);
 			json.put("context", context);
-//			json.put("context_zip", ZipUtil.compress(text));
+			json.put("context_zip", ZipUtil.compress(text));
 			json.put("author", author);
 		}
 		String r = connection.doPost(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json), new HashMap<>());

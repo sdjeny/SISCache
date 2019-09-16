@@ -352,6 +352,10 @@ public class SampleController {
 	}
 
 	private void listDate(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) throws ParseException {
+		if (!search.startsWith("D:") || !search.startsWith("d:"))
+			search = "";
+		else
+			search = search.substring(2);
 		try {
 			new SimpleDateFormat("yyyy-MM-dd").parse(search);
 		} catch (Exception e) {

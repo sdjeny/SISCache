@@ -46,8 +46,11 @@ public class DownloadList {
 		httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
 		list_url = conf.getProperties().getProperty("list_url");
-		if (null == list_url)
+		if (null == list_url) {
 			list_url = "http://www.sexinsex.net/bbs/forum-143-{0}.html";
+			conf.getProperties().setProperty("list_url", list_url);
+			conf.store();
+		}
 		store = Store_ElasticSearch.getStore();
 	}
 

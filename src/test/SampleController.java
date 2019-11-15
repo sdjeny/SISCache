@@ -642,10 +642,13 @@ public class SampleController {
 
 	public static TimerTask getTimerTask() {
 
-		String rangestr = "~1~30|torrent~1~5|torrent,image~1~5|cover~5~10";
+		String rangestr = null;
 		try {
 			rangestr = getConf().getProperties().getProperty("times_ranges");
 		} catch (Exception e) {
+		}
+		if (null == rangestr) {
+			rangestr = "~1~30|torrent~1~5|torrent,image~1~5|cover~5~10";
 			try {
 				getConf().getProperties().setProperty("times_ranges", rangestr);
 				getConf().store();

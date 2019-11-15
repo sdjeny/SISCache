@@ -49,11 +49,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 public class SampleController {
 	private final static Logger logger = Logger.getLogger(SampleController.class.toString());
 	GetConnection connection;
-	ConfUtil conf;
+	static ConfUtil conf;
 
 	private String path_es_start;
 
-	public ConfUtil getConf() throws IOException {
+	public static ConfUtil getConf() throws IOException {
 		if (null == conf)
 			conf = ConfUtil.getDefaultConf();
 		return conf;
@@ -93,7 +93,8 @@ public class SampleController {
 		}
 		{
 			rst.append("<tbody><tr>");
-			rst.append("<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Search(eg.)</a></td>");
+			rst.append(
+					"<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Search(eg.)</a></td>");
 			rst.append(String.format("<td>%s</td>", "q=type:新片;title:碧 ~筱 -白"));
 			rst.append(String.format("<td>%s</td>", "~:or -:not"));
 			rst.append("</tr></tbody>");
@@ -321,17 +322,32 @@ public class SampleController {
 			for (ESMap hit : hits) {
 				ESMap _source = hit.get("_source", ESMap.class);
 				rst.append("<tbody><tr>");
+				String datestr, timestr;
 				try {
 					Date date = format.parse((String) _source.get("datetime"));
-					rst.append(String.format("<td>%s</td>", dformat.format(date)));
-					rst.append(String.format("<td>%s</td>", tformat.format(date)));
+					datestr = dformat.format(date);
+					timestr = tformat.format(date);
 				} catch (Exception e) {
-					rst.append(String.format("<td>%s</td>", _source.get("date_str")));
-					rst.append(String.format("<td>%s</td>", "    "));
+					datestr = (String) _source.get("date_str");
+					timestr = "    ";
 				}
-				rst.append(String.format("<td align='center'>%s</td>", _source.get("type")));
-				rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-						, _source.get("id"), _source.get("page"), _source.get("title")));
+				if (false) {
+					rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+							, _source.get("id"), _source.get("page"),
+							String.format("%s&nbsp;%s&nbsp;%s&nbsp;%s", datestr, timestr, _source.get("type"), _source.get("title"))));
+				} else {
+					if (false) {
+						rst.append(String.format("<td>%s</td>", datestr));
+						rst.append(String.format("<td>%s</td>", timestr));
+						rst.append(String.format("<td align='center'>%s</td>", _source.get("type")));
+					} else {
+						rst.append(String.format("<td>%s&nbsp;%s&nbsp;%s</td>", datestr, timestr, _source.get("type")));
+					}
+					rst.append("</tr></tbody>");
+					rst.append("<tbody><tr>");
+					rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+							, _source.get("id"), _source.get("page"), _source.get("title")));
+				}
 				rst.append("</tr></tbody>");
 				// rst.append("</br>");
 			}
@@ -625,38 +641,37 @@ public class SampleController {
 	private static Timer timer;
 
 	public static TimerTask getTimerTask() {
+
+		String rangestr = "~1~30|torrent~1~5|torrent,image~1~5|cover~5~10";
+		try {
+			rangestr = getConf().getProperties().getProperty("times_ranges");
+		} catch (Exception e) {
+			try {
+				getConf().getProperties().setProperty("times_ranges", rangestr);
+				getConf().store();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		}
+		List<String[]> ranges = new ArrayList<>();
+		for (String s : rangestr.split("\\|"))
+			ranges.add(s.split("~"));
 		return new TimerTask() {
 			Long times = 0l;
 
 			@Override
 			public void run() {
 				synchronized (times) {
-					String type;
+					String[] range = ranges.get((int) (times % ranges.size()));
+					String type = (String) range[0];
 					int from = 1, to = 30;
-					switch ((int) (times % 4)) {
-					case 1:
-						type = "torrent";
-						from = 1;
-						to = 5;
-						break;
-					case 2:
-						type = "torrent,image";
-						from = 1;
-						to = 5;
-						break;
-					case 3:
-						try {
-							new DownloadList("torrent,image").execute(1, 4);
-						} catch (Throwable e1) {
-						}
-						type = "cover";
-						from = 5;
-						to = 10;
-						break;
-					default:
-						type = "";
-						from = 1;
-						break;
+					try {
+						from = Integer.valueOf(range[1]);
+					} catch (Exception e1) {
+					}
+					try {
+						to = Integer.valueOf(range[2]);
+					} catch (Exception e1) {
 					}
 					logger.log(Level.INFO, times + "	" + type + "	" + from + "	" + to);
 					try {
@@ -676,8 +691,15 @@ public class SampleController {
 		// SpringApplication(SampleController.class);
 		// springApplication.addListeners(new ApplicationStartup());
 		// springApplication.run(args);
+		double hour = 2;
+		try {
+			hour = Double.valueOf(getConf().getProperties().getProperty("times_period"));
+		} catch (Exception e) {
+			getConf().getProperties().setProperty("times_period", String.valueOf(hour));
+			getConf().store();
+		}
 		timer = new Timer("定时下载");
-		timer.schedule(getTimerTask(), 30000, 7200000);// 2hours
+		timer.schedule(getTimerTask(), 30000, (long) (hour * 3600000));// 2hours
 		SpringApplication.run(SampleController.class, args);
 	}
 }

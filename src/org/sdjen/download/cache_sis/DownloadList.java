@@ -25,9 +25,10 @@ public class DownloadList {
 
 	public static void main(String[] args) throws Throwable {
 		ConfUtil conf = ConfUtil.getDefaultConf();
-		int from = Integer.valueOf(conf.getProperties().getProperty("list_start"));
-		int to = Integer.valueOf(conf.getProperties().getProperty("list_end"));
-		new DownloadList("").execute(from, to);
+		String type = args.length > 0 ? args[0] : "torrent";
+		int from = Integer.valueOf(args.length > 1 ? args[1] : conf.getProperties().getProperty("list_start"));
+		int to = Integer.valueOf(args.length > 2 ? args[2] : conf.getProperties().getProperty("list_end"));
+		new DownloadList(type).execute(from, to);
 		HttpFactory.getPoolConnManager().close();
 	}
 
@@ -45,6 +46,11 @@ public class DownloadList {
 		httpUtil = new HttpFactory();
 		downloadSingle.setHttpUtil(httpUtil);
 		list_url = conf.getProperties().getProperty("list_url");
+		if (null == list_url) {
+			list_url = "http://www.sexinsex.net/bbs/forum-143-{0}.html";
+			conf.getProperties().setProperty("list_url", list_url);
+			conf.store();
+		}
 		store = Store_ElasticSearch.getStore();
 	}
 
@@ -66,7 +72,7 @@ public class DownloadList {
 			try {
 				for (int i = from; i <= to; i++) {
 					if (i != from && ((i - from) % pageU == 0)) {// 执行到一定数量重新下载3页，保证齐全
-						for (int j = 1; j < 3; j++) {
+						for (int j = 2; j < 3; j++) {
 							list(j, "");
 						}
 						store.refreshMsgLog();
@@ -96,9 +102,8 @@ public class DownloadList {
 	}
 
 	protected void list(final int i, String type) throws Throwable {
+		long t = System.currentTimeMillis();
 		String uri = MessageFormat.format(list_url, String.valueOf(i));
-		LogUtil.lstLog.showMsg(uri);
-		store.msg(uri);
 		String html = getHTML(uri);
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -132,10 +137,11 @@ public class DownloadList {
 							String page = threadpages ? href.text() : "1";
 							String url = httpUtil.joinUrlPath(uri, href.attr("href"));
 							try {
-								if (startDownload(type, id, page, title, date, url)) {
+								Long length = downloadSingle.startDownload(type, id, page, url, title, date);
+								if (null != length) {
 									if (null == result)
 										result = 0l;
-									result += downloadSingle.getLength_download();
+									result += length;
 									// break;
 								}
 							} catch (Throwable e) {
@@ -166,14 +172,8 @@ public class DownloadList {
 			} finally {
 			}
 		}
-		store.msg("本页下载	{0} byte,	{1} 项", length_download, count);
+		HttpFactory.getPoolConnManager().closeExpiredConnections();
+		store.msg("耗时{3}	下载	{0} byte,	{1} 项	{2}", length_download, count, uri, (System.currentTimeMillis() - t));
 		// httpUtil.getPoolConnManager().closeExpiredConnections();
-	}
-
-	protected boolean startDownload(String type, String id, String page, String title, String date, String url) throws Throwable {
-		// System.out.println(url + ":" + id + ":" + page + " " + date + ":" +
-		// title);
-		downloadSingle.startDownload(type, id, page, url, title, date);
-		return true;
 	}
 }

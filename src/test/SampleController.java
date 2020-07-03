@@ -16,9 +16,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.DataFormatException;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -26,7 +31,9 @@ import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.stereotype.Controller;
@@ -42,11 +49,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 public class SampleController {
 	private final static Logger logger = Logger.getLogger(SampleController.class.toString());
 	GetConnection connection;
-	ConfUtil conf;
+	static ConfUtil conf;
 
 	private String path_es_start;
 
-	public ConfUtil getConf() throws IOException {
+	public static ConfUtil getConf() throws IOException {
 		if (null == conf)
 			conf = ConfUtil.getDefaultConf();
 		return conf;
@@ -65,10 +72,56 @@ public class SampleController {
 		return connection;
 	}
 
-	@RequestMapping("/hello")
+	@RequestMapping("/help")
 	@ResponseBody
-	String home() {
-		return "Hello World!";
+	String help() {
+		StringBuilder rst = new StringBuilder();
+		rst.append("</br><table border='0'>");
+		{
+			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/list/1/100?debug=true' title='新窗口打开' target='_blank'>list</a></td>");
+			rst.append(String.format("<td>%s</td>", "list"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append(String.format("<td>%s</td>", "Fields"));
+			rst.append(String.format("<td>%s</td>", "id,fid,datetime,type,title,page,context,context_comments,context_zip,author"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append(
+					"<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Search(eg.)</a></td>");
+			rst.append(String.format("<td>%s</td>", "q=type:新片;title:碧 ~筱 -白"));
+			rst.append(String.format("<td>%s</td>", "~:or -:not"));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/list/1/100?debug=true&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Order</a></td>");
+			rst.append(String.format("<td>%s</td>", "order=datetime.keyword:desc id"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/restart/2' title='新窗口打开' target='_blank'>restart</a></td>");
+			rst.append(String.format("<td>%s</td>", "restart/hours"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/cache/1/30/torrent,image' title='新窗口打开' target='_blank'>reload</a></td>");
+			rst.append(String.format("<td>%s</td>", "cache/from/to/[torrent,image,cover]"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		rst.append("</table>");
+		return rst.toString(); // XXX
 	}
 
 	File cacheResultFile;
@@ -121,25 +174,35 @@ public class SampleController {
 
 	@RequestMapping("/cache/{from}/{to}")
 	String cache(@PathVariable("from") int from, @PathVariable("to") int to) {
-		final String type;
-		try {
-			ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-			HttpServletRequest request = requestAttributes.getRequest();
-			type = request.getParameter("type");
-			new Thread(new Runnable() {
-				public void run() {
+		return cache(from, to, "");
+	}
 
-					try {
-						new DownloadList(type).execute(from, to);
-					} catch (Throwable e) {
-						logger.log(Level.SEVERE, e.getMessage(), e);
-					}
+	@RequestMapping("/cache/{from}/{to}/{type}")
+	@ResponseBody
+	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type) {
+		ConfUtil.reload();
+		new Thread(new Runnable() {
+			public void run() {
+
+				try {
+					logger.log(Level.INFO, type + "	" + from + "	" + to);
+					new DownloadList(type).execute(from, to);
+				} catch (Throwable e) {
+					logger.log(Level.SEVERE, e.getMessage(), e);
 				}
-			}).start();
-		} catch (Exception e) {
-			logger.log(Level.SEVERE, e.getMessage(), e);
-		}
-		return "redirect:/siscache/cache_result";
+			}
+		}).start();
+		return list(1);
+		// return "redirect:/siscache/cache_result";
+	}
+
+	@RequestMapping("/restart/{hours}")
+	@ResponseBody
+	String restart(@PathVariable("hours") int hours) {
+		timer.cancel();
+		timer.purge();
+		(timer = new Timer("定时下载" + System.currentTimeMillis())).schedule(getTimerTask(), 0, hours * 3600000);// 2hours
+		return list(1);
 	}
 
 	@RequestMapping("/list")
@@ -192,7 +255,7 @@ public class SampleController {
 		params.put("_source",
 				ESMap.get()//
 						.set("includes", Arrays.asList())//
-						.set("excludes", Arrays.asList("context"))//
+						.set("excludes", Arrays.asList("context*"))//
 		);
 		List<ESMap> shoulds = new ArrayList<>();
 		List<ESMap> mustes = new ArrayList<>();
@@ -201,11 +264,11 @@ public class SampleController {
 			listAdv(query, shoulds, mustes, mustNots);
 		} else if (search == null || search.trim().isEmpty()) {
 			listAll(shoulds, mustes, mustNots);
-			order = "id.keyword:desc";
+			order = "id:desc";
 		} else {
 			try {
 				listDate(search, shoulds, mustes, mustNots);
-				order = "datetime:desc";
+				order = "id:desc";
 			} catch (Exception e) {
 				listDef(search, shoulds, mustes, mustNots);
 			}
@@ -259,17 +322,32 @@ public class SampleController {
 			for (ESMap hit : hits) {
 				ESMap _source = hit.get("_source", ESMap.class);
 				rst.append("<tbody><tr>");
+				String datestr, timestr;
 				try {
-					Date date = format.parse((String) _source.get("date_str"));
-					rst.append(String.format("<td>%s</td>", dformat.format(date)));
-					rst.append(String.format("<td>%s</td>", tformat.format(date)));
+					Date date = format.parse((String) _source.get("datetime"));
+					datestr = dformat.format(date);
+					timestr = tformat.format(date);
 				} catch (Exception e) {
-					rst.append(String.format("<td>%s</td>", _source.get("date_str")));
-					rst.append(String.format("<td>%s</td>", "    "));
+					datestr = (String) _source.get("date_str");
+					timestr = "    ";
 				}
-				rst.append(String.format("<td align='center'>%s</td>", _source.get("type")));
-				rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-						, _source.get("id"), _source.get("page"), _source.get("title")));
+				if (false) {
+					rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+							, _source.get("id"), _source.get("page"),
+							String.format("%s&nbsp;%s&nbsp;%s&nbsp;%s", datestr, timestr, _source.get("type"), _source.get("title"))));
+				} else {
+					if (false) {
+						rst.append(String.format("<td>%s</td>", datestr));
+						rst.append(String.format("<td>%s</td>", timestr));
+						rst.append(String.format("<td align='center'>%s</td>", _source.get("type")));
+					} else {
+						rst.append(String.format("<td>%s&nbsp;%s&nbsp;%s</td>", datestr, timestr, _source.get("type")));
+					}
+					rst.append("</tr></tbody>");
+					rst.append("<tbody><tr>");
+					rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+							, _source.get("id"), _source.get("page"), _source.get("title")));
+				}
 				rst.append("</tr></tbody>");
 				// rst.append("</br>");
 			}
@@ -286,12 +364,20 @@ public class SampleController {
 	}
 
 	private void listAll(List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
-		mustes.add(ESMap.get().set("term", Collections.singletonMap("page", "1")));
+		mustes.add(ESMap.get().set("term", Collections.singletonMap("page", 1)));
 	}
 
 	private void listDate(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) throws ParseException {
-		Date date = new SimpleDateFormat("yyyy-MM-dd").parse(search);
-		mustes.add(ESMap.get().set("match_phrase", Collections.singletonMap("date_str", search)));
+		if (!search.startsWith("D:") || !search.startsWith("d:"))
+			search = "";
+		else
+			search = search.substring(2);
+		try {
+			new SimpleDateFormat("yyyy-MM-dd").parse(search);
+		} catch (Exception e) {
+			new SimpleDateFormat("yyyy-MM").parse(search);
+		}
+		mustes.add(ESMap.get().set("match_phrase", Collections.singletonMap("datetime", search)));
 	}
 
 	private void listAdv(String query, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
@@ -329,7 +415,7 @@ public class SampleController {
 	}
 
 	private void listDef(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
-		mustes.add(ESMap.get().set("term", ESMap.get().set("page", "1")));
+		mustes.add(ESMap.get().set("term", ESMap.get().set("page", 1)));
 		for (String type : new String[] { "best_fields", "most_fields", "cross_fields" }) {
 			ESMap item = ESMap.get()//
 					.set("fields", Arrays.asList("title^3", "context"));
@@ -386,7 +472,7 @@ public class SampleController {
 					list.add(ESMap.get().set("multi_match", item));
 				}
 			}
-			String order = "datetime:desc";
+			String order = "id:desc";
 		}
 	}
 
@@ -454,8 +540,8 @@ public class SampleController {
 				page = ss[2];
 		}
 		Map<String, Object> params = new HashMap<>();
-		Map<String, Object> _source = new HashMap<>();
-		_source.put("includes", Arrays.asList("context"));
+		ESMap _source = ESMap.get();
+		_source.put("includes", Arrays.asList("context*"));
 		_source.put("excludes", Arrays.asList());
 		params.put("_source", _source);
 		params.put("query",
@@ -473,29 +559,74 @@ public class SampleController {
 			logger.log(Level.FINE, jsonParams);
 			String js = getConnection().doPost(getPath_es_start() + "html/_doc/_search", jsonParams, new HashMap<>());
 			logger.log(Level.FINE, js);
-			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
-
-			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits")).get("hits");
-			for (Map<String, Object> hit : hits) {
-				_source = (Map<String, Object>) hit.get("_source");
-				String text = (String) _source.get("context");
+			ESMap r = JsonUtil.toObject(js, ESMap.class);
+			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
+			for (ESMap hit : hits) {
+				_source = hit.get("_source", ESMap.class);
+				String text;
+				if (page.compareTo("1") > 0) {
+					rst.append("</br><table border='0'>");
+					for (Entry<Object, Object> e : _source.get("context_comments", ESMap.class).entrySet()) {
+						rst.append("<tbody><tr>");
+						rst.append(String.format("<td>%s</td>", e.getKey()));
+						rst.append(String.format("<td>%s</td>", e.getValue()));
+						rst.append("</tr></tbody>");
+					}
+					rst.append("</table>");
+					text = rst.toString();
+				} else {
+					text = (String) _source.get("context_zip");
+					if (null != text) {
+						try {
+							text = ZipUtil.uncompress(text);
+						} catch (DataFormatException e1) {
+							e1.printStackTrace();
+							text = null;
+						}
+					}
+					if (null == text) {
+						text = (String) _source.get("context");
+					}
+				}
+				long length_org = text.getBytes().length;
 				org.jsoup.nodes.Document doument = Jsoup.parse(text);
 				boolean update = false;
-				for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
-					String src = e.attr("src");
-					if (src.startsWith("../../images/20") || src.startsWith("../../torrent/20")) {
+				for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
+					if (e.text().isEmpty()) {
 						update = true;
-						e.attr("src", "../" + src);
-					} else if (src.startsWith("../../images/20")) {
-						src = src.replace("../", "");
-						if (src.startsWith("http")) {
+						e.text(DefaultCss.getCss());
+					}
+				}
+				for (org.jsoup.nodes.Element e : doument//
+						.select("div.mainbox.viewthread")//
+						.select("td.postcontent")//
+						.select("div.postmessage.defaultpost")//
+						.select("div.box.postattachlist")//
+						.select("dl.t_attachlist")//
+						.select("a[href]")//
+				) {
+					String href = e.attr("href");
+					if (href.startsWith("../../torrent/20")) {
+						update = true;
+						e.attr("href", "../" + href);
+					} else if (href.startsWith("../")) {
+						href = href.replace("../", "");
+						if (href.startsWith("http")) {
 							update = true;
-							e.attr("src", src);
+							e.attr("href", href);
 						}
 					}
 				}
-				if (update)
+				for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
+					String src = e.attr("src");
+					if (src.startsWith("../../images/20")) {
+						update = true;
+						e.attr("src", "../" + src);
+					}
+				}
+				if (update) {
 					text = doument.html();
+				}
 				rst.append(text);
 			}
 		} catch (IOException e) {
@@ -507,7 +638,71 @@ public class SampleController {
 		return rst.toString();
 	}
 
+	private static Timer timer;
+
+	public static TimerTask getTimerTask() {
+
+		String rangestr = null;
+		try {
+			rangestr = getConf().getProperties().getProperty("times_ranges");
+		} catch (Exception e) {
+		}
+		if (null == rangestr) {
+			rangestr = "~1~30|torrent~1~5|torrent,image~1~5|cover~5~10";
+			try {
+				getConf().getProperties().setProperty("times_ranges", rangestr);
+				getConf().store();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		}
+		List<String[]> ranges = new ArrayList<>();
+		for (String s : rangestr.split("\\|"))
+			ranges.add(s.split("~"));
+		return new TimerTask() {
+			Long times = 0l;
+
+			@Override
+			public void run() {
+				synchronized (times) {
+					String[] range = ranges.get((int) (times % ranges.size()));
+					String type = (String) range[0];
+					int from = 1, to = 30;
+					try {
+						from = Integer.valueOf(range[1]);
+					} catch (Exception e1) {
+					}
+					try {
+						to = Integer.valueOf(range[2]);
+					} catch (Exception e1) {
+					}
+					logger.log(Level.INFO, times + "	" + type + "	" + from + "	" + to);
+					try {
+						new DownloadList(type).execute(from, to);
+						times++;
+					} catch (Throwable e) {
+						e.printStackTrace();
+					} finally {
+					}
+				}
+			}
+		};
+	}
+
 	public static void main(String[] args) throws Exception {
+		// SpringApplication springApplication = new
+		// SpringApplication(SampleController.class);
+		// springApplication.addListeners(new ApplicationStartup());
+		// springApplication.run(args);
+		double hour = 2;
+		try {
+			hour = Double.valueOf(getConf().getProperties().getProperty("times_period"));
+		} catch (Exception e) {
+			getConf().getProperties().setProperty("times_period", String.valueOf(hour));
+			getConf().store();
+		}
+		timer = new Timer("定时下载");
+		timer.schedule(getTimerTask(), 30000, (long) (hour * 3600000));// 2hours
 		SpringApplication.run(SampleController.class, args);
 	}
 }

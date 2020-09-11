@@ -2,8 +2,10 @@ package org.sdjen.download.cache_sis;
 
 import javax.annotation.Resource;
 
+import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.test.morebeen.MoreBeenItfc;
 import org.sdjen.download.cache_sis.test.morebeen.OneBeenItfc;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
@@ -28,6 +30,8 @@ public class MainTest {
 	MoreBeenItfc moreBeenB;
 	@Resource(name = "MorebeenA")
 	MoreBeenItfc moreBeenA;
+	@Autowired
+	private HttpUtil httpUtil;
 
 	public static void main(String[] args) {
 
@@ -41,5 +45,11 @@ public class MainTest {
 		System.out.println(moreBeenA.getInfo());
 		System.out.println(moreBeenB.getInfo());
 		return "hello";
+	}
+
+	@RequestMapping("/rest")
+	@ResponseBody
+	private String rest() throws Throwable {
+		return httpUtil.getHTML("https://www.baidu.com/");
 	}
 }

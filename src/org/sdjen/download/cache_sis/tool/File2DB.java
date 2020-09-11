@@ -15,8 +15,7 @@ import org.apache.commons.logging.LogFactory;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.json.JsonUtil;
-
-import test.GetConnection;
+import org.sdjen.download.cache_sis.test.GetConnection;
 
 public class File2DB {
 	static Log logger = LogFactory.getLog(File2DB.class.getClass());

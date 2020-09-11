@@ -1,4 +1,4 @@
-package test;
+package org.sdjen.download.cache_sis.test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

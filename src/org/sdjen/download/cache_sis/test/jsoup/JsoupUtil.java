@@ -1,4 +1,4 @@
-package test.jsoup;
+package org.sdjen.download.cache_sis.test.jsoup;
 
 import java.io.BufferedInputStream;
 import java.io.FileOutputStream;
@@ -13,7 +13,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 /**
- * JSoup ÍøÂçÅÀ³æ¹¤¾ßÀà
+ * JSoup ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ¹¤ï¿½ï¿½ï¿½ï¿½
  * 
  * @author Cloud
  * @data 2016-11-21 JsoupUtil
@@ -26,51 +26,51 @@ public class JsoupUtil {
 	}
 
 	/**
-	 * <span style="color:red;font-size:18px;">»ñÈ¡ÍøÕ¾Í¼Æ¬</span>
+	 * <span style="color:red;font-size:18px;">ï¿½ï¿½È¡ï¿½ï¿½Õ¾Í¼Æ¬</span>
 	 * 
 	 * @param networkUrl
-	 *            ÍøÕ¾Â·¾¶
+	 *            ï¿½ï¿½Õ¾Â·ï¿½ï¿½
 	 * @param outPath
-	 *            Í¼Æ¬±£´æµØÖ·
+	 *            Í¼Æ¬ï¿½ï¿½ï¿½ï¿½ï¿½Ö·
 	 * @throws IOException
 	 */
 	public static void getNetworkImage(String networkUrl, String outPath) throws IOException {
-		// ÊäÈëÊä³öÁ÷
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		FileOutputStream outputStream = null;
 		InputStream inputStream = null;
 		BufferedInputStream bis = null;
 		Document doument;
 		Elements elements;
 		try {
-			// »ñÈ¡ÍøÕ¾×ÊÔ´
+			// ï¿½ï¿½È¡ï¿½ï¿½Õ¾ï¿½ï¿½Ô´
 			doument = (Document) Jsoup.connect(networkUrl).get();
-			// »ñÈ¡ÍøÕ¾×ÊÔ´Í¼Æ¬
+			// ï¿½ï¿½È¡ï¿½ï¿½Õ¾ï¿½ï¿½Ô´Í¼Æ¬
 			elements = doument.select("img[src]");
-			// Ñ­»·¶ÁÈ¡
-			for (Element e : elements) {// ¶ÁÈ¡ÍøÕ¾ËùÓÐÍ¼Æ¬
+			// Ñ­ï¿½ï¿½ï¿½ï¿½È¡
+			for (Element e : elements) {// ï¿½ï¿½È¡ï¿½ï¿½Õ¾ï¿½ï¿½ï¿½ï¿½Í¼Æ¬
 				String outImage = UUID.randomUUID().toString().replaceAll("-", "") + ".jpg";
-				// ´´½¨Á¬½Ó
+				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				URL imgUrl = new URL(e.attr("src"));
-				// »ñÈ¡ÊäÈëÁ÷
+				// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				inputStream = imgUrl.openConnection().getInputStream();
-				// ½«ÊäÈëÁ÷ÐÅÏ¢·ÅÈë»º³åÁ÷ÌáÉý¶ÁÐ´ËÙ¶È
+				// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ë»ºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½Ù¶ï¿½
 				bis = new BufferedInputStream(inputStream);
-				// ¶ÁÈ¡×Ö½ÚÂ¦
+				// ï¿½ï¿½È¡ï¿½Ö½ï¿½Â¦
 				byte[] buf = new byte[1024];
-				// Éú³ÉÎÄ¼þ
+				// ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
 				outputStream = new FileOutputStream(outPath + outImage);
 				int size = 0;
-				// ±ß¶Á±ßÐ´
+				// ï¿½ß¶ï¿½ï¿½ï¿½Ð´
 				while ((size = bis.read(buf)) != -1) {
 					outputStream.write(buf, 0, size);
 				}
-				// Ë¢ÐÂÎÄ¼þÁ÷
+				// Ë¢ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½
 				outputStream.flush();
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
-			// ÊÍ·Å×ÊÔ´ ×ñÑ­ÏÈ¿ªºó¹ØÔ­Ôò
+			// ï¿½Í·ï¿½ï¿½ï¿½Ô´ ï¿½ï¿½Ñ­ï¿½È¿ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½
 			if (outputStream != null)
 				outputStream.close();
 			if (bis != null)

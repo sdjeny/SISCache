@@ -13,12 +13,10 @@ import java.util.zip.DataFormatException;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
-import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
+import org.sdjen.download.cache_sis.test.GetConnection;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
-
-import test.GetConnection;
 
 public class Store_ElasticSearch implements IStore {
 
@@ -100,39 +98,35 @@ public class Store_ElasticSearch implements IStore {
 			}
 			msg(rst);
 			rst = connection.doPost(path_es_start + "html/_doc/_mapping/"//
-					,
-					JsonUtil.toJson(//
+					, JsonUtil.toJson(//
 							ESMap.get()//
-									.set("properties",
-											ESMap.get()//
-													.set("context_zip",
-															ESMap.get()//
-																	.set("type", "text")//
-																	.set("index", false)//
-																	.set("norms", false)//
-																	.set("fields",
-																			ESMap.get()//
-																					.set("keyword",
-																							ESMap.get()//
-																									.set("type", "keyword")//
-																									.set("ignore_above", 256)//
-																			)//
+									.set("properties", ESMap.get()//
+											.set("context_zip", ESMap.get()//
+													.set("type", "text")//
+													.set("index", false)//
+													.set("norms", false)//
+													.set("fields", ESMap.get()//
+															.set("keyword", ESMap.get()//
+																	.set("type", "keyword")//
+																	.set("ignore_above", 256)//
 															)//
+													)//
 											)//
-							)//
+									)//
 					)//
 					, new HashMap<>());
 			msg(rst);
 		}
 	}
 
-	@Override
-	public String getKey(String id, String page, String url, String title, String dateStr) {
+	private String getKey(String id, String page, String url, String title, String dateStr) {
 		return id + "_" + page;
 	}
 
 	@Override
-	public String getLocalHtml(String key) throws Throwable {
+	public String getLocalHtml(final String id, final String page, final String url, String title, String dateStr)
+			throws Throwable {
+		String key = getKey(id, page, url, title, dateStr);
 		String ss = connection.doGet(path_es_start + "html/_doc/" + key, new HashMap<>(), new HashMap<>());
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
 		ESMap _source = esMap.get("_source", ESMap.class);
@@ -156,61 +150,19 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public void saveURL(String url, String path) throws IOException {
-		Map<String, Object> json = new HashMap<>();
-		json.put("url", url);
-		json.put("path", path);
-		json.put("type", "url");
-		String s = connection.doPost(path_es_start + "md/_doc/" + getMD5(url.getBytes("utf8")), JsonUtil.toJson(json), new HashMap<>());
-	}
-
-	@Override
-	public void saveMD5(String md5, String path) throws IOException {
-		Map<String, Object> json = new HashMap<>();
-		json.put("key", md5);
-		json.put("path", path);
-		json.put("type", "path");
-		String s = connection.doPost(path_es_start + "md/_doc/" + md5, JsonUtil.toJson(json), new HashMap<>());
-	}
-
-	@Override
-	public String getMD5_Path(String key) throws Exception {
-		String ss = connection.doGet(path_es_start + "md/_doc/" + key, new HashMap<>(), new HashMap<>());
-		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
-		ESMap _source = esMap.get("_source", ESMap.class);
-		if (null != _source) {
-			return _source.get("path", String.class);
-		}
-		return null;
-	}
-
-	private synchronized String getMD5(byte[] bytes) {
-		return new BigInteger(1, md5Digest.digest(bytes)).toString(Character.MAX_RADIX);
-	}
-
-	@Override
-	public String getURL_Path(String key) throws IOException {
-		String ss = connection.doGet(path_es_start + "md/_doc/" + getMD5(key.getBytes("utf8")), new HashMap<>(), new HashMap<>());
-		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
-		ESMap _source = esMap.get("_source", ESMap.class);
-		if (null != _source) {
-			return _source.get("path", String.class);
-		}
-		return null;
-	}
-
-	@Override
-	public void saveHtml(String key, String text) throws Throwable {
+	public void saveHtml(final String id, final String page, final String url, String title, String dateStr,
+			String text) throws Throwable {
+		String key = getKey(id, page, url, title, dateStr);
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
 		org.jsoup.nodes.Element h1 = doument.select("div.mainbox").select("h1").first();
 		if (null == h1)
 			throw new Exception("Lost title");
-		org.jsoup.nodes.Element pages = doument.select("div.pages_btns").select("div.pages").first();
+//		org.jsoup.nodes.Element pages = doument.select("div.pages_btns").select("div.pages").first();
 		String type = h1.select("a").text();
-		String title = h1.ownText();
-		String id = doument.select("div.mainbox").select("span.headactions").select("a[href]").first().attr("href")
-				.replace("viewthread.php?action=printable&tid=", "");
-		String page = null == pages ? "1" : pages.select("strong").text();
+//		String title = h1.ownText();
+//		String id = doument.select("div.mainbox").select("span.headactions").select("a[href]").first().attr("href")
+//				.replace("viewthread.php?action=printable&tid=", "");
+//		String page = null == pages ? "1" : pages.select("strong").text();
 		String dat = null;
 		String context = null;
 		String author = null;
@@ -242,7 +194,8 @@ public class Store_ElasticSearch implements IStore {
 					floor = temp.ownText();
 					if ("1楼".equals(floor)) {
 						dat = postinfo.ownText().replace("发表于 ", "");
-						for (org.jsoup.nodes.Element postauthor : tbody.select("td.postauthor").select("cite").select("a[href]")) {
+						for (org.jsoup.nodes.Element postauthor : tbody.select("td.postauthor").select("cite")
+								.select("a[href]")) {
 							author = postauthor.text();
 						}
 					}
@@ -280,7 +233,8 @@ public class Store_ElasticSearch implements IStore {
 					String fm = comments.get(floor, String.class);
 					if (null == fm)
 						fm = "";
-					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost").select("div.t_msgfont")) {
+					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")
+							.select("div.t_msgfont")) {
 						if (!fm.isEmpty())
 							fm += ",";
 						fm += comment.text();
@@ -333,6 +287,52 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
+	public void saveURL(String url, String path) throws IOException {
+		Map<String, Object> json = new HashMap<>();
+		json.put("url", url);
+		json.put("path", path);
+		json.put("type", "url");
+		String s = connection.doPost(path_es_start + "md/_doc/" + getMD5(url.getBytes("utf8")), JsonUtil.toJson(json),
+				new HashMap<>());
+	}
+
+	@Override
+	public void saveMD5(String md5, String path) throws IOException {
+		Map<String, Object> json = new HashMap<>();
+		json.put("key", md5);
+		json.put("path", path);
+		json.put("type", "path");
+		String s = connection.doPost(path_es_start + "md/_doc/" + md5, JsonUtil.toJson(json), new HashMap<>());
+	}
+
+	@Override
+	public String getMD5_Path(String key) throws Exception {
+		String ss = connection.doGet(path_es_start + "md/_doc/" + key, new HashMap<>(), new HashMap<>());
+		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
+		ESMap _source = esMap.get("_source", ESMap.class);
+		if (null != _source) {
+			return _source.get("path", String.class);
+		}
+		return null;
+	}
+
+	private synchronized String getMD5(byte[] bytes) {
+		return new BigInteger(1, md5Digest.digest(bytes)).toString(Character.MAX_RADIX);
+	}
+
+	@Override
+	public String getURL_Path(String key) throws IOException {
+		String ss = connection.doGet(path_es_start + "md/_doc/" + getMD5(key.getBytes("utf8")), new HashMap<>(),
+				new HashMap<>());
+		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
+		ESMap _source = esMap.get("_source", ESMap.class);
+		if (null != _source) {
+			return _source.get("path", String.class);
+		}
+		return null;
+	}
+
+	@Override
 	public void msg(Object pattern, Object... args) {
 		msgLog.showMsg(pattern, args);
 	}
@@ -348,7 +348,8 @@ public class Store_ElasticSearch implements IStore {
 			File file = new File(getLogName());
 			if (file.exists()) {
 				if (file.length() > 0) {// 有内容才备份
-					File dest = new File(getLogName().replace("/download.log", "/download_" + System.currentTimeMillis() + ".log"));
+					File dest = new File(
+							getLogName().replace("/download.log", "/download_" + System.currentTimeMillis() + ".log"));
 					if (!dest.exists())
 						dest.createNewFile();
 					file.renameTo(dest);

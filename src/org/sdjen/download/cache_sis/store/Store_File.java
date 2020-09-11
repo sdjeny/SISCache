@@ -20,7 +20,7 @@ public abstract class Store_File implements IStore {
 		save_path = conf.getProperties().getProperty("save_path");
 	}
 
-	public String getKey(final String id, final String page, final String url, String title, String dateStr) {
+	private String getKey(final String id, final String page, final String url, String title, String dateStr) {
 		String subKey;
 		try {
 			subKey = dateStr.substring(0, Math.min(7, dateStr.length())) + "/" + dateStr.substring(8, dateStr.length()).replace("-", "");
@@ -32,8 +32,8 @@ public abstract class Store_File implements IStore {
 	}
 
 	@Override
-	public String getLocalHtml(String key) throws Throwable {
-		File file = new File(key);
+	public String getLocalHtml(final String id, final String page, final String url, String title, String dateStr) throws Throwable {
+		File file = new File(getKey(id, page, url, title, dateStr));
 		if (!file.exists())
 			return null;
 		String charset = "GBK";
@@ -56,8 +56,8 @@ public abstract class Store_File implements IStore {
 
 	}
 
-	public void saveHtml(String key, String html) throws Throwable {
-		OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(key),
+	public void saveHtml(final String id, final String page, final String url, String title, String dateStr, String html) throws Throwable {
+		OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(getKey(id, page, url, title, dateStr)),
 				ConfUtil.getDefaultConf().getProperties().getProperty("chatset"));
 		BufferedWriter bw = new BufferedWriter(writer);
 		bw.write(html);

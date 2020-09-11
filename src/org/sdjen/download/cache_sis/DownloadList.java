@@ -16,8 +16,7 @@ import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
-
-import test.GetConnection;
+import org.sdjen.download.cache_sis.test.GetConnection;
 
 public class DownloadList {
 	private DownloadSingle downloadSingle;

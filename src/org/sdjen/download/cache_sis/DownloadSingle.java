@@ -157,10 +157,10 @@ public class DownloadSingle {
 		}
 		long startTime = System.currentTimeMillis();
 		title = getFileName(title);
-		String key = store.getKey(id, page, url, title, dateStr);
+//		String key = store.getKey(id, page, url, title, dateStr);
 		String tmp_html = type.contains("cover")// 覆盖模式
 				? null // 不管是否存在，都重新读取
-				: store.getLocalHtml(key);// 否则获取本地文件
+				: store.getLocalHtml(id, page, url, title, dateStr);// 否则获取本地文件
 		if ((type.isEmpty() || Integer.valueOf(page) > 1) && null != tmp_html)// 不是特殊模式且文件已存在!
 			return null;// 跳过
 		// File newFile = new File(save_path + "/" + sub_html + "/" + title);
@@ -330,7 +330,7 @@ public class DownloadSingle {
 			if ((html.length() - cssLen) > (55000 - DefaultCss.getLength())) {
 				try {
 					lock_w_db.lock();
-					store.saveHtml(key, html);
+					store.saveHtml(id, page, url, title, dateStr, html);
 				} finally {
 					lock_w_db.unlock();
 				}

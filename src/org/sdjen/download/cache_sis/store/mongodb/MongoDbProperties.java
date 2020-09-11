@@ -3,6 +3,7 @@ package org.sdjen.download.cache_sis.store.mongodb;
 import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.PropertySource;
 
@@ -12,13 +13,14 @@ import org.springframework.context.annotation.PropertySource;
  */
 
 @ConfigurationProperties(prefix = "mongo")
-@PropertySource("classpath:mongodb.properties")
+//@PropertySource("classpath:mongodb.properties")
+@EnableAutoConfiguration
 public class MongoDbProperties {
 
 //	@NotBlank
-	private String database="test";
+	private String database;
 //	@NotEmpty
-	private List<String> address = Arrays.asList("127.0.0.1:27017");
+	private List<String> address;
 
 	private String replicaSet;
 

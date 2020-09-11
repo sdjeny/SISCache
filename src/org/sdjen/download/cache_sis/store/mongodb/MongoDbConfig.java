@@ -74,7 +74,8 @@ public class MongoDbConfig {
 			ServerAddress serverAddress = new ServerAddress(host, port);
 			serverAddresses.add(serverAddress);
 		}
-		System.out.println(" MongoDB地址列表serverAddresses:" + serverAddresses.toString());
+		System.out.println(">>>>>>>>>>>MongoDB(" + properties.getDatabase() + ")地址列表serverAddresses:"
+				+ serverAddresses.toString());
 
 		// 连接认证
 		List<MongoCredential> mongoCredentialList = new ArrayList<>();
@@ -85,8 +86,8 @@ public class MongoDbConfig {
 									? properties.getAuthenticationDatabase()
 									: properties.getDatabase(),
 					properties.getPassword().toCharArray()));
+			System.out.println(">>>>>>>>>>>连接认证mongoCredentialList:" + mongoCredentialList.toString());
 		}
-		System.out.println("连接认证mongoCredentialList:" + mongoCredentialList.toString());
 
 		// 创建客户端和Factory
 		MongoClient mongoClient = new MongoClient(serverAddresses, mongoCredentialList, mongoClientOptions);

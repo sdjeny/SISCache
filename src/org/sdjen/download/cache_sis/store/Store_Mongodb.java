@@ -13,22 +13,16 @@ import java.util.logging.Logger;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service("Store_Mongodb")
 public class Store_Mongodb implements IStore {
-
-	private static IStore store;
-
-	public static IStore getStore() throws Exception {
-		return store;
-	}
 
 	private final static Logger logger = Logger.getLogger(Store_Mongodb.class.toString());
 	private MessageDigest md5Digest;
 	private ConfUtil conf;
-//	@Autowired
-//	private MongoTemplate mongoTemplate;
+	@Autowired
+	private MongoTemplate mongoTemplate;
 
 	public ConfUtil getConf() throws IOException {
 		if (null == conf) {
@@ -38,7 +32,10 @@ public class Store_Mongodb implements IStore {
 	}
 
 	private Store_Mongodb() throws Exception {
+		System.out.println(">>>>>>>>>>>>>>>>>>Store_Mongodb");
 		md5Digest = MessageDigest.getInstance("MD5");
+//		mongoTemplate.insert(ESMap.get().set("field", "abc"), "Tas");
+		System.out.println(mongoTemplate);
 	}
 
 	@Override

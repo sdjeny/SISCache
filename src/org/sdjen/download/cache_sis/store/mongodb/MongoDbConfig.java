@@ -28,8 +28,8 @@ import com.mongodb.ServerAddress;
  * @create 2018-08-24 17:19
  **/
 
-@Configuration
-@EnableConfigurationProperties({ MongoDbProperties.class })
+//@Configuration
+//@EnableConfigurationProperties({ MongoDbProperties.class })
 public class MongoDbConfig {
 
 	@Autowired

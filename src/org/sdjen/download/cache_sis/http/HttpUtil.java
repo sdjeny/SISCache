@@ -1,6 +1,5 @@
 package org.sdjen.download.cache_sis.http;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
@@ -10,6 +9,7 @@ import java.util.Set;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -79,6 +79,29 @@ public class HttpUtil {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
+	}
+
+	public String joinUrlPath(String uri, String fileName) {
+		if (fileName.startsWith("http://") || fileName.startsWith("https://"))
+			return fileName;
+		if (uri.replaceAll("http://", "").replaceAll("https://", "").contains("/"))
+			uri = getUrlPath(uri);
+		if (fileName.startsWith("../") || fileName.startsWith("/")) {
+			if (uri.replaceAll("http://", "").replaceAll("https://", "").contains("/"))
+				uri = getUrlPath(uri);
+			fileName = fileName.substring(fileName.indexOf("/") + 1);
+		}
+		return uri + "/" + fileName;
+	}
+
+	private String getUrlPath(String uri) {
+		return uri.substring(0, uri.lastIndexOf("/"));
+	}
+
+	public String doLocalPostUtf8Json(String url, String content) {
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+		return restTemplate.postForEntity(url, new HttpEntity<>(content, headers), String.class).getBody();
 	}
 
 	public String getHTML(final String uri) throws Throwable {

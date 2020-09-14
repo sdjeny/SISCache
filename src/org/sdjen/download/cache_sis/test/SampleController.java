@@ -9,18 +9,14 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
@@ -32,8 +28,10 @@ import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
+import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.stereotype.Controller;
@@ -48,9 +46,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @RequestMapping("/siscache")
 public class SampleController {
 	private final static Logger logger = Logger.getLogger(SampleController.class.toString());
-	GetConnection connection;
+	@Autowired
+	private HttpUtil httpUtil;
 	static ConfUtil conf;
-
 	private String path_es_start;
 
 	public static ConfUtil getConf() throws IOException {
@@ -65,12 +63,12 @@ public class SampleController {
 		return path_es_start;
 	}
 
-	public GetConnection getConnection() throws IOException {
-		if (null == connection) {
-			connection = new GetConnection();
-		}
-		return connection;
-	}
+//	public GetConnection getConnection() throws IOException {
+//		if (null == connection) {
+//			connection = new GetConnection();
+//		}
+//		return connection;
+//	}
 
 	@RequestMapping("/help")
 	@ResponseBody
@@ -87,7 +85,8 @@ public class SampleController {
 		{
 			rst.append("<tbody><tr>");
 			rst.append(String.format("<td>%s</td>", "Fields"));
-			rst.append(String.format("<td>%s</td>", "id,fid,datetime,type,title,page,context,context_comments,context_zip,author"));
+			rst.append(String.format("<td>%s</td>",
+					"id,fid,datetime,type,title,page,context,context_comments,context_zip,author"));
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
 		}
@@ -101,7 +100,8 @@ public class SampleController {
 		}
 		{
 			rst.append("<tbody><tr>");
-			rst.append("<td><a href='/siscache/list/1/100?debug=true&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Order</a></td>");
+			rst.append(
+					"<td><a href='/siscache/list/1/100?debug=true&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Order</a></td>");
 			rst.append(String.format("<td>%s</td>", "order=datetime.keyword:desc id"));
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
@@ -115,7 +115,8 @@ public class SampleController {
 		}
 		{
 			rst.append("<tbody><tr>");
-			rst.append("<td><a href='/siscache/cache/1/30/torrent,image' title='新窗口打开' target='_blank'>reload</a></td>");
+			rst.append(
+					"<td><a href='/siscache/cache/1/30/torrent,image' title='新窗口打开' target='_blank'>reload</a></td>");
 			rst.append(String.format("<td>%s</td>", "cache/from/to/[torrent,image,cover]"));
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
@@ -186,7 +187,7 @@ public class SampleController {
 
 				try {
 					logger.log(Level.INFO, type + "	" + from + "	" + to);
-					new DownloadList(type).execute(from, to);
+					new DownloadList().execute(type, from, to);
 				} catch (Throwable e) {
 					logger.log(Level.SEVERE, e.getMessage(), e);
 				}
@@ -239,7 +240,8 @@ public class SampleController {
 	@RequestMapping("/list/{page}/{size}/{search}")
 	@ResponseBody
 	String list(@PathVariable("page") int page, @PathVariable("size") int size, @PathVariable("search") String search) {
-		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
+				.getRequestAttributes();
 		HttpServletRequest request = requestAttributes.getRequest();
 		boolean debug = false;
 		String query = "";
@@ -252,10 +254,9 @@ public class SampleController {
 		}
 		String order = "";
 		Map<Object, Object> params = ESMap.get();
-		params.put("_source",
-				ESMap.get()//
-						.set("includes", Arrays.asList())//
-						.set("excludes", Arrays.asList("context*"))//
+		params.put("_source", ESMap.get()//
+				.set("includes", Arrays.asList())//
+				.set("excludes", Arrays.asList("context*"))//
 		);
 		List<ESMap> shoulds = new ArrayList<>();
 		List<ESMap> mustes = new ArrayList<>();
@@ -274,12 +275,10 @@ public class SampleController {
 			}
 		}
 		params.put("query"//
-				,
-				ESMap.get().set("bool",
-						ESMap.get()//
-								.set("must", mustes)//
-								.set("should", shoulds)//
-								.set("must_not", mustNots)//
+				, ESMap.get().set("bool", ESMap.get()//
+						.set("must", mustes)//
+						.set("should", shoulds)//
+						.set("must_not", mustNots)//
 				)//
 		);
 		params.put("size", size);
@@ -302,7 +301,7 @@ public class SampleController {
 		String jsonParams = JsonUtil.toJson(params);
 		try {
 			long l = System.currentTimeMillis();
-			String js = getConnection().doPost(getPath_es_start() + "html/_doc/_search", jsonParams, new HashMap<>());
+			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search", jsonParams);
 			l = System.currentTimeMillis() - l;
 			// logger.log(Level.INFO, l + " " + jsonParams);
 			ESMap r = JsonUtil.toObject(js, ESMap.class);
@@ -332,9 +331,11 @@ public class SampleController {
 					timestr = "    ";
 				}
 				if (false) {
-					rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-							, _source.get("id"), _source.get("page"),
-							String.format("%s&nbsp;%s&nbsp;%s&nbsp;%s", datestr, timestr, _source.get("type"), _source.get("title"))));
+					rst.append(String
+							.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+									, _source.get("id"), _source.get("page"),
+									String.format("%s&nbsp;%s&nbsp;%s&nbsp;%s", datestr, timestr, _source.get("type"),
+											_source.get("title"))));
 				} else {
 					if (false) {
 						rst.append(String.format("<td>%s</td>", datestr));
@@ -345,8 +346,9 @@ public class SampleController {
 					}
 					rst.append("</tr></tbody>");
 					rst.append("<tbody><tr>");
-					rst.append(String.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-							, _source.get("id"), _source.get("page"), _source.get("title")));
+					rst.append(String
+							.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+									, _source.get("id"), _source.get("page"), _source.get("title")));
 				}
 				rst.append("</tr></tbody>");
 				// rst.append("</br>");
@@ -367,7 +369,8 @@ public class SampleController {
 		mustes.add(ESMap.get().set("term", Collections.singletonMap("page", 1)));
 	}
 
-	private void listDate(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) throws ParseException {
+	private void listDate(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots)
+			throws ParseException {
 		if (!search.startsWith("D:") || !search.startsWith("d:"))
 			search = "";
 		else
@@ -424,56 +427,6 @@ public class SampleController {
 			item.set("type", type);
 			shoulds.add(ESMap.get().set("multi_match", item));
 		}
-		if (false) {
-			shoulds.add(ESMap.get().set("match"//
-					, ESMap.get().set("title", ESMap.get().set("query", search).set("boost", 2))//
-			)//
-			);
-			shoulds.add(ESMap.get().set("match"//
-					, ESMap.get().set("context", ESMap.get().set("query", search).set("boost", 1))//
-			));
-		}
-		if (false) {
-			String fieldstr = "", opt = "";
-			// if (null != (temp = request.getParameter("fields"))) {
-			// adv = true;
-			// fieldstr = temp;
-			// fieldstr = fieldstr.replace('$', '^');
-			// }
-			Set<String> siFields = new HashSet<>();
-			Set<String> seFields = new HashSet<>();
-			for (String f : fieldstr.split(",")) {
-				if (f.startsWith("-")) {
-					seFields.add(f.substring(1));
-				} else {
-					siFields.add(f);
-				}
-			}
-			for (Collection[] cs : new Collection[][] { { "and".equalsIgnoreCase(opt) ? mustes : shoulds, siFields }, { mustNots, seFields } }) {
-				List<ESMap> list = (List<ESMap>) cs[0];
-				Set<String> set = (Set<String>) cs[1];
-				if (set.isEmpty())
-					continue;
-				for (String s : search.split(" ")) {
-					int boost = 1;
-					ESMap item = ESMap.get()//
-							.set("fields", set);
-					if (s.contains("^")) {
-						String[] ss = s.split("\\^");
-						try {
-							boost += Integer.valueOf(ss[1]);
-							s = ss[0];
-						} catch (NumberFormatException e1) {
-						}
-					}
-					item.set("query", s);
-					item.set("boost", boost);
-					item.set("type", "phrase");
-					list.add(ESMap.get().set("multi_match", item));
-				}
-			}
-			String order = "id:desc";
-		}
 	}
 
 	@RequestMapping("/s/{search}")
@@ -493,21 +446,22 @@ public class SampleController {
 		params.put("from", 1);
 		StringBuffer rst = new StringBuffer();
 		try {
-			String jsonParams = JsonUtil.toJson(params);
-			logger.log(Level.FINE, jsonParams);
-			String js = getConnection().doPost(getPath_es_start() + "html/_doc/_search?pretty", jsonParams, new HashMap<>());
+			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search?pretty",
+					JsonUtil.toJson(params));
 			logger.log(Level.FINE, js);
 			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
 
-			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits")).get("hits");
+			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits"))
+					.get("hits");
 			for (Map<String, Object> hit : hits) {
 				_source = (Map<String, Object>) hit.get("_source");
 
 				rst.append("<tbody><tr>");
 				rst.append(String.format("<td>%s</td>", _source.get("dat")));
 				rst.append(String.format("<td>%s</td>", "    "));
-				rst.append(String.format("<td><a href='../siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>", _source.get("id"),
-						_source.get("title")));
+				rst.append(
+						String.format("<td><a href='../siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>",
+								_source.get("id"), _source.get("title")));
 
 				rst.append("</tr></tbody>");
 				rst.append("</br>");
@@ -544,20 +498,16 @@ public class SampleController {
 		_source.put("includes", Arrays.asList("context*"));
 		_source.put("excludes", Arrays.asList());
 		params.put("_source", _source);
-		params.put("query",
-				Collections.singletonMap("bool"//
-						, Collections.singletonMap("filter",
-								Arrays.asList(//
-										Collections.singletonMap("term", Collections.singletonMap("id", id))//
-										, Collections.singletonMap("term", Collections.singletonMap("page", page))//
-								))//
-				)//
+		params.put("query", Collections.singletonMap("bool"//
+				, Collections.singletonMap("filter", Arrays.asList(//
+						Collections.singletonMap("term", Collections.singletonMap("id", id))//
+						, Collections.singletonMap("term", Collections.singletonMap("page", page))//
+				))//
+		)//
 		);
 		StringBuffer rst = new StringBuffer();
 		try {
-			String jsonParams = JsonUtil.toJson(params);
-			logger.log(Level.FINE, jsonParams);
-			String js = getConnection().doPost(getPath_es_start() + "html/_doc/_search", jsonParams, new HashMap<>());
+			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search", JsonUtil.toJson(params));
 			logger.log(Level.FINE, js);
 			ESMap r = JsonUtil.toObject(js, ESMap.class);
 			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
@@ -678,7 +628,7 @@ public class SampleController {
 					}
 					logger.log(Level.INFO, times + "	" + type + "	" + from + "	" + to);
 					try {
-						new DownloadList(type).execute(from, to);
+						new DownloadList().execute(type, from, to);
 						times++;
 					} catch (Throwable e) {
 						e.printStackTrace();

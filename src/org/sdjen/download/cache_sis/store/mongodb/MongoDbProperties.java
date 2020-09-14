@@ -12,9 +12,9 @@ import org.springframework.context.annotation.PropertySource;
  * @create 2018-08-24 17:05
  */
 
-@ConfigurationProperties(prefix = "mongo")
-//@PropertySource("classpath:mongodb.properties")
-@EnableAutoConfiguration
+//@ConfigurationProperties(prefix = "mongo")
+////@PropertySource("classpath:mongodb.properties")
+//@EnableAutoConfiguration
 public class MongoDbProperties {
 
 //	@NotBlank

@@ -10,50 +10,52 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Resource;
+
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
+import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
-import org.sdjen.download.cache_sis.test.GetConnection;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class DownloadList {
+	@Autowired
 	private DownloadSingle downloadSingle;
-	private IStore store = null;
+	@Resource(name = "Store_Mongodb")
+	private IStore store;
+	@Autowired
+	private HttpUtil httpUtil;
+
+	boolean autoFirst;
+	String list_url;
+	ConfUtil conf;
 
 	public static void main(String[] args) throws Throwable {
 		ConfUtil conf = ConfUtil.getDefaultConf();
 		String type = args.length > 0 ? args[0] : "torrent";
 		int from = Integer.valueOf(args.length > 1 ? args[1] : conf.getProperties().getProperty("list_start"));
 		int to = Integer.valueOf(args.length > 2 ? args[2] : conf.getProperties().getProperty("list_end"));
-		new DownloadList(type).execute(from, to);
+		new DownloadList().execute(type, from, to);
 		HttpFactory.getPoolConnManager().close();
 	}
 
-	boolean autoFirst;
-	HttpFactory httpUtil;
-	String list_url;
-	ConfUtil conf;
-	String type;
-
-	public DownloadList(String type) throws Throwable {
-		this.type = null == type ? "" : type;
+	public DownloadList() throws Throwable {
+		System.out.println(">>>>>>>>>>>>>>>>>>DownloadList");
 		conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
-		downloadSingle = new DownloadSingle();
-		httpUtil = new HttpFactory();
-		downloadSingle.setHttpUtil(httpUtil);
 		list_url = conf.getProperties().getProperty("list_url");
 		if (null == list_url) {
 			list_url = "http://www.sexinsex.net/bbs/forum-143-{0}.html";
 			conf.getProperties().setProperty("list_url", list_url);
 			conf.store();
 		}
-		store = Store_ElasticSearch.getStore();
 	}
 
-	public void execute(int from, int to) throws Throwable {
+	public void execute(String type, int from, int to) throws Throwable {
 		try {
 			autoFirst = true;
 			try {
@@ -89,8 +91,6 @@ public class DownloadList {
 			throw e;
 		} finally {
 			store.msg("Finish");
-			httpUtil.finish();
-			LogUtil.finishAll();
 			// CassandraFactory.getDefaultFactory().finish();
 			// GetConnection.getConnection().finish();
 		}
@@ -172,7 +172,8 @@ public class DownloadList {
 			}
 		}
 		HttpFactory.getPoolConnManager().closeExpiredConnections();
-		store.msg("耗时{3}	下载	{0} byte,	{1} 项	{2}", length_download, count, uri, (System.currentTimeMillis() - t));
+		store.msg("耗时{3}	下载	{0} byte,	{1} 项	{2}", length_download, count, uri,
+				(System.currentTimeMillis() - t));
 		// httpUtil.getPoolConnManager().closeExpiredConnections();
 	}
 }

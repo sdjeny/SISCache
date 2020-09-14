@@ -1,37 +1,30 @@
 package org.sdjen.download.cache_sis.store;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
-import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.test.GetConnection;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 
+//@Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
-
-	private static IStore store;
-
-	public static IStore getStore() throws Exception {
-		if (null == store)
-			store = new Store_ElasticSearch();
-		return store;
-	}
+	private final static Logger logger = Logger.getLogger(Store_ElasticSearch.class.toString());
 
 	GetConnection connection;
 	private String path_es_start = "http://192.168.0.237:9200/siscache_";
 	private MessageDigest md5Digest;
-	public LogUtil msgLog;
 
 	private String logName;
 	private String charset;
@@ -68,6 +61,7 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	private Store_ElasticSearch() throws Exception {
+		System.out.println(">>>>>>>>>>>>>>>>>>Store_ElasticSearch");
 		connection = GetConnection.getConnection();
 		md5Digest = MessageDigest.getInstance("MD5");
 		ConfUtil conf = getConf();
@@ -90,32 +84,36 @@ public class Store_ElasticSearch implements IStore {
 			postStr.append("\n");
 			String rst;
 			try {
-				rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+				try {
+					rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+				} catch (Exception e) {
+					msg("ES未启动，5分钟后重试1次");
+					Thread.sleep(300);// 300000
+					rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+				}
+				msg(rst);
+				rst = connection.doPost(path_es_start + "html/_doc/_mapping/"//
+						, JsonUtil.toJson(//
+								ESMap.get()//
+										.set("properties", ESMap.get()//
+												.set("context_zip", ESMap.get()//
+														.set("type", "text")//
+														.set("index", false)//
+														.set("norms", false)//
+														.set("fields", ESMap.get()//
+																.set("keyword", ESMap.get()//
+																		.set("type", "keyword")//
+																		.set("ignore_above", 256)//
+																)//
+														)//
+												)//
+										)//
+						)//
+						, new HashMap<>());
+				msg(rst);
 			} catch (Exception e) {
-				msg("ES未启动，5分钟后重试1次");
-				Thread.sleep(300000);
-				rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+				msg("ES启动失败");
 			}
-			msg(rst);
-			rst = connection.doPost(path_es_start + "html/_doc/_mapping/"//
-					, JsonUtil.toJson(//
-							ESMap.get()//
-									.set("properties", ESMap.get()//
-											.set("context_zip", ESMap.get()//
-													.set("type", "text")//
-													.set("index", false)//
-													.set("norms", false)//
-													.set("fields", ESMap.get()//
-															.set("keyword", ESMap.get()//
-																	.set("type", "keyword")//
-																	.set("ignore_above", 256)//
-															)//
-													)//
-											)//
-									)//
-					)//
-					, new HashMap<>());
-			msg(rst);
 		}
 	}
 
@@ -332,41 +330,30 @@ public class Store_ElasticSearch implements IStore {
 		return null;
 	}
 
+	private SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd HH:mm:ss:SSS");
+
+	private StringBuilder getMsgText(Object pattern, Object... args) {
+		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));
+		builder.append("	,");
+		if (null != args && args.length > 0 && pattern instanceof String) {
+			builder.append(MessageFormat.format((String) pattern, args));
+		} else {
+			builder.append(pattern);
+		}
+		return builder;
+	}
+
 	@Override
 	public void msg(Object pattern, Object... args) {
-		msgLog.showMsg(pattern, args);
+		logger.info(getMsgText(pattern, args).toString());
 	}
 
 	@Override
 	public void err(Object pattern, Object... args) {
-		msg(pattern, args);
+		logger.severe(getMsgText(pattern, args).toString());
 	}
 
 	@Override
 	public void refreshMsgLog() {
-		try {
-			File file = new File(getLogName());
-			if (file.exists()) {
-				if (file.length() > 0) {// 有内容才备份
-					File dest = new File(
-							getLogName().replace("/download.log", "/download_" + System.currentTimeMillis() + ".log"));
-					if (!dest.exists())
-						dest.createNewFile();
-					file.renameTo(dest);
-					file.delete();
-				}
-			}
-			if (null != msgLog) {
-				try {
-					Thread.sleep(30000l);// 休息半分钟够了，有重试机制
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-				msgLog.finish();
-			}
-			msgLog = new LogUtil().setLogFile(getLogName()).setChatset(getCharset());
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
 }

@@ -20,17 +20,22 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.annotation.Resource;
+
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpFactory;
-import org.sdjen.download.cache_sis.http.HttpFactory.Retry;
+import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 import org.sdjen.download.cache_sis.tool.Comparor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+@Component
 public class DownloadSingle {
 	private final static Logger logger = Logger.getLogger(DownloadSingle.class.toString());
 	// private String html = "";
@@ -39,7 +44,6 @@ public class DownloadSingle {
 	// private String sub_images = "images";
 	// private String sub_html = "html";
 	// private String sub_torrent = "torrent";
-	private HttpFactory httpUtil;
 	private MessageDigest md5;
 	// private long length_download;
 	private long length_flag_min_byte = 20000;
@@ -51,9 +55,15 @@ public class DownloadSingle {
 	private long count = 0;
 	// private org.sdjen.download.cache_sis.log.CassandraFactory
 	// cassandraFactory;
-	private IStore store = null;
+//	private IStore store = null;
+//	private HttpFactory httpUtil;
+	@Resource(name = "Store_Mongodb")
+	private IStore store;
+	@Autowired
+	private HttpUtil httpUtil;
 
 	public DownloadSingle() throws Exception {
+		System.out.println(">>>>>>>>>>>>>>>>>>DownloadSingle");
 		ConfUtil conf = ConfUtil.getDefaultConf();
 		md5 = MessageDigest.getInstance("MD5");
 		chatset = conf.getProperties().getProperty("chatset");
@@ -79,13 +89,7 @@ public class DownloadSingle {
 		}
 		if (isStore)
 			conf.store();
-		store = Store_ElasticSearch.getStore();
 		// cassandraFactory = CassandraFactory.getDefaultFactory();
-	}
-
-	public DownloadSingle setHttpUtil(HttpFactory httpUtil) {
-		this.httpUtil = httpUtil;
-		return this;
 	}
 
 	/**
@@ -122,7 +126,7 @@ public class DownloadSingle {
 			// System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
 			// Security.setProperty("jdk.tls.disabledAlgorithms","SSLv3, DH
 			// keySize < 768");
-			DownloadSingle util = new DownloadSingle().setHttpUtil(httpUtil);
+			DownloadSingle util = new DownloadSingle();//.setHttpUtil(httpUtil);
 			// util.startDownload("http://www.sexinsex.net/bbs/thread-6720446-1-2000.html",
 			// "370013862.html", "U");
 			// util.downloadFile("http://img599.net/images/2013/06/02/CCe908c.th.jpg",
@@ -394,20 +398,9 @@ public class DownloadSingle {
 		if (null != result && reload && result.equals(url))
 			result = null;
 		if (null == result || !checkFile(reload, result)) {
-			HttpFactory.Executor<String> executor = new HttpFactory.Executor<String>() {
-				public void execute(InputStream inputStream) throws Throwable {
+			HttpUtil.Executor<String> executor = new HttpUtil.Executor<String>() {
+				public void execute(byte[] bytes) throws Throwable {
 					setResult(null);
-					ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
-					byte[] buffer = new byte[1024];
-					int len = 0;
-					while ((len = inputStream.read(buffer)) != -1) {
-						arrayOutputStream.write(buffer, 0, len);
-					}
-					byte[] bytes = arrayOutputStream.toByteArray();
-					try {
-						arrayOutputStream.close();
-					} catch (Exception e) {
-					}
 					String md5 = getMD5(bytes);
 					String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
 					if (null == result || !checkFile(reload, result)) {
@@ -451,7 +444,7 @@ public class DownloadSingle {
 				if (path.startsWith("torrent")) {
 					try {
 						lock_w_html.lock();
-						httpUtil.retry(new Retry() {
+						httpUtil.retry(new HttpUtil.Retry() {
 							public void execute() throws Throwable {
 								httpUtil.execute(url, executor);
 							}
@@ -472,48 +465,6 @@ public class DownloadSingle {
 				store.saveURL(url, result);
 			}
 		}
-		// System.out.println("↓ " + url + " " + ls);
-		// store.msg("+ {0} {1}", result, url);
 		return result;
 	}
-
-	// private String downloadBttrack(final String url, final String path, final
-	// String name) throws Throwable {
-	// String html = httpUtil.getHTML(url, "utf-8");
-	// org.jsoup.nodes.Document doument = Jsoup.parse(html);
-	// org.jsoup.nodes.Element forumlist =
-	// doument.select("div.mainbox.forumlist").select("table").first();
-	// if (null != forumlist)
-	// html = forumlist.html();
-	// byte[] bytes = html.getBytes(chatset);
-	// String md5 = getMD5(bytes);
-	// String result = store.getMD5_Path(md5);//
-	// MapDBFactory.getFileDB().get(md5);
-	// if (null == result) {
-	// result = path;
-	// result += "/";
-	// if (name.startsWith("."))
-	// result += md5;
-	// result += name;
-	// File file = new File(save_path + "/" + result);
-	// if (!file.exists()) {
-	// FileOutputStream fos = new FileOutputStream(file);
-	// try {
-	// fos.write(bytes);
-	// } finally {
-	// try {
-	// fos.close();
-	// } catch (Exception e) {
-	// }
-	// }
-	// length_download += bytes.length;
-	// }
-	// // lock_w_mapdb.lock();
-	// // MapDBFactory.getFileDB().put(md5, result);
-	// // mapDBUtil.commit();
-	// // lock_w_mapdb.unlock();
-	// store.saveMD5(md5, result);
-	// }
-	// return result;
-	// }
 }

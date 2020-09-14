@@ -54,7 +54,7 @@ public class ListES {
 			listES.execute(from);
 		} catch (Exception e1) {
 			try {
-				new DownloadList(type).execute(size, limit + size);
+				new DownloadList().execute(type, size, limit + size);
 			} catch (Throwable e) {
 				logger.log(Level.SEVERE, e.getMessage(), e);
 			}
@@ -65,7 +65,7 @@ public class ListES {
 		LogUtil.init();
 		HttpFactory httpUtil = new HttpFactory();
 		downloadSingle = new DownloadSingle();
-		downloadSingle.setHttpUtil(httpUtil);
+//		downloadSingle.setHttpUtil(httpUtil);
 		int i = 0;
 		// getStore().refreshMsgLog();
 		Long min = 0l;
@@ -88,8 +88,8 @@ public class ListES {
 	}
 
 	public IStore getStore() throws Exception {
-		if (null == store)
-			store = Store_ElasticSearch.getStore();
+//		if (null == store)
+//			store = Store_ElasticSearch.getStore();
 		return store;
 	}
 
@@ -120,20 +120,18 @@ public class ListES {
 		// .set("includes", Arrays.asList("id"))//
 		//// .set("excludes", Arrays.asList("context"))//
 		// );
-		params.put("query",
-				ESMap.get().set("range"//
-						, ESMap.get().set("id"//
-								, ESMap.get()//
-										.set("gt", min)//
-						// .set("lte", "4762486_1")//
-						)//
+		params.put("query", ESMap.get().set("range"//
+				, ESMap.get().set("id"//
+						, ESMap.get()//
+								.set("gt", min)//
+				// .set("lte", "4762486_1")//
 				)//
+		)//
 		);
-		params.put("sort",
-				Arrays.asList(//
-						ESMap.get()//
-								.set("id", ESMap.get().set("order", "asc"))//
-				)//
+		params.put("sort", Arrays.asList(//
+				ESMap.get()//
+						.set("id", ESMap.get().set("order", "asc"))//
+		)//
 		);
 		params.put("size", size);
 		params.put("from", 0);
@@ -178,7 +176,8 @@ public class ListES {
 			} finally {
 			}
 		}
-		getStore().msg("查:{3}ms	共:{4}ms	{0}~{1}	total:{2}", min, result, h.get("total"), sTime, (System.currentTimeMillis() - startTime));
+		getStore().msg("查:{3}ms	共:{4}ms	{0}~{1}	total:{2}", min, result, h.get("total"), sTime,
+				(System.currentTimeMillis() - startTime));
 		HttpFactory.getPoolConnManager().closeExpiredConnections();
 		return result;
 	}
@@ -189,7 +188,8 @@ public class ListES {
 		Long max = Long.valueOf(_source.get("max").toString());
 		String title = _source.get("title", String.class);
 		for (Long page = min; page <= Math.min(max, 30); page++) {
-			String url = String.format("http://www.sexinsex.net/bbs/viewthread.php?tid=%s&page=%s", id.toString(), page.toString());
+			String url = String.format("http://www.sexinsex.net/bbs/viewthread.php?tid=%s&page=%s", id.toString(),
+					page.toString());
 			// System.out.println(url);torrent cover
 			downloadSingle.startDownload(type, id.toString(), page.toString()//
 					, url// http://www.sexinsex.net/bbs/thread-%s-%s-300.html

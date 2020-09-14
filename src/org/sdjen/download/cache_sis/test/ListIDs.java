@@ -38,7 +38,7 @@ public class ListIDs {
 		LogUtil.init();
 		HttpFactory httpUtil = new HttpFactory();
 		downloadSingle = new DownloadSingle();
-		downloadSingle.setHttpUtil(httpUtil);
+//		downloadSingle.setHttpUtil(httpUtil);
 		int i = 0;
 		// getStore().refreshMsgLog();
 		try {
@@ -56,8 +56,8 @@ public class ListIDs {
 	}
 
 	public IStore getStore() throws Exception {
-		if (null == store)
-			store = Store_ElasticSearch.getStore();
+//		if (null == store)
+//			store = Store_ElasticSearch.getStore();
 		return store;
 	}
 

@@ -3,6 +3,7 @@ package org.sdjen.download.cache_sis;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.test.morebeen.MoreBeenItfc;
 import org.sdjen.download.cache_sis.test.morebeen.OneBeenItfc;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +33,8 @@ public class MainTest {
 	MoreBeenItfc moreBeenA;
 	@Autowired
 	private HttpUtil httpUtil;
+	@Resource(name = "Store_Mongodb")
+	private IStore store;
 
 	public static void main(String[] args) {
 
@@ -50,6 +53,10 @@ public class MainTest {
 	@RequestMapping("/rest")
 	@ResponseBody
 	private String rest() throws Throwable {
+		store.saveURL("url", "path_url");
+		store.saveMD5("md5", "path_md5");
+//		System.out.println("get:	" + store.getURL_Path("url"));
+//		System.out.println("get:	" + store.getMD5_Path("md5"));
 		return httpUtil.getHTML("https://www.baidu.com/", "utf8");
 	}
 }

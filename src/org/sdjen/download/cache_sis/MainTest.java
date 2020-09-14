@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
-@RequestMapping("/") // wxapp
+@RequestMapping("/")
 @SpringBootApplication
 @ComponentScan({ //
 		"org.sdjen.download.cache_sis"//
@@ -50,6 +50,6 @@ public class MainTest {
 	@RequestMapping("/rest")
 	@ResponseBody
 	private String rest() throws Throwable {
-		return httpUtil.getHTML("https://www.baidu.com/");
+		return httpUtil.getHTML("https://www.baidu.com/", "utf8");
 	}
 }

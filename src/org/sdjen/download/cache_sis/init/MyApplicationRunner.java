@@ -1,7 +1,9 @@
-package org.sdjen.download.cache_sis.test.init;
+package org.sdjen.download.cache_sis.init;
 
 import java.util.Arrays;
 
+import org.sdjen.download.cache_sis.test.WithoutInterfaceService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -14,12 +16,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class MyApplicationRunner implements ApplicationRunner {
 
+	@Autowired
+	WithoutInterfaceService withoutInterfaceService;
+
 	/**
 	 * 会在服务启动完成后立即执行
 	 */
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
-		System.out.println("MyApplicationRunner----" + Arrays.asList(args));
+		System.out.println("-----MyApplicationRunner" + Arrays.asList(args));
+		System.out.println("+++++++++++WithoutInterfaceService:	" + withoutInterfaceService.test());
 	}
 
 }

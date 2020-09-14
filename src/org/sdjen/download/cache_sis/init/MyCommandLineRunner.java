@@ -1,4 +1,4 @@
-package org.sdjen.download.cache_sis.test.init;
+package org.sdjen.download.cache_sis.init;
 
 import java.util.Arrays;
 
@@ -23,7 +23,7 @@ public class MyCommandLineRunner implements CommandLineRunner {
 //			// TODO Auto-generated catch block
 //			e.printStackTrace();
 //		}
-		System.out.println("MyCommandLineRunner----" + Arrays.asList(args));
+		System.out.println("-----MyCommandLineRunner" + Arrays.asList(args));
 	}
 
 }

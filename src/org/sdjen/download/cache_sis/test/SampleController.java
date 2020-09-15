@@ -15,10 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
 
 import javax.servlet.http.HttpServletRequest;
@@ -30,7 +27,10 @@ import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.service.SISDownloadTimer;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -45,9 +45,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @EnableAutoConfiguration
 @RequestMapping("/siscache")
 public class SampleController {
-	private final static Logger logger = Logger.getLogger(SampleController.class.toString());
+	private final static Logger logger = LoggerFactory.getLogger(SampleController.class);
 	@Autowired
 	private HttpUtil httpUtil;
+	@Autowired
+	private SISDownloadTimer timer;
 	static ConfUtil conf;
 	private String path_es_start;
 
@@ -186,10 +188,10 @@ public class SampleController {
 			public void run() {
 
 				try {
-					logger.log(Level.INFO, type + "	" + from + "	" + to);
+					logger.info(type + "	" + from + "	" + to);
 					new DownloadList().execute(type, from, to);
 				} catch (Throwable e) {
-					logger.log(Level.SEVERE, e.getMessage(), e);
+					logger.error(e.getMessage(), e);
 				}
 			}
 		}).start();
@@ -200,9 +202,7 @@ public class SampleController {
 	@RequestMapping("/restart/{hours}")
 	@ResponseBody
 	String restart(@PathVariable("hours") int hours) {
-		timer.cancel();
-		timer.purge();
-		(timer = new Timer("定时下载" + System.currentTimeMillis())).schedule(getTimerTask(), 0, hours * 3600000);// 2hours
+		timer.restart(hours);
 		return list(1);
 	}
 
@@ -448,7 +448,7 @@ public class SampleController {
 		try {
 			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search?pretty",
 					JsonUtil.toJson(params));
-			logger.log(Level.FINE, js);
+			logger.debug(js);
 			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
 
 			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits"))
@@ -508,7 +508,7 @@ public class SampleController {
 		StringBuffer rst = new StringBuffer();
 		try {
 			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search", JsonUtil.toJson(params));
-			logger.log(Level.FINE, js);
+			logger.debug(js);
 			ESMap r = JsonUtil.toObject(js, ESMap.class);
 			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
 			for (ESMap hit : hits) {
@@ -588,71 +588,11 @@ public class SampleController {
 		return rst.toString();
 	}
 
-	private static Timer timer;
-
-	public static TimerTask getTimerTask() {
-
-		String rangestr = null;
-		try {
-			rangestr = getConf().getProperties().getProperty("times_ranges");
-		} catch (Exception e) {
-		}
-		if (null == rangestr) {
-			rangestr = "~1~30|torrent~1~5|torrent,image~1~5|cover~5~10";
-			try {
-				getConf().getProperties().setProperty("times_ranges", rangestr);
-				getConf().store();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-		}
-		List<String[]> ranges = new ArrayList<>();
-		for (String s : rangestr.split("\\|"))
-			ranges.add(s.split("~"));
-		return new TimerTask() {
-			Long times = 0l;
-
-			@Override
-			public void run() {
-				synchronized (times) {
-					String[] range = ranges.get((int) (times % ranges.size()));
-					String type = (String) range[0];
-					int from = 1, to = 30;
-					try {
-						from = Integer.valueOf(range[1]);
-					} catch (Exception e1) {
-					}
-					try {
-						to = Integer.valueOf(range[2]);
-					} catch (Exception e1) {
-					}
-					logger.log(Level.INFO, times + "	" + type + "	" + from + "	" + to);
-					try {
-						new DownloadList().execute(type, from, to);
-						times++;
-					} catch (Throwable e) {
-						e.printStackTrace();
-					} finally {
-					}
-				}
-			}
-		};
-	}
-
 	public static void main(String[] args) throws Exception {
 		// SpringApplication springApplication = new
 		// SpringApplication(SampleController.class);
 		// springApplication.addListeners(new ApplicationStartup());
 		// springApplication.run(args);
-		double hour = 2;
-		try {
-			hour = Double.valueOf(getConf().getProperties().getProperty("times_period"));
-		} catch (Exception e) {
-			getConf().getProperties().setProperty("times_period", String.valueOf(hour));
-			getConf().store();
-		}
-		timer = new Timer("定时下载");
-		timer.schedule(getTimerTask(), 30000, (long) (hour * 3600000));// 2hours
 		SpringApplication.run(SampleController.class, args);
 	}
 }

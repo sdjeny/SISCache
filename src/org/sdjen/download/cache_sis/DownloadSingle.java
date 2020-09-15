@@ -1,9 +1,7 @@
 package org.sdjen.download.cache_sis;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.MessageFormat;
@@ -17,8 +15,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.annotation.Resource;
 
@@ -30,14 +26,15 @@ import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 import org.sdjen.download.cache_sis.tool.Comparor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DownloadSingle {
-	private final static Logger logger = Logger.getLogger(DownloadSingle.class.toString());
+	private final static Logger logger = LoggerFactory.getLogger(DownloadSingle.class);
 	// private String html = "";
 	public String chatset = "utf8";
 	private String save_path = "WEBCACHE";
@@ -126,7 +123,7 @@ public class DownloadSingle {
 			// System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
 			// Security.setProperty("jdk.tls.disabledAlgorithms","SSLv3, DH
 			// keySize < 768");
-			DownloadSingle util = new DownloadSingle();//.setHttpUtil(httpUtil);
+			DownloadSingle util = new DownloadSingle();// .setHttpUtil(httpUtil);
 			// util.startDownload("http://www.sexinsex.net/bbs/thread-6720446-1-2000.html",
 			// "370013862.html", "U");
 			// util.downloadFile("http://img599.net/images/2013/06/02/CCe908c.th.jpg",
@@ -152,8 +149,8 @@ public class DownloadSingle {
 		return new BigInteger(1, md5.digest(bytes)).toString(Character.MAX_RADIX);
 	}
 
-	public Long startDownload(final String type, final String id, final String page, final String url, String title, String dateStr)
-			throws Throwable {
+	public Long startDownload(final String type, final String id, final String page, final String url, String title,
+			String dateStr) throws Throwable {
 		try {
 			if (Integer.valueOf(page) > 30)
 				return null;
@@ -212,7 +209,8 @@ public class DownloadSingle {
 		}
 		String subKey;
 		try {
-			subKey = dateStr.substring(0, Math.min(7, dateStr.length())) + "/" + dateStr.substring(8, dateStr.length()).replace("-", "");
+			subKey = dateStr.substring(0, Math.min(7, dateStr.length())) + "/"
+					+ dateStr.substring(8, dateStr.length()).replace("-", "");
 		} catch (Exception e1) {
 			subKey = "unknow";
 		}
@@ -256,7 +254,8 @@ public class DownloadSingle {
 				resultList.add(executor.submit(new Callable<String[]>() {
 					public String[] call() throws Exception {
 						String newName = href.contains("&") ? href.substring(0, href.indexOf("&")) : href;
-						newName = getFileName("(" + newName.substring(newName.lastIndexOf("=") + 1, newName.length()) + ")" + text);
+						newName = getFileName(
+								"(" + newName.substring(newName.lastIndexOf("=") + 1, newName.length()) + ")" + text);
 						String downloadUrl = httpUtil.joinUrlPath(url, href);
 						try {
 							newName = downloadFile(downloadUrl, sub_torrent, newName, type.contains("torrent"));
@@ -340,7 +339,8 @@ public class DownloadSingle {
 				}
 				// newFile.createNewFile();
 			} else {
-				msg.append(MessageFormat.format("	长度过短	{0}	{1}({2}/{3})", length, title, length, (60000 - DefaultCss.getLength())));
+				msg.append(MessageFormat.format("	长度过短	{0}	{1}({2}/{3})", length, title, length,
+						(60000 - DefaultCss.getLength())));
 				store.err("长度过短	{0}	{1}	{2}", length, title, url);
 				return null;
 			}
@@ -393,7 +393,8 @@ public class DownloadSingle {
 		return new File(save_path + "/" + path).exists();
 	}
 
-	private String downloadFile(final String url, final String path, final String name, boolean reload) throws Throwable {
+	private String downloadFile(final String url, final String path, final String name, boolean reload)
+			throws Throwable {
 		String result = store.getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
 		if (null != result && reload && result.equals(url))
 			result = null;
@@ -433,7 +434,7 @@ public class DownloadSingle {
 						// mapDBUtil.commit();
 						// lock_w_mapdb.unlock();
 						store.saveMD5(md5, result);
-						logger.log(Level.INFO, MessageFormat.format("	+{0}	->{1}", url, result));
+						logger.info("	+{0}	->{1}", url, result);
 					}
 					setResult(result);
 				}

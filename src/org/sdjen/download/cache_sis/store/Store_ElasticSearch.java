@@ -8,24 +8,28 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.logging.Logger;
 import java.util.zip.DataFormatException;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
-import org.sdjen.download.cache_sis.test.GetConnection;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
+import org.sdjen.download.cache_sis.util.EntryData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-//@Service("Store_ElasticSearch")
+@Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
-	private final static Logger logger = Logger.getLogger(Store_ElasticSearch.class.toString());
-
-	GetConnection connection;
+	private final static Logger logger = LoggerFactory.getLogger(Store_ElasticSearch.class);
+	@Autowired
+	private HttpUtil httpUtil;
+//	private GetConnection connection;
 	private String path_es_start = "http://192.168.0.237:9200/siscache_";
 	private MessageDigest md5Digest;
-
 	private String logName;
 	private String charset;
 	private ConfUtil conf;
@@ -62,7 +66,7 @@ public class Store_ElasticSearch implements IStore {
 
 	private Store_ElasticSearch() throws Exception {
 		System.out.println(">>>>>>>>>>>>>>>>>>Store_ElasticSearch");
-		connection = GetConnection.getConnection();
+//		connection = GetConnection.getConnection();
 		md5Digest = MessageDigest.getInstance("MD5");
 		ConfUtil conf = getConf();
 		boolean isStore = false;
@@ -85,14 +89,14 @@ public class Store_ElasticSearch implements IStore {
 			String rst;
 			try {
 				try {
-					rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+					rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 				} catch (Exception e) {
 					msg("ES未启动，5分钟后重试1次");
 					Thread.sleep(300);// 300000
-					rst = connection.doPost(path_es_start + "html/_doc/_bulk/", postStr.toString(), new HashMap<>());
+					rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 				}
 				msg(rst);
-				rst = connection.doPost(path_es_start + "html/_doc/_mapping/"//
+				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_mapping/"//
 						, JsonUtil.toJson(//
 								ESMap.get()//
 										.set("properties", ESMap.get()//
@@ -109,7 +113,7 @@ public class Store_ElasticSearch implements IStore {
 												)//
 										)//
 						)//
-						, new HashMap<>());
+				);
 				msg(rst);
 			} catch (Exception e) {
 				msg("ES启动失败");
@@ -125,7 +129,8 @@ public class Store_ElasticSearch implements IStore {
 	public String getLocalHtml(final String id, final String page, final String url, String title, String dateStr)
 			throws Throwable {
 		String key = getKey(id, page, url, title, dateStr);
-		String ss = connection.doGet(path_es_start + "html/_doc/" + key, new HashMap<>(), new HashMap<>());
+		String ss = httpUtil.doLocalGet(path_es_start + "html/_doc/{key}",
+				new EntryData<String, String>().put("key", key).getData());
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
 		ESMap _source = esMap.get("_source", ESMap.class);
 		if (null != _source) {
@@ -281,7 +286,7 @@ public class Store_ElasticSearch implements IStore {
 			json.put("context_zip", ZipUtil.compress(text));
 			json.put("author", author);
 		}
-		String r = connection.doPost(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json), new HashMap<>());
+		String r = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json));
 	}
 
 	@Override
@@ -290,8 +295,8 @@ public class Store_ElasticSearch implements IStore {
 		json.put("url", url);
 		json.put("path", path);
 		json.put("type", "url");
-		String s = connection.doPost(path_es_start + "md/_doc/" + getMD5(url.getBytes("utf8")), JsonUtil.toJson(json),
-				new HashMap<>());
+		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/" + getMD5(url.getBytes("utf8")),
+				JsonUtil.toJson(json));
 	}
 
 	@Override
@@ -300,12 +305,13 @@ public class Store_ElasticSearch implements IStore {
 		json.put("key", md5);
 		json.put("path", path);
 		json.put("type", "path");
-		String s = connection.doPost(path_es_start + "md/_doc/" + md5, JsonUtil.toJson(json), new HashMap<>());
+		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/" + md5, JsonUtil.toJson(json));
 	}
 
 	@Override
 	public String getMD5_Path(String key) throws Exception {
-		String ss = connection.doGet(path_es_start + "md/_doc/" + key, new HashMap<>(), new HashMap<>());
+		String ss = httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
+				new EntryData<String, String>().put("key", key).getData());
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
 		ESMap _source = esMap.get("_source", ESMap.class);
 		if (null != _source) {
@@ -320,8 +326,8 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public String getURL_Path(String key) throws IOException {
-		String ss = connection.doGet(path_es_start + "md/_doc/" + getMD5(key.getBytes("utf8")), new HashMap<>(),
-				new HashMap<>());
+		String ss = httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
+				new EntryData<String, String>().put("key", getMD5(key.getBytes("utf8"))).getData());
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
 		ESMap _source = esMap.get("_source", ESMap.class);
 		if (null != _source) {
@@ -350,7 +356,7 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public void err(Object pattern, Object... args) {
-		logger.severe(getMsgText(pattern, args).toString());
+		logger.error(getMsgText(pattern, args).toString());
 	}
 
 	@Override

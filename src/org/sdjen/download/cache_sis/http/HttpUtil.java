@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Resource;
@@ -102,6 +103,13 @@ public class HttpUtil {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
 		return restTemplate.postForEntity(url, new HttpEntity<>(content, headers), String.class).getBody();
+	}
+
+	public String doLocalGet(String url, Map<String, String> uriVariables) {
+//		Map<String, Object> map = new HashMap<String, Object>();
+//		map.put("flag", flag);
+//		"http://10.145.198.143:8081/ords/data_service/monitor/IntMonitor/{flag}", 
+		return restTemplate.getForEntity(url, String.class, uriVariables).getBody();
 	}
 
 	public String getHTML(final String uri) throws Throwable {

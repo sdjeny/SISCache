@@ -18,11 +18,14 @@ import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.store.IStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DownloadList {
+	private final static Logger logger = LoggerFactory.getLogger(DownloadList.class);
 	@Autowired
 	private DownloadSingle downloadSingle;
 	@Resource(name = "Store_Mongodb")

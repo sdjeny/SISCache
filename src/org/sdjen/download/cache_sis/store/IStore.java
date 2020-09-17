@@ -1,5 +1,8 @@
 package org.sdjen.download.cache_sis.store;
 
+import java.util.List;
+import java.util.Map;
+
 public interface IStore {
 //	String getKey(final String id, final String page, final String url, String title, String dateStr) throws Throwable;
 
@@ -20,4 +23,6 @@ public interface IStore {
 	void err(Object obj, Object... params);
 
 	void refreshMsgLog();
+
+	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable;
 }

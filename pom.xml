@@ -33,7 +33,7 @@
 						<manifest>
 							<addClasspath>true</addClasspath>
 							<classpathPrefix>lib/</classpathPrefix><!--指定classpath的前缀 -->
-							<mainClass>org.sdjen.download.cache_sis.DownloadList</mainClass><!--指定主类的类名 -->
+							<mainClass>org.sdjen.download.cache_sis.MainApp</mainClass><!--指定主类的类名 -->
 						</manifest>
 					</archive>
 				</configuration>

@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 		, "org.sdjen.download.cache_sis.store"//
 		, "org.sdjen.download.cache_sis.test"//
 })
-public class MainTest {
+public class MainApp {
 //	@Autowired
 //	@Qualifier("morebeenB")
 	@Resource()
@@ -33,11 +33,11 @@ public class MainTest {
 	MoreBeenItfc moreBeenA;
 	@Autowired
 	private HttpUtil httpUtil;
-	@Resource(name = "Store_Mongodb")
+	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
 
 	public static void main(String[] args) {
-		SpringApplication.run(MainTest.class, args);
+		SpringApplication.run(MainApp.class, args);
 	}
 
 	@RequestMapping("/")

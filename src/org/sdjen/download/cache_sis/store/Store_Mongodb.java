@@ -245,4 +245,10 @@ public class Store_Mongodb implements IStore {
 	@Override
 	public void refreshMsgLog() {
 	}
+
+	@Override
+	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

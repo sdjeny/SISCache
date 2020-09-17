@@ -28,7 +28,7 @@ public class DownloadList {
 	private final static Logger logger = LoggerFactory.getLogger(DownloadList.class);
 	@Autowired
 	private DownloadSingle downloadSingle;
-	@Resource(name = "Store_Mongodb")
+	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
 	@Autowired
 	private HttpUtil httpUtil;

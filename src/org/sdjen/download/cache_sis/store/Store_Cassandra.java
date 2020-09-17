@@ -1,6 +1,7 @@
 package org.sdjen.download.cache_sis.store;
 
 import java.io.IOException;
+import java.util.Map;
 
 import org.sdjen.download.cache_sis.log.CassandraFactory;
 
@@ -31,6 +32,12 @@ public class Store_Cassandra extends Store_File {
 	@Override
 	public String getURL_Path(String key) {
 		return cassandraFactory.getURL_Path(key);
+	}
+
+	@Override
+	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

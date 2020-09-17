@@ -1,23 +1,19 @@
-package org.sdjen.download.cache_sis.test;
+package org.sdjen.download.cache_sis.controller;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.Level;
 import java.util.zip.DataFormatException;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
 import org.jsoup.Jsoup;
@@ -28,11 +24,11 @@ import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.SISDownloadTimer;
+import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,12 +40,16 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @Controller
 @EnableAutoConfiguration
 @RequestMapping("/siscache")
-public class SampleController {
-	private final static Logger logger = LoggerFactory.getLogger(SampleController.class);
+public class Controller_siscache {
+	private final static Logger logger = LoggerFactory.getLogger(Controller_siscache.class);
 	@Autowired
 	private HttpUtil httpUtil;
 	@Autowired
 	private SISDownloadTimer timer;
+	@Autowired
+	private DownloadList downloadList;
+	@Resource(name = "${definde.service.name.store}")
+	private IStore store;
 	static ConfUtil conf;
 	private String path_es_start;
 
@@ -189,7 +189,7 @@ public class SampleController {
 
 				try {
 					logger.info(type + "	" + from + "	" + to);
-					new DownloadList().execute(type, from, to);
+					downloadList.execute(type, from, to);
 				} catch (Throwable e) {
 					logger.error(e.getMessage(), e);
 				}
@@ -245,97 +245,41 @@ public class SampleController {
 		HttpServletRequest request = requestAttributes.getRequest();
 		boolean debug = false;
 		String query = "";
-		// String fieldstr = "";
 		String temp;
 		if (null != (temp = request.getParameter("debug")))
 			debug = Boolean.valueOf(temp);
 		if (null != (temp = request.getParameter("q"))) {
 			query = temp;
-		}
-		String order = "";
-		Map<Object, Object> params = ESMap.get();
-		params.put("_source", ESMap.get()//
-				.set("includes", Arrays.asList())//
-				.set("excludes", Arrays.asList("context*"))//
-		);
-		List<ESMap> shoulds = new ArrayList<>();
-		List<ESMap> mustes = new ArrayList<>();
-		List<ESMap> mustNots = new ArrayList<>();
-		if (null != query && !query.isEmpty()) {
-			listAdv(query, shoulds, mustes, mustNots);
-		} else if (search == null || search.trim().isEmpty()) {
-			listAll(shoulds, mustes, mustNots);
-			order = "id:desc";
 		} else {
-			try {
-				listDate(search, shoulds, mustes, mustNots);
-				order = "id:desc";
-			} catch (Exception e) {
-				listDef(search, shoulds, mustes, mustNots);
+			query = search;
+			if (null != query && !query.isEmpty() && !query.toUpperCase().startsWith("D:")) {
+				query = "ALL:" + query;
 			}
 		}
-		params.put("query"//
-				, ESMap.get().set("bool", ESMap.get()//
-						.set("must", mustes)//
-						.set("should", shoulds)//
-						.set("must_not", mustNots)//
-				)//
-		);
-		params.put("size", size);
-		params.put("from", (page - 1) * size);
-		if (null != (temp = request.getParameter("order"))) {
-			order = temp;
-		}
-		List<ESMap> orders = new ArrayList<>();
-		for (String o : order.split(" ")) {
-			if (o.isEmpty())
-				continue;
-			String[] ss = o.split(":");
-			orders.add(//
-					ESMap.get().set(ss[0], Collections.singletonMap("order", ss.length > 1 ? ss[1] : "desc"))//
-			);
-		}
-		if (!orders.isEmpty())
-			params.put("sort", orders);
 		StringBuffer rst = new StringBuffer();
-		String jsonParams = JsonUtil.toJson(params);
 		try {
+			Map<String, Object> titleList = store.getTitleList(page, size, query, request.getParameter("order"));
+			List<Map<String, Object>> ls = (List<Map<String, Object>>) titleList.get("list");
 			long l = System.currentTimeMillis();
-			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search", jsonParams);
 			l = System.currentTimeMillis() - l;
 			// logger.log(Level.INFO, l + " " + jsonParams);
-			ESMap r = JsonUtil.toObject(js, ESMap.class);
 			rst.append("total:");
-			rst.append(r.get("hits", ESMap.class).get("total"));
+			rst.append(titleList.get("total"));
 			rst.append("&nbsp;Take:");
 			rst.append(l);
 			if (debug) {
 				rst.append("&nbsp;");
-				rst.append(jsonParams);
+				rst.append(titleList.get("json_params"));
 			}
 			rst.append("</br><table border='0'>");
-			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
-			SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-			SimpleDateFormat dformat = new SimpleDateFormat("yyyy-MM-dd");
-			SimpleDateFormat tformat = new SimpleDateFormat("HH:mm");
-			for (ESMap hit : hits) {
-				ESMap _source = hit.get("_source", ESMap.class);
+			ls.forEach(_source -> {
 				rst.append("<tbody><tr>");
-				String datestr, timestr;
-				try {
-					Date date = format.parse((String) _source.get("datetime"));
-					datestr = dformat.format(date);
-					timestr = tformat.format(date);
-				} catch (Exception e) {
-					datestr = (String) _source.get("date_str");
-					timestr = "    ";
-				}
+				String datestr = (String) _source.get("date"), timestr = (String) _source.get("time");
 				if (false) {
 					rst.append(String
 							.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-									, _source.get("id"), _source.get("page"),
-									String.format("%s&nbsp;%s&nbsp;%s&nbsp;%s", datestr, timestr, _source.get("type"),
-											_source.get("title"))));
+					, _source.get("id"), _source.get("page"), String.format("%s&nbsp;%s&nbsp;%s&nbsp;%s", datestr,
+							timestr, _source.get("type"), _source.get("title"))));
 				} else {
 					if (false) {
 						rst.append(String.format("<td>%s</td>", datestr));
@@ -348,85 +292,22 @@ public class SampleController {
 					rst.append("<tbody><tr>");
 					rst.append(String
 							.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-									, _source.get("id"), _source.get("page"), _source.get("title")));
+					, _source.get("id"), _source.get("page"), _source.get("title")));
 				}
 				rst.append("</tr></tbody>");
 				// rst.append("</br>");
-			}
+
+			});
 			rst.append("</table>");
-		} catch (IOException e) {
+		} catch (Throwable e) {
 			rst.append(e.getMessage());
 			for (java.lang.StackTraceElement element : e.getStackTrace()) {
-				rst.append(jsonParams);
+				rst.append(element);
 				rst.append("</br>");
 				rst.append(element.toString());
 			}
 		}
 		return rst.toString();
-	}
-
-	private void listAll(List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
-		mustes.add(ESMap.get().set("term", Collections.singletonMap("page", 1)));
-	}
-
-	private void listDate(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots)
-			throws ParseException {
-		if (!search.startsWith("D:") || !search.startsWith("d:"))
-			search = "";
-		else
-			search = search.substring(2);
-		try {
-			new SimpleDateFormat("yyyy-MM-dd").parse(search);
-		} catch (Exception e) {
-			new SimpleDateFormat("yyyy-MM").parse(search);
-		}
-		mustes.add(ESMap.get().set("match_phrase", Collections.singletonMap("datetime", search)));
-	}
-
-	private void listAdv(String query, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
-		// System.out.println("query:" + query);
-		for (String q : query.split(";")) {
-			if (q.isEmpty())
-				continue;
-			String[] ss = q.split(":");
-			String field = ss[0].replace("'", "^");
-			String vs = ss.length > 1 ? ss[1] : "";
-			for (String v : vs.split(" ")) {
-				if (v.isEmpty())
-					continue;
-				// String s = "and";
-				List<ESMap> list = mustes;
-				if (v.startsWith("~")) {
-					v = v.substring(1);
-					// s = "or";
-					list = shoulds;
-				} else if (v.startsWith("-")) {
-					v = v.substring(1);
-					// s = "not";
-					list = mustNots;
-				}
-				// System.out.println(s + " " + field + " " + v);
-				ESMap item = ESMap.get()//
-						.set("fields", Arrays.asList(field.split(",")));
-				item.set("query", v);
-				item.set("type", "phrase");
-				list.add(ESMap.get().set("multi_match", item));
-			}
-		}
-		// mustes.add(ESMap.get().set("term", Collections.singletonMap("page",
-		// "1")));
-	}
-
-	private void listDef(String search, List<ESMap> shoulds, List<ESMap> mustes, List<ESMap> mustNots) {
-		mustes.add(ESMap.get().set("term", ESMap.get().set("page", 1)));
-		for (String type : new String[] { "best_fields", "most_fields", "cross_fields" }) {
-			ESMap item = ESMap.get()//
-					.set("fields", Arrays.asList("title^3", "context"));
-			item.set("query", search);
-			item.set("boost", 1);
-			item.set("type", type);
-			shoulds.add(ESMap.get().set("multi_match", item));
-		}
 	}
 
 	@RequestMapping("/s/{search}")
@@ -586,13 +467,5 @@ public class SampleController {
 			}
 		}
 		return rst.toString();
-	}
-
-	public static void main(String[] args) throws Exception {
-		// SpringApplication springApplication = new
-		// SpringApplication(SampleController.class);
-		// springApplication.addListeners(new ApplicationStartup());
-		// springApplication.run(args);
-		SpringApplication.run(SampleController.class, args);
 	}
 }

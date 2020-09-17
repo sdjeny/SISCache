@@ -1,7 +1,10 @@
 package org.sdjen.download.cache_sis.init;
 
+import javax.annotation.Resource;
+
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.service.SISDownloadTimer;
+import org.sdjen.download.cache_sis.test.morebeen.MoreBeenItfc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,12 @@ public class MyApplicationRunner implements ApplicationRunner {
 	private SISDownloadTimer timer;
 	@Autowired
 	private MongoTemplate mongoTemplate;
+	@Resource(name = "morebeenB")
+	MoreBeenItfc moreBeenB;
+	@Resource(name = "MorebeenA")
+	MoreBeenItfc moreBeenA;
+	@Resource(name = "${definde.service.name.morebeen}")
+	MoreBeenItfc moreBeen;
 
 	/**
 	 * 会在服务启动完成后立即执行
@@ -64,6 +73,9 @@ public class MyApplicationRunner implements ApplicationRunner {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeenA.getInfo());
+		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeenB.getInfo());
+		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeen.getInfo());
 //		System.out.println("-----MyApplicationRunner" + Arrays.asList(args));
 //		System.out.println("+++++++++++WithoutInterfaceService:	" + withoutInterfaceService.test());
 	}

@@ -5,10 +5,16 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.DataFormatException;
+
+import javax.annotation.Resource;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
@@ -27,7 +33,8 @@ public class Store_ElasticSearch implements IStore {
 	private final static Logger logger = LoggerFactory.getLogger(Store_ElasticSearch.class);
 	@Autowired
 	private HttpUtil httpUtil;
-//	private GetConnection connection;
+	@Resource(name = "Store_Mongodb")
+	private IStore store;
 	private String path_es_start = "http://192.168.0.237:9200/siscache_";
 	private MessageDigest md5Digest;
 	private String logName;
@@ -334,6 +341,123 @@ public class Store_ElasticSearch implements IStore {
 			return _source.get("path", String.class);
 		}
 		return null;
+	}
+
+	@Override
+	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable {
+		List<Map<String, Object>> ls = new ArrayList<>();
+		Map<String, Object> result = new HashMap<>();
+		result.put("list", ls);
+		Map<Object, Object> params = ESMap.get();
+		params.put("_source", ESMap.get()//
+				.set("includes", Arrays.asList())//
+				.set("excludes", Arrays.asList("context*"))//
+		);
+		if (null == query)
+			query = "";
+		if (null == order)
+			order = "";
+		List<ESMap> shoulds = new ArrayList<>();
+		List<ESMap> mustes = new ArrayList<>();
+		List<ESMap> mustNots = new ArrayList<>();
+		if (query.isEmpty()) {
+			mustes.add(ESMap.get().set("term", Collections.singletonMap("page", 1)));
+			order = "id:desc";
+		} else if (query.toUpperCase().startsWith("D:")) {
+			query = query.substring(2);
+			mustes.add(ESMap.get().set("match_phrase", Collections.singletonMap("datetime", query)));
+			order = "id:desc";
+		} else if (query.toUpperCase().startsWith("ALL:")) {
+			query = query.substring(4);
+			mustes.add(ESMap.get().set("term", ESMap.get().set("page", 1)));
+			for (String type : new String[] { "best_fields", "most_fields", "cross_fields" }) {
+				ESMap item = ESMap.get()//
+						.set("fields", Arrays.asList("title^3", "context"));
+				item.set("query", query);
+				item.set("boost", 1);
+				item.set("type", type);
+				shoulds.add(ESMap.get().set("multi_match", item));
+			}
+		} else {
+			for (String q : query.split(";")) {
+				if (q.isEmpty())
+					continue;
+				String[] ss = q.split(":");
+				String field = ss[0].replace("'", "^");
+				String vs = ss.length > 1 ? ss[1] : "";
+				for (String v : vs.split(" ")) {
+					if (v.isEmpty())
+						continue;
+					// String s = "and";
+					List<ESMap> list = mustes;
+					if (v.startsWith("~")) {
+						v = v.substring(1);
+						// s = "or";
+						list = shoulds;
+					} else if (v.startsWith("-")) {
+						v = v.substring(1);
+						// s = "not";
+						list = mustNots;
+					}
+					// System.out.println(s + " " + field + " " + v);
+					ESMap item = ESMap.get()//
+							.set("fields", Arrays.asList(field.split(",")));
+					item.set("query", v);
+					item.set("type", "phrase");
+					list.add(ESMap.get().set("multi_match", item));
+				}
+			}
+		}
+		params.put("query"//
+				, ESMap.get().set("bool", ESMap.get()//
+						.set("must", mustes)//
+						.set("should", shoulds)//
+						.set("must_not", mustNots)//
+				)//
+		);
+		params.put("size", size);
+		params.put("from", (page - 1) * size);
+		List<ESMap> orders = new ArrayList<>();
+		for (String o : order.split(" ")) {
+			if (o.isEmpty())
+				continue;
+			String[] ss = o.split(":");
+			orders.add(//
+					ESMap.get().set(ss[0], Collections.singletonMap("order", ss.length > 1 ? ss[1] : "desc"))//
+			);
+		}
+		if (!orders.isEmpty())
+			params.put("sort", orders);
+		String jsonParams = JsonUtil.toJson(params);
+		result.put("json_params", jsonParams);
+		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", jsonParams);
+		ESMap r = JsonUtil.toObject(js, ESMap.class);
+		result.put("total", r.get("hits", ESMap.class).get("total"));
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+		SimpleDateFormat dformat = new SimpleDateFormat("yyyy-MM-dd");
+		SimpleDateFormat tformat = new SimpleDateFormat("HH:mm");
+		List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
+		for (ESMap hit : hits) {
+			ESMap _source = hit.get("_source", ESMap.class);
+			String datestr, timestr;
+			try {
+				Date date = format.parse((String) _source.get("datetime"));
+				datestr = dformat.format(date);
+				timestr = tformat.format(date);
+			} catch (Exception e) {
+				datestr = (String) _source.get("date_str");
+				timestr = "    ";
+			}
+			ls.add(new EntryData<String, Object>()//
+					.put("date", datestr)//
+					.put("time", timestr)//
+					.put("id", _source.get("id"))//
+					.put("page", _source.get("page"))//
+					.put("type", _source.get("type"))//
+					.put("title", _source.get("title"))//
+					.getData());
+		}
+		return result;
 	}
 
 	private SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd HH:mm:ss:SSS");

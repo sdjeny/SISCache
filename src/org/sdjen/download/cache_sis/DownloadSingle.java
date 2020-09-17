@@ -54,7 +54,7 @@ public class DownloadSingle {
 	// cassandraFactory;
 //	private IStore store = null;
 //	private HttpFactory httpUtil;
-	@Resource(name = "Store_Mongodb")
+	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
 	@Autowired
 	private HttpUtil httpUtil;

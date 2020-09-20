@@ -36,6 +36,8 @@ public class RestTemplateConfig {
 	// https://www.cnblogs.com/javazhiyin/p/9851775.html
 	// http://www.mkeeper.club/2018/09/17/SpringBoot%E5%9F%BA%E7%A1%80%E6%95%99%E7%A8%8B2-1-11%20RestTemplate%E6%95%B4%E5%90%88HttpClient/
 
+	@Value("${http.pool.conn.proxyHost}")
+	private String proxyHost;
 	@Value("${http.pool.conn.maxTotal}")
 	private Integer maxTotal;
 	@Value("${http.pool.conn.defaultMaxPerRoute}")
@@ -113,7 +115,6 @@ public class RestTemplateConfig {
 	public ClientHttpRequestFactory proxyHttpRequestFactory() {
 		return new HttpComponentsClientHttpRequestFactory(proxyHttpClient());
 	}
-	
 
 	@Bean
 	public PoolingHttpClientConnectionManager connectionManager() {
@@ -150,6 +151,8 @@ public class RestTemplateConfig {
 	@Bean
 	public HttpClient proxyHttpClient() {
 		System.out.println(">>>>>>>>>>>>>>>>>>proxyHttpClient");
+		String[] host = this.proxyHost.split("://");
+		String[] proxy = host[1].split(":");
 		RequestConfig requestConfig = RequestConfig.custom()
 				// 服务器返回数据(response)的时间，超过抛出read timeout
 				.setSocketTimeout(socketTimeout)
@@ -158,7 +161,7 @@ public class RestTemplateConfig {
 				// 从连接池中获取连接的超时时间//超时间未拿到可用连接，会抛出org.apache.http.conn.ConnectionPoolTimeoutException:
 				// Timeout waiting for connection from pool
 				.setConnectionRequestTimeout(connectionRequestTimeout)//
-				.setProxy(new HttpHost("10.3.5.6", 1080, "http"))//
+				.setProxy(new HttpHost(proxy[0], Integer.valueOf(proxy[1]), host[0]))//
 				.build();
 		return HttpClientBuilder//
 				.create()//
@@ -167,6 +170,7 @@ public class RestTemplateConfig {
 				.setRetryHandler(getHttpRequestRetryHandler())//
 				.build();
 	}
+
 	private HttpRequestRetryHandler getHttpRequestRetryHandler() {
 		return new HttpRequestRetryHandler() {
 			public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {

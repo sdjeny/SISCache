@@ -10,6 +10,8 @@ import java.util.Set;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -20,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 public class HttpUtil {
+	private final static Logger logger = LoggerFactory.getLogger(HttpUtil.class);
 
 	@Resource(name = "restTemplate")
 	private RestTemplate restTemplate;
@@ -163,7 +166,8 @@ public class HttpUtil {
 		return false;
 	}
 
-	public void execute(String uri, Executor<?> executor) throws Throwable {
+	public synchronized void execute(String uri, Executor<?> executor) throws Throwable {
+		logger.info(">	"+uri);
 		try {
 			boolean needProxy = needProxy(uri);
 			HttpHeaders headers = new HttpHeaders();

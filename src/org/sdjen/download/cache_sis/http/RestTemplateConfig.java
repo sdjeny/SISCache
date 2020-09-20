@@ -61,6 +61,49 @@ public class RestTemplateConfig {
 		return new RestTemplate(httpRequestFactory());
 	}
 
+//    /**
+//     * 客户端请求链接策略
+//     * 
+//     * @return
+//     */
+//    @Bean
+//    public ClientHttpRequestFactory clientHttpRequestFactory() {
+//        HttpComponentsClientHttpRequestFactory clientHttpRequestFactory = new HttpComponentsClientHttpRequestFactory();
+//        clientHttpRequestFactory.setHttpClient(httpClientBuilder().build());
+//        clientHttpRequestFactory.setConnectTimeout(6000); // 连接超时时间/毫秒
+//        clientHttpRequestFactory.setReadTimeout(6000); // 读写超时时间/毫秒
+//        clientHttpRequestFactory.setConnectionRequestTimeout(5000);// 请求超时时间/毫秒
+//        return clientHttpRequestFactory;
+//    }
+//
+//    /**
+//     * 设置HTTP连接管理器,连接池相关配置管理
+//     * 
+//     * @return 客户端链接管理器
+//     */
+//    @Bean
+//    public HttpClientBuilder httpClientBuilder() {
+//        HttpClientBuilder httpClientBuilder = HttpClientBuilder.create();
+//        httpClientBuilder.setConnectionManager(poolingConnectionManager());
+//        return httpClientBuilder;
+//    }
+//
+//    /**
+//     * 链接线程池管理,可以keep-alive不断开链接请求,这样速度会更快 MaxTotal 连接池最大连接数 DefaultMaxPerRoute
+//     * 每个主机的并发 ValidateAfterInactivity
+//     * 可用空闲连接过期时间,重用空闲连接时会先检查是否空闲时间超过这个时间，如果超过，释放socket重新建立
+//     * 
+//     * @return
+//     */
+//    @Bean
+//    public HttpClientConnectionManager poolingConnectionManager() {
+//        PoolingHttpClientConnectionManager poolingConnectionManager = new PoolingHttpClientConnectionManager();
+//        poolingConnectionManager.setMaxTotal(1000);
+//        poolingConnectionManager.setDefaultMaxPerRoute(5000);
+//        poolingConnectionManager.setValidateAfterInactivity(30000);
+//        return poolingConnectionManager;
+//    }
+
 	@Bean
 	public ClientHttpRequestFactory httpRequestFactory() {
 		return new HttpComponentsClientHttpRequestFactory(httpClient());
@@ -70,10 +113,11 @@ public class RestTemplateConfig {
 	public ClientHttpRequestFactory proxyHttpRequestFactory() {
 		return new HttpComponentsClientHttpRequestFactory(proxyHttpClient());
 	}
+	
 
 	@Bean
-	public HttpClient httpClient() {
-		System.out.println(">>>>>>>>>>>>>>>>>>httpClient");
+	public PoolingHttpClientConnectionManager connectionManager() {
+		System.out.println(">>>>>>>>>>>>>>>>>>connectionManager");
 		Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
 				.register("http", PlainConnectionSocketFactory.getSocketFactory())
 				.register("https", SSLConnectionSocketFactory.getSocketFactory()).build();
@@ -81,6 +125,12 @@ public class RestTemplateConfig {
 		connectionManager.setMaxTotal(maxTotal);
 		connectionManager.setDefaultMaxPerRoute(defaultMaxPerRoute);
 		connectionManager.setValidateAfterInactivity(validateAfterInactivity);
+		return connectionManager;
+	}
+
+	@Bean
+	public HttpClient httpClient() {
+		System.out.println(">>>>>>>>>>>>>>>>>>httpClient");
 		RequestConfig requestConfig = RequestConfig.custom()
 				// 服务器返回数据(response)的时间，超过抛出read timeout
 				.setSocketTimeout(socketTimeout)
@@ -91,7 +141,7 @@ public class RestTemplateConfig {
 				.setConnectionRequestTimeout(connectionRequestTimeout).build();
 		return HttpClientBuilder//
 				.create()//
-				.setConnectionManager(connectionManager)//
+				.setConnectionManager(connectionManager())//
 				.setDefaultRequestConfig(requestConfig)//
 				.setRetryHandler(getHttpRequestRetryHandler())//
 				.build();
@@ -100,13 +150,6 @@ public class RestTemplateConfig {
 	@Bean
 	public HttpClient proxyHttpClient() {
 		System.out.println(">>>>>>>>>>>>>>>>>>proxyHttpClient");
-		Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
-				.register("http", PlainConnectionSocketFactory.getSocketFactory())
-				.register("https", SSLConnectionSocketFactory.getSocketFactory()).build();
-		PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager(registry);
-		connectionManager.setMaxTotal(maxTotal);
-		connectionManager.setDefaultMaxPerRoute(defaultMaxPerRoute);
-		connectionManager.setValidateAfterInactivity(validateAfterInactivity);
 		RequestConfig requestConfig = RequestConfig.custom()
 				// 服务器返回数据(response)的时间，超过抛出read timeout
 				.setSocketTimeout(socketTimeout)
@@ -119,12 +162,11 @@ public class RestTemplateConfig {
 				.build();
 		return HttpClientBuilder//
 				.create()//
-				.setConnectionManager(connectionManager)//
+				.setConnectionManager(connectionManager())//
 				.setDefaultRequestConfig(requestConfig)//
 				.setRetryHandler(getHttpRequestRetryHandler())//
 				.build();
 	}
-
 	private HttpRequestRetryHandler getHttpRequestRetryHandler() {
 		return new HttpRequestRetryHandler() {
 			public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {

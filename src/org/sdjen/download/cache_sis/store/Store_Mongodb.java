@@ -50,7 +50,7 @@ public class Store_Mongodb implements IStore {
 	@Override
 	public String getLocalHtml(final String id, final String page, final String url, String title, String dateStr)
 			throws Throwable {
-		return mongoTemplate.findAll(Map.class, "Tas").toString();
+		return null;//mongoTemplate.findAll(Map.class, "Tas").toString();
 	}
 
 	@Override

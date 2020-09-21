@@ -174,7 +174,7 @@ public class DownloadList {
 			} finally {
 			}
 		}
-		HttpFactory.getPoolConnManager().closeExpiredConnections();
+//		HttpFactory.getPoolConnManager().closeExpiredConnections();
 		store.msg("耗时{3}	下载	{0} byte,	{1} 项	{2}", length_download, count, uri,
 				(System.currentTimeMillis() - t));
 		// httpUtil.getPoolConnManager().closeExpiredConnections();

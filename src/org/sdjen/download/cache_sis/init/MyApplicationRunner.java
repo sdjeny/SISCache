@@ -3,6 +3,7 @@ package org.sdjen.download.cache_sis.init;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.service.InitStartTimer;
 import org.sdjen.download.cache_sis.service.SISDownloadTimer;
 import org.sdjen.download.cache_sis.test.morebeen.MoreBeenItfc;
 import org.slf4j.Logger;
@@ -26,8 +27,9 @@ public class MyApplicationRunner implements ApplicationRunner {
 
 //	@Autowired
 //	WithoutInterfaceService withoutInterfaceService;
-	@Autowired
-	private SISDownloadTimer timer;
+//	@Autowired
+	@Resource(name = "${definde.service.name.timer}")
+	private InitStartTimer timer;
 	@Autowired
 	private MongoTemplate mongoTemplate;
 	@Resource(name = "morebeenB")

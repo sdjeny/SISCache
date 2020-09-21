@@ -21,7 +21,7 @@ import javax.annotation.Resource;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
-import org.sdjen.download.cache_sis.http.HttpFactory;
+//import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
@@ -118,7 +118,7 @@ public class DownloadSingle {
 		// "https://club.autohome.com.cn/bbs/thread/");
 		LogUtil.init();
 		// MapDBFactory.init();
-		HttpFactory httpUtil = new HttpFactory();
+//		HttpFactory httpUtil = new HttpFactory();
 		try {
 			// System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
 			// Security.setProperty("jdk.tls.disabledAlgorithms","SSLv3, DH
@@ -139,7 +139,7 @@ public class DownloadSingle {
 			// https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg
 			// https://www1.wi.to/2018/03/29/04f7c405227da092576b127e640d07f8.jpg
 		} finally {
-			httpUtil.finish();
+//			httpUtil.finish();
 			// MapDBFactory.finishAll();
 			LogUtil.finishAll();
 		}

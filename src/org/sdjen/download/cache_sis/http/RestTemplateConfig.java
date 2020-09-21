@@ -15,6 +15,7 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ConnectTimeoutException;
+import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
@@ -117,7 +118,7 @@ public class RestTemplateConfig {
 	}
 
 	@Bean
-	public PoolingHttpClientConnectionManager connectionManager() {
+	public HttpClientConnectionManager connectionManager() {
 		System.out.println(">>>>>>>>>>>>>>>>>>connectionManager");
 		Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
 				.register("http", PlainConnectionSocketFactory.getSocketFactory())
@@ -132,14 +133,12 @@ public class RestTemplateConfig {
 	@Bean
 	public HttpClient httpClient() {
 		System.out.println(">>>>>>>>>>>>>>>>>>httpClient");
-		RequestConfig requestConfig = RequestConfig.custom()
-				// 服务器返回数据(response)的时间，超过抛出read timeout
-				.setSocketTimeout(socketTimeout)
-				// 连接上服务器(握手成功)的时间，超出抛出connect timeout
-				.setConnectTimeout(connectTimeout)
-				// 从连接池中获取连接的超时时间//超时间未拿到可用连接，会抛出org.apache.http.conn.ConnectionPoolTimeoutException:
-				// Timeout waiting for connection from pool
-				.setConnectionRequestTimeout(connectionRequestTimeout).build();
+		RequestConfig requestConfig = RequestConfig.custom()//
+				.setSocketTimeout(socketTimeout)// 服务器返回数据(response)的时间，超过抛出read timeout
+				.setConnectTimeout(connectTimeout)// 连接上服务器(握手成功)的时间，超出抛出connect timeout
+				.setConnectionRequestTimeout(connectionRequestTimeout)// 从连接池中获取连接的超时时间//超时间未拿到可用连接，会抛出org.apache.http.conn.ConnectionPoolTimeoutException:Timeout
+																		// waiting for connection from pool
+				.build();
 		return HttpClientBuilder//
 				.create()//
 				.setConnectionManager(connectionManager())//
@@ -153,14 +152,11 @@ public class RestTemplateConfig {
 		System.out.println(">>>>>>>>>>>>>>>>>>proxyHttpClient");
 		String[] host = this.proxyHost.split("://");
 		String[] proxy = host[1].split(":");
-		RequestConfig requestConfig = RequestConfig.custom()
-				// 服务器返回数据(response)的时间，超过抛出read timeout
-				.setSocketTimeout(socketTimeout)
-				// 连接上服务器(握手成功)的时间，超出抛出connect timeout
-				.setConnectTimeout(connectTimeout)
-				// 从连接池中获取连接的超时时间//超时间未拿到可用连接，会抛出org.apache.http.conn.ConnectionPoolTimeoutException:
-				// Timeout waiting for connection from pool
-				.setConnectionRequestTimeout(connectionRequestTimeout)//
+		RequestConfig requestConfig = RequestConfig.custom()//
+				.setSocketTimeout(socketTimeout)// 服务器返回数据(response)的时间，超过抛出read timeout
+				.setConnectTimeout(connectTimeout)// 连接上服务器(握手成功)的时间，超出抛出connect timeout
+				.setConnectionRequestTimeout(connectionRequestTimeout)// 从连接池中获取连接的超时时间//超时间未拿到可用连接，会抛出org.apache.http.conn.ConnectionPoolTimeoutException:Timeout
+																		// waiting for connection from pool
 				.setProxy(new HttpHost(proxy[0], Integer.valueOf(proxy[1]), host[0]))//
 				.build();
 		return HttpClientBuilder//

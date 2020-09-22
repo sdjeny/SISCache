@@ -3,7 +3,7 @@ package org.sdjen.download.cache_sis.tool;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
+import java.util.Base64;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -13,9 +13,6 @@ import java.util.zip.ZipOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import sun.misc.BASE64Decoder;
-import sun.misc.BASE64Encoder;
 
 /**
  * 
@@ -143,12 +140,12 @@ public class ZipUtil {
 	}
 
 	public static String bytesToString(byte[] bytes) throws IOException {
-		 return new BASE64Encoder().encode(bytes);
+		 return Base64.getEncoder().encodeToString(bytes);
 //		return new String(bytes, CHARSET);
 	}
 
 	public static byte[] stringToBytes(String str) throws IOException {
-		 return new BASE64Decoder().decodeBuffer(str);
+		 return Base64.getDecoder().decode(str);
 //		return str.getBytes(CHARSET);
 	}
 

@@ -167,7 +167,7 @@ public class HttpUtil {
 	}
 
 	public synchronized void execute(String uri, Executor<?> executor) throws Throwable {
-		logger.info(">	"+uri);
+		logger.debug(">	" + uri);
 		try {
 			boolean needProxy = needProxy(uri);
 			HttpHeaders headers = new HttpHeaders();

@@ -3,7 +3,6 @@ package org.sdjen.download.cache_sis.store;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,13 +10,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.DataFormatException;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -49,7 +47,28 @@ public class Store_Mongodb implements IStore {
 	@Override
 	public String getLocalHtml(final String id, final String page, final String url, String title, String dateStr)
 			throws Throwable {
-		return null;// mongoTemplate.findAll(Map.class, "Tas").toString();
+		Query query = new Query();
+		query.addCriteria(Criteria.where("id").is(Long.valueOf(id)));
+		query.addCriteria(Criteria.where("page").is(Long.valueOf(page)));
+		query.fields().include("context_zip").include("context").include("page");
+		Map<Object, Object> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
+		if (null != _source) {
+			if (1 != Integer.valueOf(_source.get("page").toString()))
+				return "";
+			String text = (String) _source.get("context_zip");
+			if (null != text) {
+				try {
+					return ZipUtil.uncompress(text);
+				} catch (DataFormatException e1) {
+					e1.printStackTrace();
+					text = null;
+				}
+			}
+			if (null == text) {
+				return (String) _source.get("context");
+			}
+		}
+		return null;
 	}
 
 	@Override

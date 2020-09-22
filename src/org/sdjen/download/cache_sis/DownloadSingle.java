@@ -442,7 +442,7 @@ public class DownloadSingle {
 			executor.setResult(null);
 			try {
 				result = null;
-//				if (path.startsWith("torrent")) {
+				if (path.startsWith("torrent")) {
 					try {
 						lock_w_html.lock();
 						httpUtil.retry(new HttpUtil.Retry() {
@@ -453,8 +453,8 @@ public class DownloadSingle {
 					} finally {
 						lock_w_html.unlock();
 					}
-//				} else
-//					httpUtil.execute(url, executor);
+				} else
+					httpUtil.execute(url, executor);
 				result = executor.getResult();
 			} catch (Throwable e) {
 				result = url;

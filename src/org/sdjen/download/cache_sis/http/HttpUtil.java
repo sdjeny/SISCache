@@ -139,7 +139,7 @@ public class HttpUtil {
 		return executor.getResult();
 	}
 
-	public void retry(Retry retry) throws Throwable {
+	public synchronized void retry(Retry retry) throws Throwable {
 		boolean stop = false;
 		int count = 0;
 		do {

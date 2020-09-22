@@ -434,7 +434,7 @@ public class DownloadSingle {
 						// mapDBUtil.commit();
 						// lock_w_mapdb.unlock();
 						store.saveMD5(md5, result);
-						logger.info("	+{0}	->{1}", url, result);
+						store.msg("	+{0}	->{1}", url, result);
 					}
 					setResult(result);
 				}

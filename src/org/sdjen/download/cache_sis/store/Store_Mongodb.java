@@ -29,7 +29,6 @@ import com.mongodb.client.result.UpdateResult;
 
 @Service("Store_Mongodb")
 public class Store_Mongodb implements IStore {
-	private final static Logger logger = LoggerFactory.getLogger(Store_Mongodb.class);
 	private MessageDigest md5Digest;
 	private ConfUtil conf;
 	@Autowired
@@ -217,29 +216,6 @@ public class Store_Mongodb implements IStore {
 //		query.with(PageRequest.of(page, size, Sort.by(Order.asc("DEVID"), Order.desc("TIME"))));
 		query.fields().include("path");
 		return (String) mongoTemplate.findOne(query, Map.class, "md").get("path");
-	}
-
-	private SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd HH:mm:ss:SSS");
-
-	private StringBuilder getMsgText(Object pattern, Object... args) {
-		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));
-		builder.append("	,");
-		if (null != args && args.length > 0 && pattern instanceof String) {
-			builder.append(MessageFormat.format((String) pattern, args));
-		} else {
-			builder.append(pattern);
-		}
-		return builder;
-	}
-
-	@Override
-	public void msg(Object pattern, Object... args) {
-		logger.info(getMsgText(pattern, args).toString());
-	}
-
-	@Override
-	public void err(Object pattern, Object... args) {
-		logger.error(getMsgText(pattern, args).toString());
 	}
 
 	@Override

@@ -72,8 +72,8 @@ public class MyApplicationRunner implements ApplicationRunner {
 		}
 		try {
 			timer.restart(hour);
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (Throwable e) {
+			logger.error("timer",e);
 		}
 		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeenA.getInfo());
 		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeenB.getInfo());

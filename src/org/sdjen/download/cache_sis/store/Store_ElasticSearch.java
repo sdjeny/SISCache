@@ -460,29 +460,6 @@ public class Store_ElasticSearch implements IStore {
 		return result;
 	}
 
-	private SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd HH:mm:ss:SSS");
-
-	private StringBuilder getMsgText(Object pattern, Object... args) {
-		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));
-		builder.append("	,");
-		if (null != args && args.length > 0 && pattern instanceof String) {
-			builder.append(MessageFormat.format((String) pattern, args));
-		} else {
-			builder.append(pattern);
-		}
-		return builder;
-	}
-
-	@Override
-	public void msg(Object pattern, Object... args) {
-		logger.info(getMsgText(pattern, args).toString());
-	}
-
-	@Override
-	public void err(Object pattern, Object... args) {
-		logger.error(getMsgText(pattern, args).toString());
-	}
-
 	@Override
 	public void refreshMsgLog() {
 	}

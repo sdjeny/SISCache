@@ -49,7 +49,7 @@ public class Store_Mongodb implements IStore {
 	@Override
 	public String getLocalHtml(final String id, final String page, final String url, String title, String dateStr)
 			throws Throwable {
-		return null;//mongoTemplate.findAll(Map.class, "Tas").toString();
+		return null;// mongoTemplate.findAll(Map.class, "Tas").toString();
 	}
 
 	@Override
@@ -197,7 +197,8 @@ public class Store_Mongodb implements IStore {
 		query.addCriteria(Criteria.where("key").is(key));
 		query.addCriteria(Criteria.where("type").is("path"));
 		query.fields().include("path");
-		return (String) mongoTemplate.findOne(query, Map.class, "md").get("path");
+		Map<Object, Object> rst = mongoTemplate.findOne(query, Map.class, "md");
+		return null == rst ? null : (String) rst.get("path");
 	}
 
 	private synchronized String getMD5(byte[] bytes) {
@@ -215,7 +216,8 @@ public class Store_Mongodb implements IStore {
 //		query.with(Sort.by(Order.asc("DEVID"), Order.desc("TIME")));
 //		query.with(PageRequest.of(page, size, Sort.by(Order.asc("DEVID"), Order.desc("TIME"))));
 		query.fields().include("path");
-		return (String) mongoTemplate.findOne(query, Map.class, "md").get("path");
+		Map<Object, Object> rst = mongoTemplate.findOne(query, Map.class, "md");
+		return null == rst ? null : (String) rst.get("path");
 	}
 
 	@Override

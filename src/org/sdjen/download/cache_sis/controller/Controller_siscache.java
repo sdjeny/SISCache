@@ -301,6 +301,7 @@ public class Controller_siscache {
 				rst.append("</br>");
 				rst.append(element.toString());
 			}
+			e.printStackTrace();
 		}
 		return rst.toString();
 	}

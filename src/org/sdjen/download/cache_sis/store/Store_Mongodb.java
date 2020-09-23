@@ -293,7 +293,7 @@ public class Store_Mongodb implements IStore {
 		} else if (query_str.toUpperCase().startsWith("ALL:")) {
 			query.addCriteria(Criteria.where("page").is(1l));
 			query_str = query_str.substring(4);
-			for (String qs : query_str.split("	")) {
+			for (String qs : query_str.split(" ")) {
 				Pattern pattern = escapeExprSpecialWord.apply(qs.trim());
 				query.addCriteria(new Criteria().orOperator(//
 						Criteria.where("title").regex(pattern)//

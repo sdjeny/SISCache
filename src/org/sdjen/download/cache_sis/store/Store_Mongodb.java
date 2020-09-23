@@ -40,6 +40,7 @@ public class Store_Mongodb implements IStore {
 	private ConfUtil conf;
 	@Autowired
 	private MongoTemplate mongoTemplate;
+	private String[] fbsArr = { "\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|" };
 
 	public ConfUtil getConf() throws IOException {
 		if (null == conf) {
@@ -270,8 +271,11 @@ public class Store_Mongodb implements IStore {
 		if (null == order)
 			order = "";
 		Function<String, Pattern> escapeExprSpecialWord = keyword -> {
+			// 完全匹配 ^name$
+			// 右匹配 ^.*name$
+			// 左匹配 ^name.*$
+			// 模糊匹配 ^.*name8.*$"
 			if (!StringUtils.isEmpty(keyword)) {
-				String[] fbsArr = { "\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|" };
 				for (String key : fbsArr) {
 					if (keyword.contains(key)) {
 						keyword = keyword.replace(key, "\\" + key);
@@ -334,7 +338,6 @@ public class Store_Mongodb implements IStore {
 		}
 		if (orders.isEmpty())
 			orders.add(Order.desc("id"));
-
 //		query.addCriteria(Criteria.where("key").is(getMD5(key.getBytes("utf8"))));
 //		query.addCriteria(Criteria.where("type").is("url"));
 //		query.skip(skipNumber);

@@ -283,7 +283,8 @@ public class Store_Mongodb implements IStore {
 					}
 				}
 			}
-			return Pattern.compile("^.*" + keyword + ".*$", Pattern.CASE_INSENSITIVE);
+//			return Pattern.compile("^.*" + keyword + ".*$", Pattern.CASE_INSENSITIVE);
+			return Pattern.compile(".*" + keyword + ".*", Pattern.CASE_INSENSITIVE);
 		};
 		if (query_str.isEmpty()) {
 			query.addCriteria(Criteria.where("page").is(1l));

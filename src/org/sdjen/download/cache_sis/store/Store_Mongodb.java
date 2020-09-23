@@ -291,19 +291,19 @@ public class Store_Mongodb implements IStore {
 		} else if (query_str.toUpperCase().startsWith("D:")) {
 			query.addCriteria(Criteria.where("datetime").is(query_str.substring(2)));
 		} else if (query_str.toUpperCase().startsWith("ALL:")) {
-			query.addCriteria(Criteria.where("page").is(1l));
 			query_str = query_str.substring(4);
 			List<Criteria> mustes = new ArrayList<>();
+			mustes.add(Criteria.where("page").is(1l));
 			for (String qs : query_str.split(" ")) {
 				Pattern pattern = escapeExprSpecialWord.apply(qs.trim());
-				mustes.add(new Criteria().orOperator(new Criteria().orOperator(//
+				mustes.add(new Criteria().orOperator(//
 						Criteria.where("title").regex(pattern)//
 						, Criteria.where("context").regex(pattern)//
 						, Criteria.where("context_comments.context").regex(pattern)//
-				)));
-				if (!mustes.isEmpty())
-					query.addCriteria(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
+				));
 			}
+			if (!mustes.isEmpty())
+				query.addCriteria(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
 		} else {
 			List<Criteria> shoulds = new ArrayList<>();
 			List<Criteria> mustes = new ArrayList<>();

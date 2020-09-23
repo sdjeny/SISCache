@@ -119,7 +119,7 @@ public class HttpUtil {
 		return getHTML(uri, conf.getProperties().getProperty("chatset"));
 	}
 
-	public synchronized String getHTML(final String uri, final String chatset) throws Throwable {
+	public String getHTML(final String uri, final String chatset) throws Throwable {
 		final Executor<String> executor = new Executor<String>() {
 			public void execute(byte[] bytes) throws Throwable {
 				setResult(null);
@@ -139,7 +139,7 @@ public class HttpUtil {
 		return executor.getResult();
 	}
 
-	public synchronized void retry(Retry retry) throws Throwable {
+	public void retry(Retry retry) throws Throwable {
 		boolean stop = false;
 		int count = 0;
 		do {
@@ -166,7 +166,7 @@ public class HttpUtil {
 		return false;
 	}
 
-	public synchronized void execute(String uri, Executor<?> executor) throws Throwable {
+	public void execute(String uri, Executor<?> executor) throws Throwable {
 		logger.debug(">	" + uri);
 		try {
 			boolean needProxy = needProxy(uri);

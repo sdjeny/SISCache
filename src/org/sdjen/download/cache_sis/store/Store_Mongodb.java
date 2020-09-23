@@ -293,13 +293,16 @@ public class Store_Mongodb implements IStore {
 		} else if (query_str.toUpperCase().startsWith("ALL:")) {
 			query.addCriteria(Criteria.where("page").is(1l));
 			query_str = query_str.substring(4);
+			List<Criteria> mustes = new ArrayList<>();
 			for (String qs : query_str.split(" ")) {
 				Pattern pattern = escapeExprSpecialWord.apply(qs.trim());
-				query.addCriteria(new Criteria().orOperator(//
+				mustes.add(new Criteria().orOperator(new Criteria().orOperator(//
 						Criteria.where("title").regex(pattern)//
 						, Criteria.where("context").regex(pattern)//
 						, Criteria.where("context_comments.context").regex(pattern)//
-				));
+				)));
+				if (!mustes.isEmpty())
+					query.addCriteria(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
 			}
 		} else {
 			List<Criteria> shoulds = new ArrayList<>();
@@ -326,11 +329,12 @@ public class Store_Mongodb implements IStore {
 					list.add(Criteria.where(field).regex(pattern));
 				}
 			}
-			mustes.forEach(c -> query.addCriteria(c));
 			if (!shoulds.isEmpty())
-				query.addCriteria(new Criteria().orOperator(shoulds.toArray(new Criteria[] {})));
+				mustes.add(new Criteria().orOperator(shoulds.toArray(new Criteria[] {})));
 			if (!mustNots.isEmpty())
-				query.addCriteria(new Criteria().norOperator(mustNots.toArray(new Criteria[] {})));
+				mustes.add(new Criteria().norOperator(mustNots.toArray(new Criteria[] {})));
+			if (!mustes.isEmpty())
+				query.addCriteria(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
 		}
 		for (String o : order.split(" ")) {
 			if (o.isEmpty())

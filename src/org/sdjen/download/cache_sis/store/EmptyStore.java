@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 public class EmptyStore implements IStore {
 
 	@Override
-	public String getLocalHtml(String id, String page, String url, String title, String dateStr) throws Throwable {
+	public String getLocalHtml(String id, String page) throws Throwable {
 		// TODO Auto-generated method stub
 		return null;
 	}

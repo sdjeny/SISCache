@@ -8,20 +8,29 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
+import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import com.mongodb.client.result.UpdateResult;
 
@@ -45,26 +54,35 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public String getLocalHtml(final String id, final String page, final String url, String title, String dateStr)
-			throws Throwable {
+	public String getLocalHtml(final String id, final String page) throws Throwable {
 		Query query = new Query();
 		query.addCriteria(Criteria.where("id").is(Long.valueOf(id)));
 		query.addCriteria(Criteria.where("page").is(Long.valueOf(page)));
-		query.fields().include("context_zip").include("context").include("page");
-		Map<Object, Object> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
+		query.fields().include("context_zip").include("context_comments").include("context").include("page");
+		Map<?, ?> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
 		if (null != _source) {
-			if (1 != Integer.valueOf(_source.get("page").toString()))
-				return "";
-			String text = (String) _source.get("context_zip");
-			if (null != text) {
-				try {
-					return ZipUtil.uncompress(text);
-				} catch (DataFormatException e1) {
-					e1.printStackTrace();
-					text = null;
+			if (Long.valueOf(page) > 1) {
+				StringBuffer rst = new StringBuffer();
+				rst.append("</br><table border='0'>");
+				List<Map<?, ?>> comments = (List<Map<?, ?>>) _source.get("context_comments");
+				if (null != comments)
+					comments.forEach(m -> {
+						rst.append("<tbody><tr>");
+						rst.append(String.format("<td>%s</td>", m.get("floor")));
+						rst.append(String.format("<td>%s</td>", m.get("context")));
+						rst.append("</tr></tbody>");
+					});
+				rst.append("</table>");
+				return rst.toString();
+			} else {
+				byte[] zip = (byte[]) _source.get("context_zip");
+				if (null != zip) {
+					try {
+						return ZipUtil.uncompress(zip);
+					} catch (DataFormatException e1) {
+						e1.printStackTrace();
+					}
 				}
-			}
-			if (null == text) {
 				return (String) _source.get("context");
 			}
 		}
@@ -216,7 +234,7 @@ public class Store_Mongodb implements IStore {
 		query.addCriteria(Criteria.where("key").is(key));
 		query.addCriteria(Criteria.where("type").is("path"));
 		query.fields().include("path");
-		Map<Object, Object> rst = mongoTemplate.findOne(query, Map.class, "md");
+		Map<?, ?> rst = mongoTemplate.findOne(query, Map.class, "md");
 		return null == rst ? null : (String) rst.get("path");
 	}
 
@@ -235,7 +253,7 @@ public class Store_Mongodb implements IStore {
 //		query.with(Sort.by(Order.asc("DEVID"), Order.desc("TIME")));
 //		query.with(PageRequest.of(page, size, Sort.by(Order.asc("DEVID"), Order.desc("TIME"))));
 		query.fields().include("path");
-		Map<Object, Object> rst = mongoTemplate.findOne(query, Map.class, "md");
+		Map<?, ?> rst = mongoTemplate.findOne(query, Map.class, "md");
 		return null == rst ? null : (String) rst.get("path");
 	}
 
@@ -244,8 +262,115 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable {
-		// TODO Auto-generated method stub
-		return null;
+	public Map<String, Object> getTitleList(int page, int size, String query_str, String order) throws Throwable {
+		Query query = new Query();
+		Set<Order> orders = new LinkedHashSet<>();
+		if (null == query_str)
+			query_str = "";
+		if (null == order)
+			order = "";
+		Function<String, Pattern> escapeExprSpecialWord = keyword -> {
+			if (!StringUtils.isEmpty(keyword)) {
+				String[] fbsArr = { "\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|" };
+				for (String key : fbsArr) {
+					if (keyword.contains(key)) {
+						keyword = keyword.replace(key, "\\" + key);
+					}
+				}
+			}
+			return Pattern.compile("^.*" + keyword + ".*$", Pattern.CASE_INSENSITIVE);
+		};
+		if (query_str.isEmpty()) {
+			query.addCriteria(Criteria.where("page").is(1l));
+		} else if (query_str.toUpperCase().startsWith("D:")) {
+			query.addCriteria(Criteria.where("datetime").is(query_str.substring(2)));
+		} else if (query_str.toUpperCase().startsWith("ALL:")) {
+			query.addCriteria(Criteria.where("page").is(1l));
+			query_str = query_str.substring(4);
+			for (String qs : query_str.split("	")) {
+				Pattern pattern = escapeExprSpecialWord.apply(qs.trim());
+				query.addCriteria(new Criteria().orOperator(//
+						Criteria.where("title").regex(pattern)//
+						, Criteria.where("context").regex(pattern)//
+						, Criteria.where("context_comments.context").regex(pattern)//
+				));
+			}
+		} else {
+			List<Criteria> shoulds = new ArrayList<>();
+			List<Criteria> mustes = new ArrayList<>();
+			List<Criteria> mustNots = new ArrayList<>();
+			for (String q : query_str.split(";")) {
+				if (q.isEmpty())
+					continue;
+				String[] ss = q.split(":");
+				String field = ss[0].replace("'", "^");
+				String vs = ss.length > 1 ? ss[1] : "";
+				for (String v : vs.split(" ")) {
+					if (v.isEmpty())
+						continue;
+					Pattern pattern = escapeExprSpecialWord.apply(v.trim());
+					List<Criteria> list = mustes;// String s = "and";
+					if (v.startsWith("~")) {
+						v = v.substring(1);
+						list = shoulds;// s = "or";
+					} else if (v.startsWith("-")) {
+						v = v.substring(1);
+						list = mustNots;// s = "not";
+					}
+					list.add(Criteria.where(field).regex(pattern));
+				}
+			}
+			mustes.forEach(c -> query.addCriteria(c));
+			if (!shoulds.isEmpty())
+				query.addCriteria(new Criteria().orOperator(shoulds.toArray(new Criteria[] {})));
+			if (!mustNots.isEmpty())
+				query.addCriteria(new Criteria().norOperator(mustNots.toArray(new Criteria[] {})));
+		}
+		for (String o : order.split(" ")) {
+			if (o.isEmpty())
+				continue;
+			String[] ss = o.split(":");
+			orders.add((ss.length > 1 && "asc".equalsIgnoreCase(ss[1])) ? Order.asc(ss[0]) : Order.desc(ss[0]));
+		}
+		if (orders.isEmpty())
+			orders.add(Order.desc("id"));
+
+//		query.addCriteria(Criteria.where("key").is(getMD5(key.getBytes("utf8"))));
+//		query.addCriteria(Criteria.where("type").is("url"));
+//		query.skip(skipNumber);
+//		query.limit(pageSize);
+//		Sort sort = new Sort(Sort.Direction.ASC, "DEVID").and(new Sort(Sort.Direction.ASC, "TIME"));// 多条件DEVID、time
+//		query.with(Sort.by(Order.asc("DEVID"), Order.desc("TIME")));
+		query.fields().include("datetime").include("date_str").include("id").include("page").include("type")
+				.include("title");
+		List<Map<String, Object>> ls = new ArrayList<>();
+		Map<String, Object> result = new HashMap<>();
+		result.put("list", ls);
+		result.put("total", mongoTemplate.count(query, "htmldoc"));
+		query.with(PageRequest.of(page, size, Sort.by(orders.toArray(new Order[] {}))));
+		result.put("json_params", query.toString());
+		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+		SimpleDateFormat dformat = new SimpleDateFormat("yyyy-MM-dd");
+		SimpleDateFormat tformat = new SimpleDateFormat("HH:mm");
+		for (Map<?, ?> _source : mongoTemplate.find(query, Map.class, "htmldoc")) {
+			String datestr, timestr;
+			try {
+				Date date = format.parse((String) _source.get("datetime"));
+				datestr = dformat.format(date);
+				timestr = tformat.format(date);
+			} catch (Exception e) {
+				datestr = (String) _source.get("date_str");
+				timestr = "    ";
+			}
+			ls.add(new EntryData<String, Object>()//
+					.put("date", datestr)//
+					.put("time", timestr)//
+					.put("id", _source.get("id"))//
+					.put("page", _source.get("page"))//
+					.put("type", _source.get("type"))//
+					.put("title", _source.get("title"))//
+					.getData());
+		}
+		return result;
 	}
 }

@@ -10,8 +10,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.zip.DataFormatException;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -21,11 +19,8 @@ import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
-import org.sdjen.download.cache_sis.http.HttpUtil;
-import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.SISDownloadTimer;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,28 +37,28 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 @RequestMapping("/siscache")
 public class Controller_siscache {
 	private final static Logger logger = LoggerFactory.getLogger(Controller_siscache.class);
-	@Autowired
-	private HttpUtil httpUtil;
+//	@Autowired
+//	private HttpUtil httpUtil;
 	@Autowired
 	private SISDownloadTimer timer;
 	@Autowired
 	private DownloadList downloadList;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
-	static ConfUtil conf;
-	private String path_es_start;
+//	static ConfUtil conf;
+//	private String path_es_start;
 
-	public static ConfUtil getConf() throws IOException {
-		if (null == conf)
-			conf = ConfUtil.getDefaultConf();
-		return conf;
-	}
+//	public static ConfUtil getConf() throws IOException {
+//		if (null == conf)
+//			conf = ConfUtil.getDefaultConf();
+//		return conf;
+//	}
 
-	public String getPath_es_start() throws IOException {
-		if (null == path_es_start)
-			path_es_start = getConf().getProperties().getProperty("path_es_start");
-		return path_es_start;
-	}
+//	public String getPath_es_start() throws IOException {
+//		if (null == path_es_start)
+//			path_es_start = getConf().getProperties().getProperty("path_es_start");
+//		return path_es_start;
+//	}
 
 //	public GetConnection getConnection() throws IOException {
 //		if (null == connection) {
@@ -313,47 +308,48 @@ public class Controller_siscache {
 	@RequestMapping("/s/{search}")
 	@ResponseBody
 	String search(@PathVariable("search") String search) {
-		Map<String, Object> params = new HashMap<>();
-		Map<String, Object> _source = new HashMap<>();
-		_source.put("includes", Arrays.asList());
-		_source.put("excludes", Arrays.asList("context"));
-		params.put("_source", _source);
-		params.put("query", Collections.singletonMap("match", Collections.singletonMap("title", search)));
-		params.put("sort", Arrays.asList(//
-				Collections.singletonMap("id.keyword", Collections.singletonMap("order", "desc"))//
-		)//
-		);
-		params.put("size", 1000);
-		params.put("from", 1);
-		StringBuffer rst = new StringBuffer();
-		try {
-			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search?pretty",
-					JsonUtil.toJson(params));
-			logger.debug(js);
-			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
-
-			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits"))
-					.get("hits");
-			for (Map<String, Object> hit : hits) {
-				_source = (Map<String, Object>) hit.get("_source");
-
-				rst.append("<tbody><tr>");
-				rst.append(String.format("<td>%s</td>", _source.get("dat")));
-				rst.append(String.format("<td>%s</td>", "    "));
-				rst.append(
-						String.format("<td><a href='../siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>",
-								_source.get("id"), _source.get("title")));
-
-				rst.append("</tr></tbody>");
-				rst.append("</br>");
-			}
-		} catch (IOException e) {
-			rst.append(e.getMessage());
-			for (java.lang.StackTraceElement element : e.getStackTrace()) {
-				rst.append(element.toString());
-			}
-		}
-		return rst.toString();
+		return list(1, 1000, search);
+//		Map<String, Object> params = new HashMap<>();
+//		Map<String, Object> _source = new HashMap<>();
+//		_source.put("includes", Arrays.asList());
+//		_source.put("excludes", Arrays.asList("context"));
+//		params.put("_source", _source);
+//		params.put("query", Collections.singletonMap("match", Collections.singletonMap("title", search)));
+//		params.put("sort", Arrays.asList(//
+//				Collections.singletonMap("id.keyword", Collections.singletonMap("order", "desc"))//
+//		)//
+//		);
+//		params.put("size", 1000);
+//		params.put("from", 1);
+//		StringBuffer rst = new StringBuffer();
+//		try {
+//			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search?pretty",
+//					JsonUtil.toJson(params));
+//			logger.debug(js);
+//			Map<String, Object> r = JsonUtil.toObject(js, Map.class);
+//
+//			List<Map<String, Object>> hits = (List<Map<String, Object>>) ((Map<String, Object>) r.get("hits"))
+//					.get("hits");
+//			for (Map<String, Object> hit : hits) {
+//				_source = (Map<String, Object>) hit.get("_source");
+//
+//				rst.append("<tbody><tr>");
+//				rst.append(String.format("<td>%s</td>", _source.get("dat")));
+//				rst.append(String.format("<td>%s</td>", "    "));
+//				rst.append(
+//						String.format("<td><a href='../siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>",
+//								_source.get("id"), _source.get("title")));
+//
+//				rst.append("</tr></tbody>");
+//				rst.append("</br>");
+//			}
+//		} catch (IOException e) {
+//			rst.append(e.getMessage());
+//			for (java.lang.StackTraceElement element : e.getStackTrace()) {
+//				rst.append(element.toString());
+//			}
+//		}
+//		return rst.toString();
 	}
 
 	@RequestMapping("/detail/{id}")
@@ -388,79 +384,47 @@ public class Controller_siscache {
 		);
 		StringBuffer rst = new StringBuffer();
 		try {
-			String js = httpUtil.doLocalPostUtf8Json(getPath_es_start() + "html/_doc/_search", JsonUtil.toJson(params));
-			logger.debug(js);
-			ESMap r = JsonUtil.toObject(js, ESMap.class);
-			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
-			for (ESMap hit : hits) {
-				_source = hit.get("_source", ESMap.class);
-				String text;
-				if (page.compareTo("1") > 0) {
-					rst.append("</br><table border='0'>");
-					for (Entry<Object, Object> e : _source.get("context_comments", ESMap.class).entrySet()) {
-						rst.append("<tbody><tr>");
-						rst.append(String.format("<td>%s</td>", e.getKey()));
-						rst.append(String.format("<td>%s</td>", e.getValue()));
-						rst.append("</tr></tbody>");
-					}
-					rst.append("</table>");
-					text = rst.toString();
-				} else {
-					text = (String) _source.get("context_zip");
-					if (null != text) {
-						try {
-							text = ZipUtil.uncompress(text);
-						} catch (DataFormatException e1) {
-							e1.printStackTrace();
-							text = null;
-						}
-					}
-					if (null == text) {
-						text = (String) _source.get("context");
-					}
+			String text = store.getLocalHtml(id, page);
+			org.jsoup.nodes.Document doument = Jsoup.parse(text);
+			boolean update = false;
+			for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
+				if (e.text().isEmpty()) {
+					update = true;
+					e.text(DefaultCss.getCss());
 				}
-				long length_org = text.getBytes().length;
-				org.jsoup.nodes.Document doument = Jsoup.parse(text);
-				boolean update = false;
-				for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
-					if (e.text().isEmpty()) {
-						update = true;
-						e.text(DefaultCss.getCss());
-					}
-				}
-				for (org.jsoup.nodes.Element e : doument//
-						.select("div.mainbox.viewthread")//
-						.select("td.postcontent")//
-						.select("div.postmessage.defaultpost")//
-						.select("div.box.postattachlist")//
-						.select("dl.t_attachlist")//
-						.select("a[href]")//
-				) {
-					String href = e.attr("href");
-					if (href.startsWith("../../torrent/20")) {
-						update = true;
-						e.attr("href", "../" + href);
-					} else if (href.startsWith("../")) {
-						href = href.replace("../", "");
-						if (href.startsWith("http")) {
-							update = true;
-							e.attr("href", href);
-						}
-					}
-				}
-				for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
-					String src = e.attr("src");
-					if (src.startsWith("../../images/20")) {
-						update = true;
-						e.attr("src", "../" + src);
-					}
-				}
-				if (update) {
-					text = doument.html();
-				}
-				rst.append(text);
 			}
-		} catch (IOException e) {
+			for (org.jsoup.nodes.Element e : doument//
+					.select("div.mainbox.viewthread")//
+					.select("td.postcontent")//
+					.select("div.postmessage.defaultpost")//
+					.select("div.box.postattachlist")//
+					.select("dl.t_attachlist")//
+					.select("a[href]")//
+			) {
+				String href = e.attr("href");
+				if (href.startsWith("../../torrent/20")) {
+					update = true;
+					e.attr("href", "../" + href);
+				} else if (href.startsWith("../")) {
+					href = href.replace("../", "");
+					if (href.startsWith("http")) {
+						update = true;
+						e.attr("href", href);
+					}
+				}
+			}
+			for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
+				String src = e.attr("src");
+				if (src.startsWith("../../images/20")) {
+					update = true;
+					e.attr("src", "../" + src);
+				}
+			}
+			if (update) {
+				text = doument.html();
+			}
+			rst.append(text);
+		} catch (Throwable e) {
 			rst.append(e.getMessage());
 			for (java.lang.StackTraceElement element : e.getStackTrace()) {
 				rst.append(element.toString());

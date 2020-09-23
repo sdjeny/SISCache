@@ -13,7 +13,6 @@ import java.util.concurrent.TimeUnit;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
-import org.sdjen.download.cache_sis.log.CassandraFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
 public class DownloadList {
@@ -74,7 +73,7 @@ public class DownloadList {
 		} finally {
 			httpUtil.finish();
 			LogUtil.finishAll();
-			CassandraFactory.getDefaultFactory().finish();
+//			CassandraFactory.getDefaultFactory().finish();
 			// downloadSingle.startDownload("http://www.sexinsex.net/bbs/thread-7701385-1-9.html",
 			// "WW.html");
 			// new

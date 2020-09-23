@@ -13,8 +13,7 @@ public interface IStore {
 	SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd HH:mm:ss:SSS");
 //	String getKey(final String id, final String page, final String url, String title, String dateStr) throws Throwable;
 
-	String getLocalHtml(final String id, final String page, final String url, String title, String dateStr)
-			throws Throwable;
+	String getLocalHtml(final String id, final String page) throws Throwable;
 
 	void saveURL(String url, String path) throws Throwable;
 

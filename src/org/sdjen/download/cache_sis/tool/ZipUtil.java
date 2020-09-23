@@ -117,11 +117,11 @@ public class ZipUtil {
 		return decompressed;
 	}
 
-	public static String compress(String primStr) throws IOException {
+	public static byte[] compress(String primStr) throws IOException {
 		return compress(primStr, 9);
 	}
 
-	public static String compress(String primStr, int level) throws IOException {
+	public static byte[] compress(String primStr, int level) throws IOException {
 		byte input[] = primStr.getBytes(CHARSET);
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		Deflater compressor = new Deflater(level);
@@ -136,7 +136,7 @@ public class ZipUtil {
 		} finally {
 			compressor.end();
 		}
-		return bytesToString(bos.toByteArray());
+		return bos.toByteArray();
 	}
 
 	public static String bytesToString(byte[] bytes) throws IOException {
@@ -150,7 +150,10 @@ public class ZipUtil {
 	}
 
 	public static String uncompress(String compressedStr) throws DataFormatException, IOException {
-		byte[] input = stringToBytes(compressedStr);
+		return uncompress(stringToBytes(compressedStr));
+	}
+
+	public static String uncompress(byte[] input) throws DataFormatException, IOException {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		Inflater decompressor = new Inflater();
 		try {

@@ -22,11 +22,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
-import org.sdjen.download.cache_sis.log.CassandraFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.store.Store_Cassandra;
 
 public class DownloadSingle {
 	private String html = "";
@@ -74,7 +72,7 @@ public class DownloadSingle {
 		}
 		if (isStore)
 			conf.store();
-		store = new Store_Cassandra();
+//		store = new Store_Cassandra();
 		// cassandraFactory = CassandraFactory.getDefaultFactory();
 	}
 

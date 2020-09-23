@@ -161,7 +161,7 @@ public class DownloadSingle {
 //		String key = store.getKey(id, page, url, title, dateStr);
 		String tmp_html = type.contains("cover")// 覆盖模式
 				? null // 不管是否存在，都重新读取
-				: store.getLocalHtml(id, page, url, title, dateStr);// 否则获取本地文件
+				: store.getLocalHtml(id, page);// 否则获取本地文件
 		if ((type.isEmpty() || Integer.valueOf(page) > 1) && null != tmp_html)// 不是特殊模式且文件已存在!
 			return null;// 跳过
 		// File newFile = new File(save_path + "/" + sub_html + "/" + title);
@@ -434,7 +434,7 @@ public class DownloadSingle {
 						// mapDBUtil.commit();
 						// lock_w_mapdb.unlock();
 						store.saveMD5(md5, result);
-						store.msg("	+{0}	->{1}", url, result);
+						logger.debug("	+{}	->{}", url, result);
 					}
 					setResult(result);
 				}

@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.zip.DataFormatException;
 
 import javax.annotation.Resource;
@@ -128,32 +129,42 @@ public class Store_ElasticSearch implements IStore {
 		}
 	}
 
-	private String getKey(String id, String page, String url, String title, String dateStr) {
+	private String getKey(String id, String page) {
 		return id + "_" + page;
 	}
 
 	@Override
-	public String getLocalHtml(final String id, final String page, final String url, String title, String dateStr)
-			throws Throwable {
-		String key = getKey(id, page, url, title, dateStr);
+	public String getLocalHtml(final String id, final String page) throws Throwable {
+		String key = getKey(id, page);
 		String ss = httpUtil.doLocalGet(path_es_start + "html/_doc/{key}",
 				new EntryData<String, String>().put("key", key).getData());
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
 		ESMap _source = esMap.get("_source", ESMap.class);
 		if (null != _source) {
-			if (1 != Integer.valueOf(_source.get("page").toString()))
-				return "";
-			String text = _source.get("context_zip", String.class);
-			if (null != text) {
-				try {
-					return ZipUtil.uncompress(text);
-				} catch (DataFormatException e1) {
-					e1.printStackTrace();
-					text = null;
+			if (page.compareTo("1") > 0) {
+				StringBuffer rst = new StringBuffer();
+				rst.append("</br><table border='0'>");
+				for (Entry<Object, Object> e : _source.get("context_comments", ESMap.class).entrySet()) {
+					rst.append("<tbody><tr>");
+					rst.append(String.format("<td>%s</td>", e.getKey()));
+					rst.append(String.format("<td>%s</td>", e.getValue()));
+					rst.append("</tr></tbody>");
 				}
-			}
-			if (null == text) {
-				return _source.get("context", String.class);
+				rst.append("</table>");
+				return rst.toString();
+			} else {
+				String text = _source.get("context_zip", String.class);
+				if (null != text) {
+					try {
+						return ZipUtil.uncompress(text);
+					} catch (DataFormatException e1) {
+						e1.printStackTrace();
+						text = null;
+					}
+				}
+				if (null == text) {
+					return _source.get("context", String.class);
+				}
 			}
 		}
 		return null;
@@ -162,7 +173,7 @@ public class Store_ElasticSearch implements IStore {
 	@Override
 	public void saveHtml(final String id, final String page, final String url, String title, String dateStr,
 			String text) throws Throwable {
-		String key = getKey(id, page, url, title, dateStr);
+		String key = getKey(id, page);
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
 		org.jsoup.nodes.Element h1 = doument.select("div.mainbox").select("h1").first();
 		if (null == h1)
@@ -290,7 +301,7 @@ public class Store_ElasticSearch implements IStore {
 			json.put("fid", 143);
 			json.put("type", type);
 			json.put("context", context);
-			json.put("context_zip", ZipUtil.compress(text));
+			json.put("context_zip", ZipUtil.bytesToString(ZipUtil.compress(text)));
 			json.put("author", author);
 		}
 		String r = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json));

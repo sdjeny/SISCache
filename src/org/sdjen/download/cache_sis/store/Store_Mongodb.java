@@ -16,6 +16,7 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
 
+import org.bson.types.Binary;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
@@ -76,10 +77,10 @@ public class Store_Mongodb implements IStore {
 				rst.append("</table>");
 				return rst.toString();
 			} else {
-				byte[] zip = (byte[]) _source.get("context_zip");
+				Binary zip = (Binary) _source.get("context_zip");
 				if (null != zip) {
 					try {
-						return ZipUtil.uncompress(zip);
+						return ZipUtil.uncompress(zip.getData());
 					} catch (DataFormatException e1) {
 						e1.printStackTrace();
 					}
@@ -350,7 +351,10 @@ public class Store_Mongodb implements IStore {
 		Map<String, Object> result = new HashMap<>();
 		result.put("list", ls);
 		result.put("total", mongoTemplate.count(query, "htmldoc"));
-		query.with(PageRequest.of(page, size, Sort.by(orders.toArray(new Order[] {}))));
+		query.skip((page - 1) * size);
+		query.limit(size);
+		query.with(Sort.by(orders.toArray(new Order[] {})));
+//		query.with(PageRequest.of(page, size, Sort.by(orders.toArray(new Order[] {}))));
 		result.put("json_params", query.toString());
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
 		SimpleDateFormat dformat = new SimpleDateFormat("yyyy-MM-dd");

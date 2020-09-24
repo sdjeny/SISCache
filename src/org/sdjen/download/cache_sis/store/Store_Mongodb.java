@@ -106,7 +106,7 @@ public class Store_Mongodb implements IStore {
 		String fid = null;
 		for (org.jsoup.nodes.Element element : doument.select("#foruminfo").select("a")) {
 			String href = element.attr("href");
-			if (href.startsWith("forum-")) {
+			if (null != href && href.startsWith("forum-")) {
 				href = href.substring("forum-".length());
 				fid = href.split("-")[0];
 			}

@@ -1,5 +1,6 @@
 package org.sdjen.download.cache_sis.store;
 
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,8 +60,9 @@ public class EmptyStore implements IStore {
 
 	@Override
 	public Set<String> getProxyUrls() {
-		// TODO Auto-generated method stub
-		return null;
+		Set<String> s = new LinkedHashSet<String>();
+		s.add("http://www.sexinsex.net");
+		return s;
 	}
 
 	@Override

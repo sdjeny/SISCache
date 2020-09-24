@@ -103,6 +103,14 @@ public class Store_Mongodb implements IStore {
 		String dat = null;
 		String context = null;
 		String author = null;
+		String fid = null;
+		for (org.jsoup.nodes.Element element : doument.select("#foruminfo").select("a")) {
+			String href = element.attr("href");
+			if (href.startsWith("forum-")) {
+				href = href.substring("forum-".length());
+				fid = href.split("-")[0];
+			}
+		}
 		for (org.jsoup.nodes.Element tbody : doument.select("div.mainbox.viewthread")//// class=mainbox的div
 				.select("table")//
 				.select("tbody")//
@@ -188,7 +196,7 @@ public class Store_Mongodb implements IStore {
 				}
 			} catch (Exception e1) {
 			}
-			json.put("fid", 143);
+			json.put("fid", fid);
 			json.put("type", type);
 			json.put("context", context);
 			json.put("context_zip", ZipUtil.compress(text));

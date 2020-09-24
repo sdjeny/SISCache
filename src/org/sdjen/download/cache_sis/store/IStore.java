@@ -53,7 +53,7 @@ public interface IStore {
 			return ((TextNode) comment).text();
 		} else {
 			StringBuilder result = new StringBuilder();
-			comment.childNodes().forEach(child -> result.append(toTextOnly(child)).append('\n'));
+			comment.childNodes().forEach(child -> result.append(toTextOnly(child)).append(' '));
 			return result.toString().trim();
 		}
 	}

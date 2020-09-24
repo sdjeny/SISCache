@@ -1,6 +1,9 @@
 package org.sdjen.download.cache_sis.test;
 
-import java.io.FileInputStream;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.List;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.TextNode;
@@ -18,11 +21,12 @@ public class TestJsoup {
 
 	public static void main(String[] args) throws Throwable {
 
-		FileInputStream inputStream = new FileInputStream("src/org/sdjen/download/cache_sis/test/sisdemo.html");
-		String html = new String(inputStream.readAllBytes(), "GBK");
-		inputStream.close();
+		StringBuffer html = new StringBuffer();
+		List<String> lines = Files.readAllLines(Paths.get("src/org/sdjen/download/cache_sis/test/sisdemo.html"),
+				Charset.forName("GBK"));
+		lines.forEach(str -> html.append(str));
 
-		org.jsoup.nodes.Document doument = Jsoup.parse(html);
+		org.jsoup.nodes.Document doument = Jsoup.parse(html.toString());
 		for (org.jsoup.nodes.Element element : doument.select("#foruminfo").select("a")) {
 			String href = element.attr("href");
 			if (href.startsWith("forum-")) {

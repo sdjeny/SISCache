@@ -3,13 +3,12 @@ package org.sdjen.download.cache_sis.http;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.text.MessageFormat;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.store.IStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpEntity;
@@ -28,9 +27,10 @@ public class HttpUtil {
 	private RestTemplate restTemplate;
 	@Resource(name = "proxyRestTemplate")
 	private RestTemplate proxyRestTemplate;
+	@Resource(name = "${definde.service.name.store}")
+	private IStore store;
 
 	private ConfUtil conf;
-	private Set<String> proxy_urls = new HashSet<String>();
 	private int retry_times = 5;
 	private int retry_time_second = 30;
 
@@ -67,15 +67,6 @@ public class HttpUtil {
 				retry_time_second = Integer.valueOf(conf.getProperties().getProperty("retry_time_second"));
 			} catch (Exception e) {
 				conf.getProperties().setProperty("retry_time_second", String.valueOf(retry_time_second));
-				isStore = true;
-			}
-			try {
-				for (String s : conf.getProperties().getProperty("proxy_urls").split(",")) {
-					proxy_urls.add(s.trim());
-				}
-				proxy_urls.remove("");
-			} catch (Exception e) {
-				conf.getProperties().setProperty("proxy_urls", "http://www.sexinsex.net");
 				isStore = true;
 			}
 			if (isStore)
@@ -159,7 +150,7 @@ public class HttpUtil {
 	}
 
 	private boolean needProxy(String uri) {
-		for (String s : proxy_urls) {
+		for (String s : store.getProxyUrls()) {
 			if (uri.startsWith(s))
 				return true;
 		}
@@ -181,21 +172,11 @@ public class HttpUtil {
 			} catch (Exception e) {
 				if (!needProxy) {
 					rsp = proxyRestTemplate.exchange(uri, HttpMethod.GET, ent, byte[].class);
-					int index = uri.indexOf('/', 9);
-					String proxy_url;
-					if (-1 != index)
-						proxy_url = uri.substring(0, index);// 排除参数部分
-					else
-						proxy_url = uri;
-					if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
-						proxy_urls.add(proxy_url);
-						conf.getProperties().setProperty("proxy_urls",
-								conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
-						conf.store();
-						System.out.println(">>>>>>>>>ADD:	" + proxy_url);
-					}
-				} else {// 已经经过代理的直接终止了
-					throw e;
+					store.addProxyUrl(uri);
+				} else {
+					rsp = restTemplate.exchange(uri, HttpMethod.GET, ent, byte[].class);
+					store.removeProxyUrl(uri);
+//					throw e;// 已经经过代理的直接终止了
 				}
 			}
 			if (rsp == null || !rsp.getStatusCode().is2xxSuccessful()) {

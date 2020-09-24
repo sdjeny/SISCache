@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,6 @@ import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -42,6 +42,7 @@ public class Store_Mongodb implements IStore {
 	@Autowired
 	private MongoTemplate mongoTemplate;
 	private String[] fbsArr = { "\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|" };
+	private static Set<String> proxy_urls;
 
 	public ConfUtil getConf() throws IOException {
 		if (null == conf) {
@@ -146,7 +147,8 @@ public class Store_Mongodb implements IStore {
 					continue;
 				if ("1楼".equals(floor)) {
 					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")) {
-						context = comment.html();
+//						context = comment.html();
+						context = toTextOnly(comment);
 					}
 				} else {
 					String fm = "";
@@ -384,5 +386,35 @@ public class Store_Mongodb implements IStore {
 					.getData());
 		}
 		return result;
+	}
+
+	@Override
+	public synchronized Set<String> getProxyUrls() {
+		if (null == proxy_urls) {
+			proxy_urls = new HashSet<>();
+			mongoTemplate.findAll(Map.class, "urls_proxy").forEach(m -> proxy_urls.add((String) m.get("url")));
+			proxy_urls.remove("");
+		}
+		return proxy_urls;
+	}
+
+	@Override
+	public void addProxyUrl(String url) {
+		String proxy_url = cutForProxy(url);
+		if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
+			proxy_urls.add(proxy_url);
+			msg(">>>>>>>>>ADD:	{0}", mongoTemplate
+					.insert(new EntryData<String, Object>().put("url", proxy_url).getData(), "urls_proxy"));
+		}
+	}
+
+	@Override
+	public void removeProxyUrl(String url) {
+		String proxy_url = cutForProxy(url);
+		if (!proxy_url.isEmpty() && proxy_urls.contains(proxy_url)) {
+			proxy_urls.remove(proxy_url);
+			msg(">>>>>>>>>REMOVE:	{0}",
+					mongoTemplate.findAllAndRemove(Query.query(Criteria.where("url").is(proxy_url)), "urls_proxy"));
+		}
 	}
 }

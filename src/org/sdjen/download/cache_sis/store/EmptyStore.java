@@ -1,9 +1,8 @@
 package org.sdjen.download.cache_sis.store;
 
 import java.util.Map;
+import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service("Store_Empty")
@@ -56,6 +55,24 @@ public class EmptyStore implements IStore {
 	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public Set<String> getProxyUrls() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void addProxyUrl(String url) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void removeProxyUrl(String url) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

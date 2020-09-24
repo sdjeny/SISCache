@@ -3,16 +3,17 @@ package org.sdjen.download.cache_sis.store;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
-import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.zip.DataFormatException;
 
 import javax.annotation.Resource;
@@ -41,6 +42,7 @@ public class Store_ElasticSearch implements IStore {
 	private String logName;
 	private String charset;
 	private ConfUtil conf;
+	private static Set<String> proxy_urls;
 
 	public ConfUtil getConf() throws IOException {
 		if (null == conf) {
@@ -473,5 +475,53 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public void refreshMsgLog() {
+	}
+
+	public synchronized Set<String> getProxyUrls() {
+		if (null == proxy_urls) {
+			proxy_urls = new HashSet<>();
+			try {
+				ConfUtil conf = ConfUtil.getDefaultConf();
+				for (String s : conf.getProperties().getProperty("proxy_urls").split(",")) {
+					proxy_urls.add(s.trim());
+				}
+				proxy_urls.remove("");
+			} catch (Throwable e) {
+				e.printStackTrace();
+			}
+		}
+		return proxy_urls;
+	}
+
+	public void addProxyUrl(String url) {
+		try {
+			ConfUtil conf = ConfUtil.getDefaultConf();
+			String proxy_url = cutForProxy(url);
+			if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
+				proxy_urls.add(proxy_url);
+				conf.getProperties().setProperty("proxy_urls",
+						conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
+				conf.store();
+				msg(">>>>>>>>>ADD:	{0}", proxy_url);
+			}
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void removeProxyUrl(String url) {
+		try {
+			ConfUtil conf = ConfUtil.getDefaultConf();
+			String proxy_url = cutForProxy(url);
+			if (!proxy_url.isEmpty() && proxy_urls.contains(proxy_url)) {
+				proxy_urls.remove(proxy_url);
+				conf.getProperties().setProperty("proxy_urls",
+						conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
+				conf.store();
+				msg(">>>>>>>>>remove:	{0}", proxy_url);
+			}
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
 	}
 }

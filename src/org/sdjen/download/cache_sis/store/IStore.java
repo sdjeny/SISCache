@@ -4,7 +4,9 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 
+import org.jsoup.nodes.TextNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,32 @@ public interface IStore {
 
 	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable;
 
+	default String cutForProxy(String url) {
+		int index = url.indexOf('/', 9);
+		String result;
+		if (-1 != index)
+			result = url.substring(0, index);// 排除参数部分
+		else
+			result = url;
+		return result;
+	}
+
+	Set<String> getProxyUrls();
+
+	void addProxyUrl(String url);
+
+	void removeProxyUrl(String url);
+
+	default String toTextOnly(org.jsoup.nodes.Node comment) {
+		if (comment instanceof TextNode) {
+			return ((TextNode) comment).text();
+		} else {
+			StringBuilder result = new StringBuilder();
+			comment.childNodes().forEach(child -> result.append(toTextOnly(child)).append('\n'));
+			return result.toString().trim();
+		}
+	}
+
 	default StringBuilder getMsgText(Object pattern, Object... args) {
 		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));
 		builder.append("	,");
@@ -43,6 +71,10 @@ public interface IStore {
 
 	default void msg(Object pattern, Object... args) {
 		logger.info(getMsgText(pattern, args).toString());
+	}
+
+	default void debug(Object pattern, Object... args) {
+		logger.debug(getMsgText(pattern, args).toString());
 	}
 
 	default void err(Object pattern, Object... args) {

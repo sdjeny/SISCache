@@ -22,19 +22,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-@Service("TestThreadsDownloadTimer")
-public class TestThreadsDownloadTimer implements InitStartTimer {
-	private final static Logger logger = LoggerFactory.getLogger(TestThreadsDownloadTimer.class);
+@Service("TestTimer")
+public class TestTimer implements InitStartTimer {
+	private final static Logger logger = LoggerFactory.getLogger(TestTimer.class);
 	@Autowired
 	private HttpUtil httpUtil;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
 
-	public TestThreadsDownloadTimer() {
-		System.out.println(">>>>>>>>>>>>TestThreadsDownloadTimer");
+	public TestTimer() {
+		System.out.println(">>>>>>>>>>>>TestTimer");
 	}
 
 	public void restart(double hours) throws Throwable {
+//		httpUtil.getHTML("https://www.baidu.com/", "utf8");
 //		System.out.println(httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-8752715-1-1.html"));
 //		for (int i = 2; i < 3; i++) {
 //			String uri = MessageFormat.format("http://www.sexinsex.net/bbs/forum-143-{0}.html", String.valueOf(i));

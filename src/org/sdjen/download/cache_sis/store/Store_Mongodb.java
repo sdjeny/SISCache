@@ -205,7 +205,7 @@ public class Store_Mongodb implements IStore {
 		save("htmldoc", json, "fid", "id", "page");
 	}
 
-	private synchronized void save(String collectionName, Map<String, Object> objectToSave, String... keys) {
+	private void save(String collectionName, Map<String, Object> objectToSave, String... keys) {
 		Query query = new Query();
 		Update update = new Update();
 		java.util.List<String> ks = Arrays.asList(keys);

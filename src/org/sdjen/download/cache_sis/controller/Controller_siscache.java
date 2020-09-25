@@ -24,6 +24,7 @@ import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,6 +46,10 @@ public class Controller_siscache {
 	private DownloadList downloadList;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
+	@Value("${siscache.conf.can_restart}")
+	private boolean can_restart = true;
+	@Value("${siscache.conf.can_reload}")
+	private boolean can_reload = true;
 //	static ConfUtil conf;
 //	private String path_es_start;
 
@@ -90,8 +95,8 @@ public class Controller_siscache {
 		{
 			rst.append("<tbody><tr>");
 			rst.append(
-					"<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Search(eg.)</a></td>");
-			rst.append(String.format("<td>%s</td>", "q=type:新片;title:碧 ~筱 -白"));
+					"<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:~碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Search(eg.)</a></td>");
+			rst.append(String.format("<td>%s</td>", "q=type:新片;title:~碧 ~筱 -白"));
 			rst.append(String.format("<td>%s</td>", "~:or -:not"));
 			rst.append("</tr></tbody>");
 		}
@@ -103,14 +108,14 @@ public class Controller_siscache {
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
 		}
-		{
+		if (can_restart) {
 			rst.append("<tbody><tr>");
 			rst.append("<td><a href='/siscache/restart/2' title='新窗口打开' target='_blank'>restart</a></td>");
 			rst.append(String.format("<td>%s</td>", "restart/hours"));
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
 		}
-		{
+		if (can_reload) {
 			rst.append("<tbody><tr>");
 			rst.append(
 					"<td><a href='/siscache/cache/1/30/torrent,image' title='新窗口打开' target='_blank'>reload</a></td>");

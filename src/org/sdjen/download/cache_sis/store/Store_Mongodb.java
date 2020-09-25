@@ -315,20 +315,20 @@ public class Store_Mongodb implements IStore {
 			if (!mustes.isEmpty())
 				query.addCriteria(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
 		} else {
-			List<Criteria> shoulds = new ArrayList<>();
-			List<Criteria> mustes = new ArrayList<>();
-			List<Criteria> mustNots = new ArrayList<>();
+			List<Criteria> and = new ArrayList<>();
 			for (String q : query_str.split(";")) {
 				if (q.isEmpty())
 					continue;
+				List<Criteria> shoulds = new ArrayList<>();
+				List<Criteria> mustes = new ArrayList<>();
+				List<Criteria> mustNots = new ArrayList<>();
 				String[] ss = q.split(":");
 				String field = ss[0].replace("'", "^");
 				String vs = ss.length > 1 ? ss[1] : "";
 				for (String v : vs.split(" ")) {
 					if (v.isEmpty())
 						continue;
-					Pattern pattern = escapeExprSpecialWord.apply(v.trim());
-					List<Criteria> list = mustes;// String s = "and";
+					List<Criteria> list = and;// String s = "and";
 					if (v.startsWith("~")) {
 						v = v.substring(1);
 						list = shoulds;// s = "or";
@@ -336,15 +336,22 @@ public class Store_Mongodb implements IStore {
 						v = v.substring(1);
 						list = mustNots;// s = "not";
 					}
+					Pattern pattern = escapeExprSpecialWord.apply(v.trim());
 					list.add(Criteria.where(field).regex(pattern));
 				}
+				if (!shoulds.isEmpty())
+					and.add(new Criteria().orOperator(shoulds.toArray(new Criteria[] {})));
+				if (!mustNots.isEmpty())
+					and.add(new Criteria().norOperator(mustNots.toArray(new Criteria[] {})));
+//				if (!mustes.isEmpty())
+//					and.add(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
 			}
-			if (!shoulds.isEmpty())
-				mustes.add(new Criteria().orOperator(shoulds.toArray(new Criteria[] {})));
-			if (!mustNots.isEmpty())
-				mustes.add(new Criteria().norOperator(mustNots.toArray(new Criteria[] {})));
-			if (!mustes.isEmpty())
-				query.addCriteria(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
+//			if (!shoulds.isEmpty())
+//				mustes.add(new Criteria().orOperator(shoulds.toArray(new Criteria[] {})));
+//			if (!mustNots.isEmpty())
+//				mustes.add(new Criteria().norOperator(mustNots.toArray(new Criteria[] {})));
+			if (!and.isEmpty())
+				query.addCriteria(new Criteria().andOperator(and.toArray(new Criteria[] {})));
 		}
 		for (String o : order.split(" ")) {
 			if (o.isEmpty())

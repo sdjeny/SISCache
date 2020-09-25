@@ -3,9 +3,8 @@ package org.sdjen.download.cache_sis.init;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.conf.ConfUtil;
-import org.sdjen.download.cache_sis.service.InitStartTimer;
-import org.sdjen.download.cache_sis.service.SISDownloadTimer;
 import org.sdjen.download.cache_sis.test.morebeen.MoreBeenItfc;
+import org.sdjen.download.cache_sis.timer.InitStartTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

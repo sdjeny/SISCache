@@ -20,13 +20,13 @@ public class TestJsoup {
 	}
 
 	public static void main(String[] args) throws Throwable {
-
 		StringBuffer html = new StringBuffer();
 		List<String> lines = Files.readAllLines(Paths.get("src/org/sdjen/download/cache_sis/test/sisdemo.html"),
 				Charset.forName("GBK"));
 		lines.forEach(str -> html.append(str));
-
 		org.jsoup.nodes.Document doument = Jsoup.parse(html.toString());
+		org.jsoup.nodes.Element title = doument.select("div.mainbox").select("h1").first();
+		System.out.println(title.textNodes());
 		for (org.jsoup.nodes.Element element : doument.select("#foruminfo").select("a")) {
 			String href = element.attr("href");
 			if (href.startsWith("forum-")) {
@@ -34,6 +34,7 @@ public class TestJsoup {
 				System.out.println(href.split("-")[0]);
 			}
 		}
+		System.out.println(doument.select("#foruminfo #nav").first().textNodes());
 		for (org.jsoup.nodes.Element element : doument.select("#foruminfo #nav")) {
 			System.out.println(element.text());
 		}
@@ -55,7 +56,7 @@ public class TestJsoup {
 				continue;
 			if ("1楼".equals(floor)) {
 				for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")) {
-					System.out.println(toTextOnly(comment));
+//					System.out.println(toTextOnly(comment));
 				}
 			} else {
 			}

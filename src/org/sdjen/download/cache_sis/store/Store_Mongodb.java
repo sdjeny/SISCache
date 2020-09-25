@@ -407,7 +407,7 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public void addProxyUrl(String url) {
+	public synchronized void addProxyUrl(String url) {
 		String proxy_url = cutForProxy(url);
 		if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
 			proxy_urls.add(proxy_url);
@@ -417,7 +417,7 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public void removeProxyUrl(String url) {
+	public synchronized void removeProxyUrl(String url) {
 		String proxy_url = cutForProxy(url);
 		if (!proxy_url.isEmpty() && proxy_urls.contains(proxy_url)) {
 			proxy_urls.remove(proxy_url);

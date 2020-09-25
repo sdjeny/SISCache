@@ -1,20 +1,14 @@
 package org.sdjen.download.cache_sis.json;
 
 import java.io.IOException;
-import java.lang.reflect.AnnotatedElement;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
-import org.springframework.format.annotation.DateTimeFormat;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.introspect.Annotated;
-import com.fasterxml.jackson.databind.introspect.AnnotatedMethod;
-import com.fasterxml.jackson.databind.introspect.JacksonAnnotationIntrospector;
 
 public class JsonUtil {
 	// private static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";

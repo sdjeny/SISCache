@@ -22,7 +22,6 @@ import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 
 public class ListES {
 	private final static Logger logger = Logger.getLogger(ListES.class.toString());

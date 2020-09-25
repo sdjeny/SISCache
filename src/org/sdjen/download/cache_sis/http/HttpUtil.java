@@ -2,7 +2,6 @@ package org.sdjen.download.cache_sis.http;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.Map;
 
 import javax.annotation.Resource;
@@ -144,7 +143,7 @@ public class HttpUtil {
 				stop = count >= retry_times;
 				if (stop)
 					throw e;
-				System.err.println(MessageFormat.format("Retry	{0}	{1}", count, e));
+				logger.debug("Retry	{}	{}", count, e);
 			}
 		} while (!stop);
 	}

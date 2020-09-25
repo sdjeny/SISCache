@@ -25,14 +25,11 @@ import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
-	private final static Logger logger = LoggerFactory.getLogger(Store_ElasticSearch.class);
 	@Autowired
 	private HttpUtil httpUtil;
 	@Resource(name = "Store_Mongodb")
@@ -493,7 +490,7 @@ public class Store_ElasticSearch implements IStore {
 		return proxy_urls;
 	}
 
-	public void addProxyUrl(String url) {
+	public synchronized void addProxyUrl(String url) {
 		try {
 			ConfUtil conf = ConfUtil.getDefaultConf();
 			String proxy_url = cutForProxy(url);
@@ -509,7 +506,7 @@ public class Store_ElasticSearch implements IStore {
 		}
 	}
 
-	public void removeProxyUrl(String url) {
+	public synchronized void removeProxyUrl(String url) {
 		try {
 			ConfUtil conf = ConfUtil.getDefaultConf();
 			String proxy_url = cutForProxy(url);

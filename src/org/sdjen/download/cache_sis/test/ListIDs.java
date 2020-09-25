@@ -2,15 +2,10 @@ package org.sdjen.download.cache_sis.test;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.zip.DataFormatException;
 
-import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.DownloadSingle;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
@@ -18,8 +13,6 @@ import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
-import org.sdjen.download.cache_sis.tool.ZipUtil;
 
 public class ListIDs {
 	GetConnection connection;

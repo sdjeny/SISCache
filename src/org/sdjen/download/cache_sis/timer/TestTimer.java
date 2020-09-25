@@ -1,30 +1,14 @@
-package org.sdjen.download.cache_sis.service;
-
-import java.text.MessageFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+package org.sdjen.download.cache_sis.timer;
 
 import javax.annotation.Resource;
 
-import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.util.EntryData;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service("TestTimer")
 public class TestTimer implements InitStartTimer {
-	private final static Logger logger = LoggerFactory.getLogger(TestTimer.class);
 	@Autowired
 	private HttpUtil httpUtil;
 	@Resource(name = "${definde.service.name.store}")

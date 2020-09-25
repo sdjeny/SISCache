@@ -5,7 +5,6 @@ import java.io.InputStream;
 import javax.net.ssl.HostnameVerifier;
 
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpHost;
 import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
@@ -44,11 +43,11 @@ public class DDD {
 		org.apache.http.impl.client.CloseableHttpClient client = HttpClients.custom()//
 		        .setConnectionManager(poolConnManager)//
 		        .setDefaultRequestConfig(RequestConfig.custom()//
-		                .setConnectTimeout(10000)// ÉèÖÃÁ¬½Ó³¬Ê±Ê±¼ä£¬µ¥Î»ºÁÃë¡£
-		                .setConnectionRequestTimeout(10000) // ÉèÖÃ´ÓconnectManager(Á¬½Ó³Ø)»ñÈ¡Connection³¬Ê±Ê±¼ä£¬µ¥Î»ºÁÃë¡£Õâ¸öÊôÐÔÊÇÐÂ¼ÓµÄÊôÐÔ£¬ÒòÎªÄ¿Ç°°æ±¾ÊÇ¿ÉÒÔ¹²ÏíÁ¬½Ó³ØµÄ¡£
-		                .setSocketTimeout(10000)// ÇëÇó»ñÈ¡Êý¾ÝµÄ³¬Ê±Ê±¼ä(¼´ÏìÓ¦Ê±¼ä)£¬µ¥Î»ºÁÃë¡£Èç¹û·ÃÎÊÒ»¸ö½Ó¿Ú£¬¶àÉÙÊ±¼äÄÚÎÞ·¨·µ»ØÊý¾Ý£¬¾ÍÖ±½Ó·ÅÆú´Ë´Îµ÷ÓÃ¡£
+		                .setConnectTimeout(10000)// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ï¿½Ê±Ê±ï¿½ä£¬ï¿½ï¿½Î»ï¿½ï¿½ï¿½ë¡£
+		                .setConnectionRequestTimeout(10000) // ï¿½ï¿½ï¿½Ã´ï¿½connectManager(ï¿½ï¿½ï¿½Ó³ï¿½)ï¿½ï¿½È¡Connectionï¿½ï¿½Ê±Ê±ï¿½ä£¬ï¿½ï¿½Î»ï¿½ï¿½ï¿½ë¡£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼Óµï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ÎªÄ¿Ç°ï¿½æ±¾ï¿½Ç¿ï¿½ï¿½Ô¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó³ØµÄ¡ï¿½
+		                .setSocketTimeout(10000)// ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ÝµÄ³ï¿½Ê±Ê±ï¿½ï¿½(ï¿½ï¿½ï¿½ï¿½Ó¦Ê±ï¿½ï¿½)ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ë¡£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ó¿Ú£ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½Ö±ï¿½Ó·ï¿½ï¿½ï¿½ï¿½Ë´Îµï¿½ï¿½Ã¡ï¿½
 		                .setCookieSpec(CookieSpecs.IGNORE_COOKIES)//
-//		                .setProxy(new HttpHost("127.0.0.1", 9666, "http"))// °Ñ´úÀíÉèÖÃµ½ÇëÇóÅäÖÃ
+//		                .setProxy(new HttpHost("127.0.0.1", 9666, "http"))// ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 		                .build())//
 		        .build();
 		InputStream in = null;
@@ -59,7 +58,7 @@ public class DDD {
 		        "https://www1.wi.to/2018/03/29/87188c533dce9cfaa1e34992c693a5d5.jpg"//
 		;
 		get = new HttpGet(url);
-		try {// ÏÈ²»Òª´úÀíÍæÒ»´Î
+		try {// ï¿½È²ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 			response = client.execute(get);
 			HttpEntity entity = response.getEntity();
 			if (entity != null) {
@@ -84,7 +83,7 @@ public class DDD {
 					}
 				}
 			}
-		} catch (IOException e) {// ²»ÐÐ¾ÍÊ¹ÓÃ´úÀíÔÙÍæÒ»´Î
+		} catch (IOException e) {// ï¿½ï¿½ï¿½Ð¾ï¿½Ê¹ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 			e.printStackTrace();
 			get.abort();
 		}

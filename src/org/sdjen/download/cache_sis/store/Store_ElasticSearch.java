@@ -26,6 +26,7 @@ import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service("Store_ElasticSearch")
@@ -34,7 +35,8 @@ public class Store_ElasticSearch implements IStore {
 	private HttpUtil httpUtil;
 	@Resource(name = "Store_Mongodb")
 	private IStore store;
-	private String path_es_start = "http://192.168.0.237:9200/siscache_";
+	@Value("${siscache.conf.path_es_start}")
+	private String path_es_start;
 	private MessageDigest md5Digest;
 	private String logName;
 	private String charset;
@@ -77,15 +79,6 @@ public class Store_ElasticSearch implements IStore {
 		md5Digest = MessageDigest.getInstance("MD5");
 		ConfUtil conf = getConf();
 		boolean isStore = false;
-		String temp = conf.getProperties().getProperty("path_es_start");
-		if (null == temp) {
-			conf.getProperties().setProperty("path_es_start", path_es_start);
-			isStore = true;
-		} else {
-			path_es_start = temp;
-		}
-		if (isStore)
-			conf.store();
 		refreshMsgLog();
 		{// html.context_zip字段不参与检索
 			StringBuilder postStr = new StringBuilder();
@@ -392,6 +385,9 @@ public class Store_ElasticSearch implements IStore {
 			for (String q : query.split(";")) {
 				if (q.isEmpty())
 					continue;
+				List<ESMap> and = new ArrayList<>();
+				List<ESMap> or = new ArrayList<>();
+				List<ESMap> nor = new ArrayList<>();
 				String[] ss = q.split(":");
 				String field = ss[0].replace("'", "^");
 				String vs = ss.length > 1 ? ss[1] : "";
@@ -399,15 +395,15 @@ public class Store_ElasticSearch implements IStore {
 					if (v.isEmpty())
 						continue;
 					// String s = "and";
-					List<ESMap> list = mustes;
+					List<ESMap> list = and;
 					if (v.startsWith("~")) {
 						v = v.substring(1);
 						// s = "or";
-						list = shoulds;
+						list = or;
 					} else if (v.startsWith("-")) {
 						v = v.substring(1);
 						// s = "not";
-						list = mustNots;
+						list = nor;
 					}
 					// System.out.println(s + " " + field + " " + v);
 					ESMap item = ESMap.get()//
@@ -416,6 +412,15 @@ public class Store_ElasticSearch implements IStore {
 					item.set("type", "phrase");
 					list.add(ESMap.get().set("multi_match", item));
 				}
+				ESMap bool = ESMap.get();
+				if (!and.isEmpty())
+					bool.set("must", and);
+				if (!or.isEmpty())
+					bool.set("should", or);
+				if (!nor.isEmpty())
+					bool.set("must_not", nor);
+				if (!bool.isEmpty())
+					mustes.add(ESMap.get().set("bool", bool));
 			}
 		}
 		params.put("query"//

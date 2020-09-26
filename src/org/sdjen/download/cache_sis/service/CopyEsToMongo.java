@@ -34,15 +34,110 @@ public class CopyEsToMongo {
 	}
 
 	public synchronized void copy(long from) throws Throwable {
-		Long listResult = from;
-		do {
-			listResult = list(from = listResult);
-		} while (listResult.compareTo(from) > 0);
-
+		ExecutorService executor = Executors.newFixedThreadPool(3);
+		List<Future<Object>> resultList = new ArrayList<>();
+		resultList.add(executor.submit(new Callable<Object>() {
+			public Object call() throws Exception {
+				try {
+//					copyHtml(from);
+				} catch (Throwable e) {
+					if (e instanceof Exception) {
+						throw (Exception) e;
+					} else
+						throw new Exception(e);
+				}
+				return null;
+			}
+		}));
+		resultList.add(executor.submit(new Callable<Object>() {
+			public Object call() throws Exception {
+				try {
+					copyMd("url");
+				} catch (Throwable e) {
+					if (e instanceof Exception) {
+						throw (Exception) e;
+					} else
+						throw new Exception(e);
+				}
+				return null;
+			}
+		}));
+		resultList.add(executor.submit(new Callable<Object>() {
+			public Object call() throws Exception {
+				try {
+					copyMd("path");
+				} catch (Throwable e) {
+					if (e instanceof Exception) {
+						throw (Exception) e;
+					} else
+						throw new Exception(e);
+				}
+				return null;
+			}
+		}));
+		executor.shutdown();
+		for (Future<Object> fs : resultList) {
+			try {
+				fs.get(30, TimeUnit.MINUTES);
+			} catch (java.util.concurrent.TimeoutException e) {
+				fs.cancel(false);
+			} catch (Exception e) {
+				e.printStackTrace();
+			} finally {
+			}
+		}
 		logger.info(">>>>>>>>>>>>Copy finished!");
 	}
 
-	private Long list(Long from) throws Throwable {
+	public void copyHtml(long from) throws Throwable {
+		Long listResult = from;
+		do {
+			listResult = listHtml(from = listResult);
+		} while (listResult.compareTo(from) > 0);
+
+	}
+
+	void copyMd(String type) {
+		String from = "";
+		String listResult = from;
+//		do {
+		listResult = listMd(from = listResult, type);
+//		} while (!listResult.equals(from));
+	}
+
+	private String listMd(String from, String type) {
+		String result = from;
+		long startTime = System.currentTimeMillis();
+		Map<Object, Object> params = ESMap.get();
+		params.put("query", ESMap.get().set("bool", ESMap.get().set("must", Arrays.asList(//
+				ESMap.get().set("term", Collections.singletonMap("type", type)) //
+				,ESMap.get().set("range", ESMap.get().set("path", ESMap.get().set("gt", from)))//
+		)))//
+		);
+		params.put("sort", Arrays.asList(//
+				ESMap.get().set("path.keyword", ESMap.get().set("order", "asc"))//
+		));
+		params.put("size", size);
+		params.put("from", 0);
+		long l = System.currentTimeMillis();
+		String json = JsonUtil.toJson(params);
+		logger.info("{}	{}", type, json);
+		json = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search", json);
+		logger.info("{}	{}", type, json);
+		l = System.currentTimeMillis() - l;
+		ESMap hits = JsonUtil.toObject(json, ESMap.class).get("hits", ESMap.class);
+		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
+			ESMap _source = hit.get("_source", ESMap.class);
+			result = _source.get("path", String.class);
+		}
+		long sTime = System.currentTimeMillis() - startTime;
+		logger.info("查{}:	{}ms	共:{}ms	total:{}", type, sTime, (System.currentTimeMillis() - startTime),
+				hits.get("total"));
+		int total = (Integer) hits.get("total");
+		return result;
+	}
+
+	private Long listHtml(Long from) throws Throwable {
 		Long result = from, startTime = System.currentTimeMillis();
 		Map<Object, Object> params = ESMap.get();
 		params.put("query", ESMap.get().set("bool", ESMap.get().set("must", Arrays.asList(//
@@ -62,10 +157,10 @@ public class CopyEsToMongo {
 		long l = System.currentTimeMillis();
 		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
 		l = System.currentTimeMillis() - l;
-		ESMap h = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
+		ESMap hits = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
 		ExecutorService executor = Executors.newFixedThreadPool(3);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
-		for (ESMap hit : (List<ESMap>) h.get("hits")) {
+		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);
 			Long id = Long.valueOf(_source.get("id").toString());
 			result = Math.max(id, result);
@@ -73,7 +168,7 @@ public class CopyEsToMongo {
 			resultList.add(executor.submit(new Callable<Long>() {
 				public Long call() throws Exception {
 					try {
-						single(id);
+//						single(id);
 					} catch (Throwable e) {
 						if (e instanceof Exception) {
 							throw (Exception) e;
@@ -96,8 +191,8 @@ public class CopyEsToMongo {
 			} finally {
 			}
 		}
-		logger.info("查:{}ms	共:{}ms	{}~{}	total:{}", sTime, (System.currentTimeMillis() - startTime), from, result,
-				h.get("total"));
+		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}	{}", sTime, (System.currentTimeMillis() - startTime), from,
+				result, hits.get("total"), hits.get("total").getClass());
 		return result;
 	}
 
@@ -107,11 +202,14 @@ public class CopyEsToMongo {
 				Arrays.asList(ESMap.get().set("term", Collections.singletonMap("id", Long.valueOf(id)))))));
 //		params.put("query", ESMap.get().set("term", ESMap.get().set("id", Long.valueOf(id))));
 		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
-		for (ESMap hit : (List<ESMap>) JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class).get("hits")) {
+		ESMap hits = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
+		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);
 			Long page = Long.valueOf(_source.get("page").toString());
 			String title = _source.get("title", String.class);
-			logger.info("{}+{}	{}", id, page, title);
+			if (1l == page) {
+				logger.info("{}+{}	{}	{}", id, hits.get("total"), _source.get("datetime", String.class), title);
+			}
 		}
 	}
 }

@@ -154,6 +154,7 @@ public class Controller_siscache {
 	}
 
 	@RequestMapping("/copy/es/mongo/{from}")
+	@ResponseBody
 	private String copyEsToMongo(@PathVariable("from") long from) {
 		new Thread(new Runnable() {
 			public void run() {

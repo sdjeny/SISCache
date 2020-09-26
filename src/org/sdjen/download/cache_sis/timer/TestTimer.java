@@ -25,12 +25,12 @@ public class TestTimer implements InitStartTimer {
 	}
 
 	public void restart(double hours) throws Throwable {
-		String s = httpUtil.doLocalGet("http://192.168.0.237:9200/siscache_html/_doc/{key}",
-				new EntryData<String, String>().put("key", "8757080_1").getData());
-		ESMap esMap = JsonUtil.toObject(s, ESMap.class);
-		s = esMap.get("_source", ESMap.class).get("context_zip", String.class);
-		System.out.println(s);
-		System.out.println(ZipUtil.uncompress(s));
+//		String s = httpUtil.doLocalGet("http://192.168.0.237:9200/siscache_html/_doc/{key}",
+//				new EntryData<String, String>().put("key", "8757080_1").getData());
+//		ESMap esMap = JsonUtil.toObject(s, ESMap.class);
+//		s = esMap.get("_source", ESMap.class).get("context_zip", String.class);
+//		System.out.println(s);
+//		System.out.println(ZipUtil.uncompress(s));
 //		httpUtil.getHTML("https://www.baidu.com/", "utf8");
 //		System.out.println(httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-8752715-1-1.html"));
 //		for (int i = 2; i < 3; i++) {

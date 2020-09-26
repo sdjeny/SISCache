@@ -25,6 +25,7 @@ import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Required;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.stereotype.Controller;
@@ -153,7 +154,6 @@ public class Controller_siscache {
 	}
 
 	@RequestMapping("/copy/es/mongo/{from}")
-	@ResponseBody
 	private String copyEsToMongo(@PathVariable("from") long from) {
 		new Thread(new Runnable() {
 			public void run() {
@@ -390,8 +390,7 @@ public class Controller_siscache {
 			return detail(id, "1");
 	}
 
-	@RequestMapping("/detail/{id}/redirect")
-	@ResponseBody
+	@RequestMapping("/detail/{id}/redirect.php")
 	String detail_redirect(@PathVariable("id") String id) {
 		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
 				.getRequestAttributes();
@@ -399,17 +398,16 @@ public class Controller_siscache {
 		String fid = request.getParameter("fid");
 		String tid = request.getParameter("tid");
 		String gto = request.getParameter("goto");// nextnewset/nextoldset
-		return detail(id);
+		return "redirect:/siscache/detail/" + tid;
 	}
 
 	@RequestMapping("/detail/{id}/viewthread.php")
-	@ResponseBody
 	String detail_viewthread(@PathVariable("id") String id) {
 		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
 				.getRequestAttributes();
 		HttpServletRequest request = requestAttributes.getRequest();
 		String tid = request.getParameter("tid");
-		return detail(tid);
+		return "redirect:/siscache/detail/" + tid;
 	}
 
 	@RequestMapping("/detail/{id}/{page}")

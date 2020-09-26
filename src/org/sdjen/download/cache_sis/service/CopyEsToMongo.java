@@ -38,13 +38,15 @@ public class CopyEsToMongo {
 		do {
 			listResult = list(from = listResult);
 		} while (listResult.compareTo(from) > 0);
+
+		logger.info(">>>>>>>>>>>>Copy finished!");
 	}
 
 	private Long list(Long from) throws Throwable {
 		Long result = from, startTime = System.currentTimeMillis();
 		Map<Object, Object> params = ESMap.get();
 		params.put("query", ESMap.get().set("bool", ESMap.get().set("must", Arrays.asList(//
-				ESMap.get().set("term", Collections.singletonMap("page", 1)),//
+				ESMap.get().set("term", Collections.singletonMap("page", 1)), //
 				ESMap.get().set("range", ESMap.get().set("id", ESMap.get().set("gt", from)))//
 		)))//
 		);
@@ -58,8 +60,6 @@ public class CopyEsToMongo {
 		params.put("size", size);
 		params.put("from", 0);
 		long l = System.currentTimeMillis();
-
-		logger.info(JsonUtil.toJson(params));
 		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
 		l = System.currentTimeMillis() - l;
 		ESMap h = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);

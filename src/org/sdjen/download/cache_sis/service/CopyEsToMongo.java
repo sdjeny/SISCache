@@ -23,7 +23,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class CopyEsToMongo {
 	final static Logger logger = LoggerFactory.getLogger(CopyEsToMongo.class);
-	private static int size = 300;
+	@Value("${siscache.conf.copy_es_mongo_unit_limit}")
+	private int size = 300;
 	@Autowired
 	private HttpUtil httpUtil;
 	@Value("${siscache.conf.path_es_start}")
@@ -39,7 +40,7 @@ public class CopyEsToMongo {
 		resultList.add(executor.submit(new Callable<Object>() {
 			public Object call() throws Exception {
 				try {
-//					copyHtml(from);
+					copyHtml(from);
 				} catch (Throwable e) {
 					if (e instanceof Exception) {
 						throw (Exception) e;
@@ -98,11 +99,12 @@ public class CopyEsToMongo {
 	}
 
 	void copyMd(String type) {
-		String from = "";
+		String from = " ";
 		String listResult = from;
-//		do {
-		listResult = listMd(from = listResult, type);
-//		} while (!listResult.equals(from));
+		do {
+			listResult = listMd(from = listResult, type);
+//			logger.info("{}	{}={}", listResult, from, listResult.equals(from));
+		} while (!listResult.equals(from));
 	}
 
 	private String listMd(String from, String type) {
@@ -110,8 +112,8 @@ public class CopyEsToMongo {
 		long startTime = System.currentTimeMillis();
 		Map<Object, Object> params = ESMap.get();
 		params.put("query", ESMap.get().set("bool", ESMap.get().set("must", Arrays.asList(//
-				ESMap.get().set("term", Collections.singletonMap("type", type)) //
-				,ESMap.get().set("range", ESMap.get().set("path", ESMap.get().set("gt", from)))//
+				ESMap.get().set("term", Collections.singletonMap("type", type)), //
+				ESMap.get().set("range", ESMap.get().set("path.keyword", ESMap.get().set("gt", from)))//
 		)))//
 		);
 		params.put("sort", Arrays.asList(//
@@ -121,18 +123,19 @@ public class CopyEsToMongo {
 		params.put("from", 0);
 		long l = System.currentTimeMillis();
 		String json = JsonUtil.toJson(params);
-		logger.info("{}	{}", type, json);
+//		logger.info("{}	{}", type, json);
 		json = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search", json);
-		logger.info("{}	{}", type, json);
+//		logger.info("{}	{}", type, json);
 		l = System.currentTimeMillis() - l;
 		ESMap hits = JsonUtil.toObject(json, ESMap.class).get("hits", ESMap.class);
 		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);
+//			logger.info("{}	{}	{}", type, hit.get("_id"), _source);
 			result = _source.get("path", String.class);
 		}
 		long sTime = System.currentTimeMillis() - startTime;
-		logger.info("查{}:	{}ms	共:{}ms	total:{}", type, sTime, (System.currentTimeMillis() - startTime),
-				hits.get("total"));
+		logger.info("查{}:	{}ms	共:{}ms	Last:{}	total:{}", type, sTime, (System.currentTimeMillis() - startTime),
+				result, hits.get("total"));
 		int total = (Integer) hits.get("total");
 		return result;
 	}
@@ -168,7 +171,7 @@ public class CopyEsToMongo {
 			resultList.add(executor.submit(new Callable<Long>() {
 				public Long call() throws Exception {
 					try {
-//						single(id);
+						single(id);
 					} catch (Throwable e) {
 						if (e instanceof Exception) {
 							throw (Exception) e;
@@ -191,8 +194,8 @@ public class CopyEsToMongo {
 			} finally {
 			}
 		}
-		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}	{}", sTime, (System.currentTimeMillis() - startTime), from,
-				result, hits.get("total"), hits.get("total").getClass());
+		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", sTime, (System.currentTimeMillis() - startTime), from,
+				result, hits.get("total"));
 		return result;
 	}
 

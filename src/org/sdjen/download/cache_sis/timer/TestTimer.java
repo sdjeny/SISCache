@@ -1,9 +1,15 @@
 package org.sdjen.download.cache_sis.timer;
 
+import java.util.HashMap;
+
 import javax.annotation.Resource;
 
+import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
+import org.sdjen.download.cache_sis.tool.ZipUtil;
+import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +25,12 @@ public class TestTimer implements InitStartTimer {
 	}
 
 	public void restart(double hours) throws Throwable {
+		String s = httpUtil.doLocalGet("http://192.168.0.237:9200/siscache_html/_doc/{key}",
+				new EntryData<String, String>().put("key", "8757080_1").getData());
+		ESMap esMap = JsonUtil.toObject(s, ESMap.class);
+		s = esMap.get("_source", ESMap.class).get("context_zip", String.class);
+		System.out.println(s);
+		System.out.println(ZipUtil.uncompress(s));
 //		httpUtil.getHTML("https://www.baidu.com/", "utf8");
 //		System.out.println(httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-8752715-1-1.html"));
 //		for (int i = 2; i < 3; i++) {

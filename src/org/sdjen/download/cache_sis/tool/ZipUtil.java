@@ -3,7 +3,11 @@ package org.sdjen.download.cache_sis.tool;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.List;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -13,6 +17,7 @@ import java.util.zip.ZipOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.Base64Utils;
 
 /**
  * 
@@ -30,8 +35,7 @@ public class ZipUtil {
 	/**
 	 * 将字符串压缩后Base64
 	 * 
-	 * @param primStr
-	 *            待加压加密函数
+	 * @param primStr 待加压加密函数
 	 * @return
 	 */
 	public static String zipString(String primStr) {
@@ -64,8 +68,7 @@ public class ZipUtil {
 	/**
 	 * 将压缩并Base64后的字符串进行解密解压
 	 * 
-	 * @param compressedStr
-	 *            待解密解压字符串
+	 * @param compressedStr 待解密解压字符串
 	 * @return
 	 */
 	public static final String unzipString(String compressedStr) {
@@ -140,12 +143,13 @@ public class ZipUtil {
 	}
 
 	public static String bytesToString(byte[] bytes) throws IOException {
-		 return Base64.getEncoder().encodeToString(bytes);
-//		return new String(bytes, CHARSET);
+		return new String(Base64Utils.encode(bytes), CHARSET);
+//		return new String(Base64.getEncoder().encode(bytes), CHARSET);
 	}
 
 	public static byte[] stringToBytes(String str) throws IOException {
-		 return Base64.getDecoder().decode(str);
+		return Base64Utils.decodeFromString(str.replace("\n", "").replace("\r", ""));
+//		return Base64.getDecoder().decode(str.getBytes(CHARSET));
 //		return str.getBytes(CHARSET);
 	}
 

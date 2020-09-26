@@ -19,6 +19,7 @@ import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
+import org.sdjen.download.cache_sis.service.CopyEsToMongo;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
 import org.slf4j.Logger;
@@ -44,12 +45,16 @@ public class Controller_siscache {
 	private SISDownloadTimer timer;
 	@Autowired
 	private DownloadList downloadList;
+	@Autowired
+	private CopyEsToMongo copyEsToMongo;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
 	@Value("${siscache.conf.can_restart}")
 	private boolean can_restart = true;
 	@Value("${siscache.conf.can_reload}")
 	private boolean can_reload = true;
+	@Value("${siscache.conf.can_copy_es_mongo}")
+	private boolean can_copy_es_mongo = true;
 //	static ConfUtil conf;
 //	private String path_es_start;
 
@@ -79,13 +84,6 @@ public class Controller_siscache {
 		rst.append("</br><table border='0'>");
 		{
 			rst.append("<tbody><tr>");
-			rst.append("<td><a href='/siscache/list/1/100?debug=true' title='新窗口打开' target='_blank'>list</a></td>");
-			rst.append(String.format("<td>%s</td>", "list"));
-			rst.append(String.format("<td>%s</td>", ""));
-			rst.append("</tr></tbody>");
-		}
-		{
-			rst.append("<tbody><tr>");
 			rst.append(String.format("<td>%s</td>", "Fields"));
 			rst.append(String.format("<td>%s</td>",
 					"id,fid,datetime,type,title,page,context,context_comments,context_zip,author"));
@@ -94,8 +92,15 @@ public class Controller_siscache {
 		}
 		{
 			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/list/all/1/100?debug=true' title='新窗口打开' target='_blank'>list</a></td>");
+			rst.append(String.format("<td>%s</td>", "list"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		{
+			rst.append("<tbody><tr>");
 			rst.append(
-					"<td><a href='/siscache/list/1/100?debug=true&q=type:新片;title:~碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Search(eg.)</a></td>");
+					"<td><a href='/siscache/list/all/1/100?debug=true&q=type:新片;title:~碧 ~筱 -白&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Search(eg.)</a></td>");
 			rst.append(String.format("<td>%s</td>", "q=type:新片;title:~碧 ~筱 -白"));
 			rst.append(String.format("<td>%s</td>", "~:or -:not"));
 			rst.append("</tr></tbody>");
@@ -103,8 +108,15 @@ public class Controller_siscache {
 		{
 			rst.append("<tbody><tr>");
 			rst.append(
-					"<td><a href='/siscache/list/1/100?debug=true&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Order</a></td>");
+					"<td><a href='/siscache/list/all/1/100?debug=true&order=datetime.keyword:desc id' title='新窗口打开' target='_blank'>Order</a></td>");
 			rst.append(String.format("<td>%s</td>", "order=datetime.keyword:desc id"));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		}
+		if (can_copy_es_mongo) {
+			rst.append("<tbody><tr>");
+			rst.append("<td><a href='/siscache/copy/es/mongo/0' title='新窗口打开' target='_blank'>copy es->mongo</a></td>");
+			rst.append(String.format("<td>%s</td>", "copy/es/mongo/from"));
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
 		}
@@ -138,6 +150,21 @@ public class Controller_siscache {
 			cacheResultFile = new File(save_path + "/download.log");
 		}
 		return cacheResultFile;
+	}
+
+	@RequestMapping("/copy/es/mongo/{from}")
+	@ResponseBody
+	private String copyEsToMongo(@PathVariable("from") long from) {
+		new Thread(new Runnable() {
+			public void run() {
+				try {
+					copyEsToMongo.copy(from);
+				} catch (Throwable e) {
+					logger.error(e.getMessage(), e);
+				}
+			}
+		}).start();
+		return "redirect:/siscache/list/all/1/100?debug=true";
 	}
 
 	@RequestMapping("/cache_result")
@@ -206,16 +233,10 @@ public class Controller_siscache {
 		return list(1);
 	}
 
-	@RequestMapping("/list")
-	@ResponseBody
-	String list() {
-		return list(1);
-	}
-
 	@RequestMapping("/list/{page}")
 	@ResponseBody
 	String list(@PathVariable("page") int page) {
-		return list(page, 50, "");
+		return list("all", page, 50);
 	}
 
 	// @RequestMapping("/list/{search}")
@@ -224,10 +245,10 @@ public class Controller_siscache {
 	// return list(search, 1, 40);
 	// }
 
-	@RequestMapping("/list/{page}/{size}")
+	@RequestMapping("/list/{fid}/{page}/{size}")
 	@ResponseBody
-	String list(@PathVariable("page") int page, @PathVariable("size") int size) {
-		return list(page, size, "");
+	String list(@PathVariable("fid") String fid, @PathVariable("page") int page, @PathVariable("size") int size) {
+		return list(fid, page, size, "");
 	}
 
 	// @RequestMapping("/list/{page}/{size}")
@@ -237,9 +258,10 @@ public class Controller_siscache {
 	// return list("", page, 40);
 	// }
 
-	@RequestMapping("/list/{page}/{size}/{search}")
+	@RequestMapping("/list/{fid}/{page}/{size}/{search}")
 	@ResponseBody
-	String list(@PathVariable("page") int page, @PathVariable("size") int size, @PathVariable("search") String search) {
+	String list(@PathVariable("fid") String fid, @PathVariable("page") int page, @PathVariable("size") int size,
+			@PathVariable("search") String search) {
 		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
 				.getRequestAttributes();
 		HttpServletRequest request = requestAttributes.getRequest();
@@ -258,7 +280,7 @@ public class Controller_siscache {
 		}
 		StringBuffer rst = new StringBuffer();
 		try {
-			Map<String, Object> titleList = store.getTitleList(page, size, query, request.getParameter("order"));
+			Map<String, Object> titleList = store.getTitleList(fid, page, size, query, request.getParameter("order"));
 			List<Map<String, Object>> ls = (List<Map<String, Object>>) titleList.get("list");
 			long l = System.currentTimeMillis();
 			l = System.currentTimeMillis() - l;
@@ -314,7 +336,7 @@ public class Controller_siscache {
 	@RequestMapping("/s/{search}")
 	@ResponseBody
 	String search(@PathVariable("search") String search) {
-		return list(1, 1000, search);
+		return list("143", 1, 1000, search);
 //		Map<String, Object> params = new HashMap<>();
 //		Map<String, Object> _source = new HashMap<>();
 //		_source.put("includes", Arrays.asList());
@@ -366,6 +388,28 @@ public class Controller_siscache {
 			return detail(ss[1], ss[2]);
 		} else
 			return detail(id, "1");
+	}
+
+	@RequestMapping("/detail/{id}/redirect")
+	@ResponseBody
+	String detail_redirect(@PathVariable("id") String id) {
+		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
+				.getRequestAttributes();
+		HttpServletRequest request = requestAttributes.getRequest();
+		String fid = request.getParameter("fid");
+		String tid = request.getParameter("tid");
+		String gto = request.getParameter("goto");// nextnewset/nextoldset
+		return detail(id);
+	}
+
+	@RequestMapping("/detail/{id}/viewthread.php")
+	@ResponseBody
+	String detail_viewthread(@PathVariable("id") String id) {
+		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
+				.getRequestAttributes();
+		HttpServletRequest request = requestAttributes.getRequest();
+		String tid = request.getParameter("tid");
+		return detail(tid);
 	}
 
 	@RequestMapping("/detail/{id}/{page}")
@@ -431,6 +475,7 @@ public class Controller_siscache {
 			}
 			rst.append(text);
 		} catch (Throwable e) {
+			e.printStackTrace();
 			rst.append(e.getMessage());
 			for (java.lang.StackTraceElement element : e.getStackTrace()) {
 				rst.append(element.toString());

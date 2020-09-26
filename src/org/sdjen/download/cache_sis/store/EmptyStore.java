@@ -53,12 +53,6 @@ public class EmptyStore implements IStore {
 	}
 
 	@Override
-	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
 	public Set<String> getProxyUrls() {
 		Set<String> s = new LinkedHashSet<String>();
 		s.add("http://www.sexinsex.net");
@@ -75,6 +69,13 @@ public class EmptyStore implements IStore {
 	public void removeProxyUrl(String url) {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public Map<String, Object> getTitleList(String fid, int page, int size, String query, String order)
+			throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

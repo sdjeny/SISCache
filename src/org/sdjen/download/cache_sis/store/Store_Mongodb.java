@@ -274,7 +274,8 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public Map<String, Object> getTitleList(int page, int size, String query_str, String order) throws Throwable {
+	public Map<String, Object> getTitleList(String fid, int page, int size, String query_str, String order)
+			throws Throwable {
 		Query query = new Query();
 		Set<Order> orders = new LinkedHashSet<>();
 		if (null == query_str)
@@ -296,32 +297,31 @@ public class Store_Mongodb implements IStore {
 //			return Pattern.compile("^.*" + keyword + ".*$", Pattern.CASE_INSENSITIVE);
 			return Pattern.compile(".*" + keyword + ".*", Pattern.CASE_INSENSITIVE);
 		};
+		List<Criteria> and = new ArrayList<>();
+		if (!"ALL".equalsIgnoreCase(fid)) {
+			and.add(Criteria.where("fid").is(fid));
+		}
 		if (query_str.isEmpty()) {
-			query.addCriteria(Criteria.where("page").is(1l));
+			and.add(Criteria.where("page").is(1l));
 		} else if (query_str.toUpperCase().startsWith("D:")) {
-			query.addCriteria(Criteria.where("datetime").is(query_str.substring(2)));
+			and.add(Criteria.where("datetime").is(query_str.substring(2)));
 		} else if (query_str.toUpperCase().startsWith("ALL:")) {
 			query_str = query_str.substring(4);
-			List<Criteria> mustes = new ArrayList<>();
-			mustes.add(Criteria.where("page").is(1l));
+			and.add(Criteria.where("page").is(1l));
 			for (String qs : query_str.split(" ")) {
 				Pattern pattern = escapeExprSpecialWord.apply(qs.trim());
-				mustes.add(new Criteria().orOperator(//
+				and.add(new Criteria().orOperator(//
 						Criteria.where("title").regex(pattern)//
 						, Criteria.where("context").regex(pattern)//
 						, Criteria.where("context_comments.context").regex(pattern)//
 				));
 			}
-			if (!mustes.isEmpty())
-				query.addCriteria(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
 		} else {
-			List<Criteria> and = new ArrayList<>();
 			for (String q : query_str.split(";")) {
 				if (q.isEmpty())
 					continue;
-				List<Criteria> shoulds = new ArrayList<>();
-				List<Criteria> mustes = new ArrayList<>();
-				List<Criteria> mustNots = new ArrayList<>();
+				List<Criteria> or = new ArrayList<>();
+				List<Criteria> nor = new ArrayList<>();
 				String[] ss = q.split(":");
 				String field = ss[0].replace("'", "^");
 				String vs = ss.length > 1 ? ss[1] : "";
@@ -331,28 +331,22 @@ public class Store_Mongodb implements IStore {
 					List<Criteria> list = and;// String s = "and";
 					if (v.startsWith("~")) {
 						v = v.substring(1);
-						list = shoulds;// s = "or";
+						list = or;// s = "or";
 					} else if (v.startsWith("-")) {
 						v = v.substring(1);
-						list = mustNots;// s = "not";
+						list = nor;// s = "not";
 					}
 					Pattern pattern = escapeExprSpecialWord.apply(v.trim());
 					list.add(Criteria.where(field).regex(pattern));
 				}
-				if (!shoulds.isEmpty())
-					and.add(new Criteria().orOperator(shoulds.toArray(new Criteria[] {})));
-				if (!mustNots.isEmpty())
-					and.add(new Criteria().norOperator(mustNots.toArray(new Criteria[] {})));
-//				if (!mustes.isEmpty())
-//					and.add(new Criteria().andOperator(mustes.toArray(new Criteria[] {})));
+				if (!or.isEmpty())
+					and.add(new Criteria().orOperator(or.toArray(new Criteria[] {})));
+				if (!nor.isEmpty())
+					and.add(new Criteria().norOperator(nor.toArray(new Criteria[] {})));
 			}
-//			if (!shoulds.isEmpty())
-//				mustes.add(new Criteria().orOperator(shoulds.toArray(new Criteria[] {})));
-//			if (!mustNots.isEmpty())
-//				mustes.add(new Criteria().norOperator(mustNots.toArray(new Criteria[] {})));
-			if (!and.isEmpty())
-				query.addCriteria(new Criteria().andOperator(and.toArray(new Criteria[] {})));
 		}
+		if (!and.isEmpty())
+			query.addCriteria(new Criteria().andOperator(and.toArray(new Criteria[] {})));
 		for (String o : order.split(" ")) {
 			if (o.isEmpty())
 				continue;

@@ -33,7 +33,7 @@ public class CopyEsToMongo {
 		System.out.println(">>>>>>>>>>>>CopyEsToMongo");
 	}
 
-	public void copy(long from) throws Throwable {
+	public synchronized void copy(long from) throws Throwable {
 		Long listResult = from;
 		do {
 			listResult = list(from = listResult);
@@ -44,24 +44,23 @@ public class CopyEsToMongo {
 		Long result = from, startTime = System.currentTimeMillis();
 		Map<Object, Object> params = ESMap.get();
 		params.put("query", ESMap.get().set("bool", ESMap.get().set("must", Arrays.asList(//
-				ESMap.get().set("term", Collections.singletonMap("page", 1))//
-				, ESMap.get().set("range", ESMap.get().set("id", ESMap.get().set("gt", from)))//
+				ESMap.get().set("term", Collections.singletonMap("page", 1)),//
+				ESMap.get().set("range", ESMap.get().set("id", ESMap.get().set("gt", from)))//
 		)))//
 		);
-//		params.put("query", ESMap.get().set("range"//
-//				, ESMap.get().set("id"//
-//						, ESMap.get()//
-//								.set("gt", from)//
-//				)//
-//		)//
-//		);
+		params.put("_source", ESMap.get()//
+				.set("includes", Arrays.asList("id"))//
+				.set("excludes", Arrays.asList())//
+		);
 		params.put("sort", Arrays.asList(//
 				ESMap.get().set("id", ESMap.get().set("order", "asc"))//
 		));
 		params.put("size", size);
 		params.put("from", 0);
 		long l = System.currentTimeMillis();
-		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "ids/_doc/_search", JsonUtil.toJson(params));
+
+		logger.info(JsonUtil.toJson(params));
+		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
 		l = System.currentTimeMillis() - l;
 		ESMap h = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
 		ExecutorService executor = Executors.newFixedThreadPool(3);
@@ -74,6 +73,7 @@ public class CopyEsToMongo {
 			resultList.add(executor.submit(new Callable<Long>() {
 				public Long call() throws Exception {
 					try {
+						single(id);
 					} catch (Throwable e) {
 						if (e instanceof Exception) {
 							throw (Exception) e;
@@ -103,10 +103,10 @@ public class CopyEsToMongo {
 
 	private void single(Long id) throws Throwable {
 		Map<Object, Object> params = ESMap.get();
-//		params.put("query", ESMap.get().set("bool", ESMap.get().set("must",
-//				Arrays.asList(ESMap.get().set("term", Collections.singletonMap("id", Long.valueOf(id)))))));
-		params.put("query", ESMap.get().set("term", ESMap.get().set("id", Long.valueOf(id))));
-		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "ids/_doc/_search", JsonUtil.toJson(params));
+		params.put("query", ESMap.get().set("bool", ESMap.get().set("must",
+				Arrays.asList(ESMap.get().set("term", Collections.singletonMap("id", Long.valueOf(id)))))));
+//		params.put("query", ESMap.get().set("term", ESMap.get().set("id", Long.valueOf(id))));
+		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
 		for (ESMap hit : (List<ESMap>) JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class).get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);
 			Long page = Long.valueOf(_source.get("page").toString());

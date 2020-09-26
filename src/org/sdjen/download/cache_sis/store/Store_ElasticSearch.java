@@ -347,7 +347,8 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable {
+	public Map<String, Object> getTitleList(String fid, int page, int size, String query, String order)
+			throws Throwable {
 		List<Map<String, Object>> ls = new ArrayList<>();
 		Map<String, Object> result = new HashMap<>();
 		result.put("list", ls);
@@ -363,6 +364,10 @@ public class Store_ElasticSearch implements IStore {
 		List<ESMap> shoulds = new ArrayList<>();
 		List<ESMap> mustes = new ArrayList<>();
 		List<ESMap> mustNots = new ArrayList<>();
+		try {
+			mustes.add(ESMap.get().set("term", Collections.singletonMap("fid", Integer.valueOf(fid))));
+		} catch (NumberFormatException e1) {
+		}
 		if (query.isEmpty()) {
 			mustes.add(ESMap.get().set("term", Collections.singletonMap("page", 1)));
 			order = "id:desc";

@@ -30,7 +30,8 @@ public interface IStore {
 
 	void refreshMsgLog();
 
-	public Map<String, Object> getTitleList(int page, int size, String query, String order) throws Throwable;
+	public Map<String, Object> getTitleList(String fid, int page, int size, String query, String order)
+			throws Throwable;
 
 	default String cutForProxy(String url) {
 		int index = url.indexOf('/', 9);

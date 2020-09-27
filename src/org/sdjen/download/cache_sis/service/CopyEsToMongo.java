@@ -34,60 +34,23 @@ public class CopyEsToMongo {
 		System.out.println(">>>>>>>>>>>>CopyEsToMongo");
 	}
 
-	public synchronized void copy(long from) throws Throwable {
-		ExecutorService executor = Executors.newFixedThreadPool(3);
-		List<Future<Object>> resultList = new ArrayList<>();
-		resultList.add(executor.submit(new Callable<Object>() {
-			public Object call() throws Exception {
-				try {
-					copyHtml(from);
-				} catch (Throwable e) {
-					if (e instanceof Exception) {
-						throw (Exception) e;
-					} else
-						throw new Exception(e);
-				}
-				return null;
-			}
-		}));
-		resultList.add(executor.submit(new Callable<Object>() {
-			public Object call() throws Exception {
-				try {
-					copyMd("url");
-				} catch (Throwable e) {
-					if (e instanceof Exception) {
-						throw (Exception) e;
-					} else
-						throw new Exception(e);
-				}
-				return null;
-			}
-		}));
-		resultList.add(executor.submit(new Callable<Object>() {
-			public Object call() throws Exception {
-				try {
-					copyMd("path");
-				} catch (Throwable e) {
-					if (e instanceof Exception) {
-						throw (Exception) e;
-					} else
-						throw new Exception(e);
-				}
-				return null;
-			}
-		}));
-		executor.shutdown();
-		for (Future<Object> fs : resultList) {
-			try {
-				fs.get(30, TimeUnit.MINUTES);
-			} catch (java.util.concurrent.TimeoutException e) {
-				fs.cancel(false);
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-			}
+	public synchronized void copy(String type) throws Throwable {
+		switch (type) {
+		case "html": {
+			String from = "0";
+			copyHtml(Long.valueOf(from));
+			break;
 		}
-		logger.info(">>>>>>>>>>>>Copy finished!");
+		case "url":
+		case "path": {
+			String from = " ";
+			copyMd(type);
+			break;
+		}
+		default:
+			break;
+		}
+		logger.info(">>>>>>>>>>>>Copy {} finished!", type);
 	}
 
 	public void copyHtml(long from) throws Throwable {

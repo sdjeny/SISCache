@@ -115,11 +115,30 @@ public class Controller_siscache {
 			rst.append("</tr></tbody>");
 		}
 		if (can_copy_es_mongo) {
-			rst.append("<tbody><tr>");
-			rst.append("<td><a href='/siscache/copy/es/mongo/0' title='新窗口打开' target='_blank'>copy es->mongo</a></td>");
-			rst.append(String.format("<td>%s</td>", "copy/es/mongo/from"));
-			rst.append(String.format("<td>%s</td>", ""));
-			rst.append("</tr></tbody>");
+			if (true) {
+				rst.append("<tbody><tr>");
+				rst.append(
+						"<td><a href='/siscache/copy/es/mongo/html' title='新窗口打开' target='_blank'>es->mongo html</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy html"));
+				rst.append(String.format("<td>%s</td>", ""));
+				rst.append("</tr></tbody>");
+			}
+			if (true) {
+				rst.append("<tbody><tr>");
+				rst.append(
+						"<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>es->mongo url</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy url"));
+				rst.append(String.format("<td>%s</td>", ""));
+				rst.append("</tr></tbody>");
+			}
+			if (true) {
+				rst.append("<tbody><tr>");
+				rst.append(
+						"<td><a href='/siscache/copy/es/mongo/path' title='新窗口打开' target='_blank'>es->mongo path</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy path"));
+				rst.append(String.format("<td>%s</td>", ""));
+				rst.append("</tr></tbody>");
+			}
 		}
 		if (can_restart) {
 			rst.append("<tbody><tr>");
@@ -153,13 +172,13 @@ public class Controller_siscache {
 		return cacheResultFile;
 	}
 
-	@RequestMapping("/copy/es/mongo/{from}")
+	@RequestMapping("/copy/es/mongo/{type}")
 	@ResponseBody
-	private String copyEsToMongo(@PathVariable("from") long from) {
+	private String copyEsToMongo(@PathVariable("type") String type) {
 		new Thread(new Runnable() {
 			public void run() {
 				try {
-					copyEsToMongo.copy(from);
+					copyEsToMongo.copy(type);
 				} catch (Throwable e) {
 					logger.error(e.getMessage(), e);
 				}

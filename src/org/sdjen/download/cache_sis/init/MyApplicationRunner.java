@@ -86,7 +86,7 @@ public class MyApplicationRunner implements ApplicationRunner {
 //		System.out.println("+++++++++++WithoutInterfaceService:	" + withoutInterfaceService.test());
 		if (can_copy_es_mongo) {
 			System.out.println("~~~~~~~~~~~~~~~~~"
-					+ mongoTemplate.updateMulti(new Query(), new Update().set("running", false), "es_mongo_last"));
+					+ mongoTemplate.updateMulti(new Query(), new Update().set("running", false), "last"));
 		}
 	}
 

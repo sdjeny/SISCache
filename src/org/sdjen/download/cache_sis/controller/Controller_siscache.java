@@ -124,9 +124,9 @@ public class Controller_siscache {
 		}
 		if (can_copy_es_mongo) {
 			Set<String> running = new HashSet<>();
-			mongoTemplate.find(new Query().addCriteria(Criteria.where("running").is(true)), Map.class, "es_mongo_last")
+			mongoTemplate.find(new Query().addCriteria(Criteria.where("running").is(true)), Map.class, "last")
 					.forEach(m -> running.add((String) m.get("type")));
-			if (!running.contains("es_mongo_last_html")) {
+			if (!running.contains("es_mongo_html")) {
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/html' title='新窗口打开' target='_blank'>es->mongo html</a></td>");
@@ -134,7 +134,7 @@ public class Controller_siscache {
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
-			if (!running.contains("es_mongo_last_url")) {
+			if (!running.contains("es_mongo_url")) {
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>es->mongo url</a></td>");
@@ -142,7 +142,7 @@ public class Controller_siscache {
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
-			if (!running.contains("es_mongo_last_path")) {
+			if (!running.contains("es_mongo_path")) {
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/path' title='新窗口打开' target='_blank'>es->mongo path</a></td>");
@@ -196,8 +196,8 @@ public class Controller_siscache {
 			}
 		}).start();
 		return JsonUtil.toJson(
-				mongoTemplate.findOne(new Query().addCriteria(Criteria.where("type").is("es_mongo_last_" + type)),
-						Map.class, "es_mongo_last")); // "redirect:/siscache/list/all/1/100?debug=true";
+				mongoTemplate.findOne(new Query().addCriteria(Criteria.where("type").is("es_mongo_" + type)),
+						Map.class, "last")); // "redirect:/siscache/list/all/1/100?debug=true";
 	}
 
 	@RequestMapping("/cache_result")

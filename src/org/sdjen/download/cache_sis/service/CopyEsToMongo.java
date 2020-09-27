@@ -42,8 +42,8 @@ public class CopyEsToMongo {
 	}
 
 	public void copy(String type) throws Throwable {
-		Query query = new Query().addCriteria(Criteria.where("type").is("es_mongo_last_" + type));
-		Map<?, ?> last = mongoTemplate.findOne(query, Map.class, "es_mongo_last");
+		Query query = new Query().addCriteria(Criteria.where("type").is("es_mongo_" + type));
+		Map<?, ?> last = mongoTemplate.findOne(query, Map.class, "last");
 		String from = null;
 		if (null != last) {
 			if (last.containsKey("running") && (Boolean) last.get("running")) {
@@ -56,7 +56,7 @@ public class CopyEsToMongo {
 				.set("running", true)//
 				.set("time", new Date())//
 				.set("msg", " init")//
-				, "es_mongo_last");
+				, "last");
 		logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
 		try {
 			switch (type) {
@@ -72,14 +72,14 @@ public class CopyEsToMongo {
 			default:
 				break;
 			}
-			updateResult = mongoTemplate.updateMulti(query, new Update().set("running", false), "es_mongo_last");
+			updateResult = mongoTemplate.updateMulti(query, new Update().set("running", false), "last");
 			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, updateResult);
 		} catch (Throwable e) {
 			updateResult = mongoTemplate.updateMulti(query, new Update()//
 					.set("running", false)//
 					.set("time", new Date())//
 					.set("msg", e.getMessage())//
-					, "es_mongo_last");
+					, "last");
 			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, updateResult);
 			throw e;
 		}
@@ -130,7 +130,7 @@ public class CopyEsToMongo {
 		long sTime = System.currentTimeMillis() - startTime;
 		logger.info("查{}:	{}ms	共:{}ms	Last:{}	total:{}", type, sTime, (System.currentTimeMillis() - startTime),
 				result, hits.get("total"));
-		logLast("es_mongo_last_" + type, result, hits.get("total").toString());
+		logLast("es_mongo_" + type, result, hits.get("total").toString());
 		int total = (Integer) hits.get("total");
 		return result;
 	}
@@ -189,7 +189,7 @@ public class CopyEsToMongo {
 			} finally {
 			}
 		}
-		logLast("es_mongo_last_html", String.valueOf(result), hits.get("total").toString());
+		logLast("es_mongo_html", String.valueOf(result), hits.get("total").toString());
 		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", sTime, (System.currentTimeMillis() - startTime), from,
 				result, hits.get("total"));
 		return result;
@@ -218,6 +218,6 @@ public class CopyEsToMongo {
 				.set("running", true)//
 				.set("msg", msg)//
 				.set("time", new Date())//
-				, "es_mongo_last");
+				, "last");
 	}
 }

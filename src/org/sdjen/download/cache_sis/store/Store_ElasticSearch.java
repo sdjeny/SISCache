@@ -90,7 +90,7 @@ public class Store_ElasticSearch implements IStore {
 			try {
 				try {
 					rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
-				} catch (Exception e) {
+				} catch (Throwable e) {
 					msg("ES未启动，5分钟后重试1次");
 					Thread.sleep(300);// 300000
 					rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
@@ -115,7 +115,7 @@ public class Store_ElasticSearch implements IStore {
 						)//
 				);
 				msg(rst);
-			} catch (Exception e) {
+			} catch (Throwable e) {
 				msg("ES启动失败");
 			}
 		}
@@ -300,7 +300,7 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public void saveURL(String url, String path) throws IOException {
+	public void saveURL(String url, String path) throws Throwable {
 		Map<String, Object> json = new HashMap<>();
 		json.put("url", url);
 		json.put("path", path);
@@ -310,7 +310,7 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public void saveMD5(String md5, String path) throws IOException {
+	public void saveMD5(String md5, String path) throws Throwable {
 		Map<String, Object> json = new HashMap<>();
 		json.put("key", md5);
 		json.put("path", path);
@@ -319,7 +319,7 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public String getMD5_Path(String key) throws Exception {
+	public String getMD5_Path(String key) throws Throwable {
 		String ss = httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
 				new EntryData<String, String>().put("key", key).getData());
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
@@ -335,7 +335,7 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public String getURL_Path(String key) throws IOException {
+	public String getURL_Path(String key) throws Throwable {
 		String ss = httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
 				new EntryData<String, String>().put("key", getMD5(key.getBytes("utf8"))).getData());
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);

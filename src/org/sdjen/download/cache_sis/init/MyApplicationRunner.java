@@ -8,12 +8,15 @@ import org.sdjen.download.cache_sis.timer.InitStartTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.index.Index;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
 
 /**
@@ -37,6 +40,8 @@ public class MyApplicationRunner implements ApplicationRunner {
 	MoreBeenItfc moreBeenA;
 	@Resource(name = "${definde.service.name.morebeen}")
 	MoreBeenItfc moreBeen;
+	@Value("${siscache.conf.can_copy_es_mongo}")
+	private boolean can_copy_es_mongo = true;
 
 	/**
 	 * 会在服务启动完成后立即执行
@@ -72,13 +77,17 @@ public class MyApplicationRunner implements ApplicationRunner {
 		try {
 			timer.restart(hour);
 		} catch (Throwable e) {
-			logger.error("timer",e);
+			logger.error("timer", e);
 		}
 		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeenA.getInfo());
 		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeenB.getInfo());
 		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeen.getInfo());
 //		System.out.println("-----MyApplicationRunner" + Arrays.asList(args));
 //		System.out.println("+++++++++++WithoutInterfaceService:	" + withoutInterfaceService.test());
+		if (can_copy_es_mongo) {
+			System.out.println("~~~~~~~~~~~~~~~~~"
+					+ mongoTemplate.updateMulti(new Query(), new Update().set("running", false), "es_mongo_last"));
+		}
 	}
 
 }

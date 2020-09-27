@@ -445,9 +445,10 @@ public class DownloadSingle {
 				if (path.startsWith("torrent")) {
 					try {
 						lock_w_html.lock();
-						httpUtil.retry(new HttpUtil.Retry() {
-							public void execute() throws Throwable {
+						httpUtil.retry(new HttpUtil.Retry<Void>() {
+							public Void execute() throws Throwable {
 								httpUtil.execute(url, executor);
+								return null;
 							}
 						});
 					} finally {

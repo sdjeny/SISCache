@@ -8,8 +8,10 @@ import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -28,6 +30,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Required;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +53,8 @@ public class Controller_siscache {
 	private DownloadList downloadList;
 	@Autowired
 	private CopyEsToMongo copyEsToMongo;
+	@Autowired
+	private MongoTemplate mongoTemplate;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
 	@Value("${siscache.conf.can_restart}")
@@ -115,7 +122,10 @@ public class Controller_siscache {
 			rst.append("</tr></tbody>");
 		}
 		if (can_copy_es_mongo) {
-			if (true) {
+			Set<String> running = new HashSet<>();
+			mongoTemplate.find(new Query().addCriteria(Criteria.where("running").is(true)), Map.class, "es_mongo_last")
+					.forEach(m -> running.add((String) m.get("type")));
+			if (!running.contains("es_mongo_last_html")) {
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/html' title='新窗口打开' target='_blank'>es->mongo html</a></td>");
@@ -123,7 +133,7 @@ public class Controller_siscache {
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
-			if (true) {
+			if (!running.contains("es_mongo_last_url")) {
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>es->mongo url</a></td>");
@@ -131,7 +141,7 @@ public class Controller_siscache {
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
-			if (true) {
+			if (!running.contains("es_mongo_last_path")) {
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/path' title='新窗口打开' target='_blank'>es->mongo path</a></td>");

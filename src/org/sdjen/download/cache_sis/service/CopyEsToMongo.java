@@ -3,6 +3,7 @@ package org.sdjen.download.cache_sis.service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -18,6 +19,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -25,32 +30,59 @@ public class CopyEsToMongo {
 	final static Logger logger = LoggerFactory.getLogger(CopyEsToMongo.class);
 	@Value("${siscache.conf.copy_es_mongo_unit_limit}")
 	private int size = 300;
-	@Autowired
-	private HttpUtil httpUtil;
 	@Value("${siscache.conf.path_es_start}")
 	private String path_es_start;
+	@Autowired
+	private HttpUtil httpUtil;
+	@Autowired
+	private MongoTemplate mongoTemplate;
 
 	public CopyEsToMongo() {
 		System.out.println(">>>>>>>>>>>>CopyEsToMongo");
 	}
 
-	public synchronized void copy(String type) throws Throwable {
-		switch (type) {
-		case "html": {
-			String from = "0";
-			copyHtml(Long.valueOf(from));
-			break;
+	public void copy(String type) throws Throwable {
+		Query query = new Query().addCriteria(Criteria.where("type").is("es_mongo_last_" + type));
+		Map<?, ?> last = mongoTemplate.findOne(query, Map.class, "es_mongo_last");
+		String from = null;
+		if (null != last) {
+			if (last.containsKey("running") && (Boolean) last.get("running")) {
+				logger.info(">>>>>>>>>>>>Copy {} is Running", type);
+				return;
+			}
+			from = (String) last.get("keyword");
 		}
-		case "url":
-		case "path": {
-			String from = " ";
-			copyMd(type);
-			break;
+		com.mongodb.client.result.UpdateResult updateResult = mongoTemplate.upsert(query, new Update()//
+				.set("running", true)//
+				.set("time", new Date())//
+				.set("msg", " init")//
+				, "es_mongo_last");
+		logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
+		try {
+			switch (type) {
+			case "html": {
+				copyHtml(null == from ? 0l : Long.valueOf(from));
+				break;
+			}
+			case "url":
+			case "path": {
+				copyMd(type, null == from ? " " : from);
+				break;
+			}
+			default:
+				break;
+			}
+			updateResult = mongoTemplate.updateMulti(query, new Update().set("running", false), "es_mongo_last");
+			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, updateResult);
+		} catch (Throwable e) {
+			updateResult = mongoTemplate.updateMulti(query, new Update()//
+					.set("running", false)//
+					.set("time", new Date())//
+					.set("msg", e.getMessage())//
+					, "es_mongo_last");
+			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, updateResult);
+			throw e;
 		}
-		default:
-			break;
-		}
-		logger.info(">>>>>>>>>>>>Copy {} finished!", type);
 	}
 
 	public void copyHtml(long from) throws Throwable {
@@ -61,16 +93,15 @@ public class CopyEsToMongo {
 
 	}
 
-	void copyMd(String type) {
-		String from = " ";
+	void copyMd(String type, String from) throws Throwable {
 		String listResult = from;
 		do {
-			listResult = listMd(from = listResult, type);
+			listResult = listMd(type, from = listResult);
 //			logger.info("{}	{}={}", listResult, from, listResult.equals(from));
 		} while (!listResult.equals(from));
 	}
 
-	private String listMd(String from, String type) {
+	private String listMd(String type, String from) throws Throwable {
 		String result = from;
 		long startTime = System.currentTimeMillis();
 		Map<Object, Object> params = ESMap.get();
@@ -99,6 +130,7 @@ public class CopyEsToMongo {
 		long sTime = System.currentTimeMillis() - startTime;
 		logger.info("查{}:	{}ms	共:{}ms	Last:{}	total:{}", type, sTime, (System.currentTimeMillis() - startTime),
 				result, hits.get("total"));
+		logLast("es_mongo_last_" + type, result, hits.get("total").toString());
 		int total = (Integer) hits.get("total");
 		return result;
 	}
@@ -157,6 +189,7 @@ public class CopyEsToMongo {
 			} finally {
 			}
 		}
+		logLast("es_mongo_last_html", String.valueOf(result), hits.get("total").toString());
 		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", sTime, (System.currentTimeMillis() - startTime), from,
 				result, hits.get("total"));
 		return result;
@@ -177,5 +210,13 @@ public class CopyEsToMongo {
 				logger.info("{}+{}	{}	{}", id, hits.get("total"), _source.get("datetime", String.class), title);
 			}
 		}
+	}
+
+	private void logLast(String type, String keyword, String msg) {
+		mongoTemplate.upsert(new Query().addCriteria(Criteria.where("type").is(type)), new Update()//
+				.set("keyword", keyword)//
+				.set("running", true)//
+				.set("time", new Date())//
+				, "es_mongo_last");
 	}
 }

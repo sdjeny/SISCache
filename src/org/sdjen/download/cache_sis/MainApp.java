@@ -52,10 +52,10 @@ public class MainApp {
 	@RequestMapping("/rest")
 	@ResponseBody
 	private String rest() throws Throwable {
-		store.saveURL("url", "path_url");
-		store.saveMD5("md5", "path_md5");
-		System.out.println("get:	" + store.getURL_Path("url"));
-		System.out.println("get:	" + store.getMD5_Path("md5"));
+//		store.saveURL("url", "path_url");
+//		store.saveMD5("md5", "path_md5");
+//		System.out.println("get:	" + store.getURL_Path("url"));
+//		System.out.println("get:	" + store.getMD5_Path("md5"));
 		return httpUtil.getHTML("https://www.baidu.com/", "utf8");
 	}
 }

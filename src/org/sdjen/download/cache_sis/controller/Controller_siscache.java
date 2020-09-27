@@ -21,6 +21,7 @@ import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.DefaultCss;
+import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.CopyEsToMongo;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
@@ -194,7 +195,9 @@ public class Controller_siscache {
 				}
 			}
 		}).start();
-		return "redirect:/siscache/list/all/1/100?debug=true";
+		return JsonUtil.toJson(
+				mongoTemplate.findOne(new Query().addCriteria(Criteria.where("type").is("es_mongo_last_" + type)),
+						Map.class, "es_mongo_last")); // "redirect:/siscache/list/all/1/100?debug=true";
 	}
 
 	@RequestMapping("/cache_result")

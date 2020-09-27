@@ -216,6 +216,7 @@ public class CopyEsToMongo {
 		mongoTemplate.upsert(new Query().addCriteria(Criteria.where("type").is(type)), new Update()//
 				.set("keyword", keyword)//
 				.set("running", true)//
+				.set("msg", msg)//
 				.set("time", new Date())//
 				, "es_mongo_last");
 	}

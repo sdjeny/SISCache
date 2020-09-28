@@ -36,9 +36,9 @@ public class TestTimer implements InitStartTimer {
 //		System.out.println(ZipUtil.uncompress(s));
 //		httpUtil.getHTML("https://www.baidu.com/", "utf8");
 //		System.out.println("kais");
-//		for (String id : "8758015,8758189,8756205,8757822".split(",")) {
+//		for (String id : "8720516".split(",")) {//8758015,8758189,8756205,8757822
 //			Files.write(httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-"+id
-//					+ "-1-1.html").getBytes("GBK"),new File("sisdemo-"+id+".html"));
+//					+ "-1-1.html").getBytes("GBK"),new File("sisdemo_"+id+".html"));
 //			System.out.println(id);
 //		}
 //		System.out.println(httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-8752715-1-1.html"));

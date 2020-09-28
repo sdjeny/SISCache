@@ -1,5 +1,6 @@
 package org.sdjen.download.cache_sis.timer;
 
+import java.io.File;
 import java.util.HashMap;
 
 import javax.annotation.Resource;
@@ -12,6 +13,8 @@ import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.google.common.io.Files;
 
 @Service("TestTimer")
 public class TestTimer implements InitStartTimer {
@@ -32,6 +35,12 @@ public class TestTimer implements InitStartTimer {
 //		System.out.println(s);
 //		System.out.println(ZipUtil.uncompress(s));
 //		httpUtil.getHTML("https://www.baidu.com/", "utf8");
+//		System.out.println("kais");
+//		for (String id : "8758015,8758189,8756205,8757822".split(",")) {
+//			Files.write(httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-"+id
+//					+ "-1-1.html").getBytes("GBK"),new File("sisdemo-"+id+".html"));
+//			System.out.println(id);
+//		}
 //		System.out.println(httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-8752715-1-1.html"));
 //		for (int i = 2; i < 3; i++) {
 //			String uri = MessageFormat.format("http://www.sexinsex.net/bbs/forum-143-{0}.html", String.valueOf(i));

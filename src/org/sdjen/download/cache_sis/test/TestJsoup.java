@@ -21,7 +21,7 @@ public class TestJsoup {
 
 	public static void main(String[] args) throws Throwable {
 		StringBuffer html = new StringBuffer();
-		List<String> lines = Files.readAllLines(Paths.get("src/org/sdjen/download/cache_sis/test/sisdemo.html"),
+		List<String> lines = Files.readAllLines(Paths.get("sisdemo-8758015.html"),
 				Charset.forName("GBK"));
 		lines.forEach(str -> html.append(str));
 		org.jsoup.nodes.Document doument = Jsoup.parse(html.toString());

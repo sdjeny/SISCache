@@ -6,6 +6,7 @@ import java.util.Date;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
@@ -42,20 +43,13 @@ public class JsonUtil {
 		// });
 	}
 
-	public static synchronized String toJson(Object obj) {
-		try {
-			return mapper.writeValueAsString(obj);
-		} catch (Exception e) {
-			throw new RuntimeException("转换json字符失败!");
-		}
+	public static synchronized String toJson(Object obj) throws JsonProcessingException {
+		return mapper.writeValueAsString(obj);
 	}
 
-	public static synchronized <T> T toObject(String json, Class<T> clazz) {
-		try {
-			return mapper.readValue(json, clazz);
-		} catch (IOException e) {
-			throw new RuntimeException("将json字符转换为对象时失败!");
-		}
+	public static synchronized <T> T toObject(String json, Class<T> clazz)
+			throws JsonMappingException, JsonProcessingException {
+		return mapper.readValue(json, clazz);
 	}
 
 	public static class JsonDateSerializer extends JsonSerializer<Date> {
@@ -66,7 +60,8 @@ public class JsonUtil {
 		}
 
 		@Override
-		public void serialize(Date date, JsonGenerator gen, SerializerProvider provider) throws IOException, JsonProcessingException {
+		public void serialize(Date date, JsonGenerator gen, SerializerProvider provider)
+				throws IOException, JsonProcessingException {
 			String value = dateFormat.format(date);
 			gen.writeString(value);
 		}

@@ -41,6 +41,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 @Controller
 @EnableAutoConfiguration
 @RequestMapping("/siscache")
@@ -195,9 +197,12 @@ public class Controller_siscache {
 				}
 			}
 		}).start();
-		return JsonUtil.toJson(
-				mongoTemplate.findOne(new Query().addCriteria(Criteria.where("type").is("es_mongo_" + type)),
-						Map.class, "last")); // "redirect:/siscache/list/all/1/100?debug=true";
+		try {
+			return JsonUtil.toJson(mongoTemplate.findOne(
+					new Query().addCriteria(Criteria.where("type").is("es_mongo_" + type)), Map.class, "last"));
+		} catch (JsonProcessingException e) {
+			return e.getMessage();
+		} // "redirect:/siscache/list/all/1/100?debug=true";
 	}
 
 	@RequestMapping("/cache_result")

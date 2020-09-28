@@ -1,7 +1,9 @@
 package org.sdjen.download.cache_sis.store;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigInteger;
+import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -9,9 +11,11 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -19,8 +23,11 @@ import java.util.zip.DataFormatException;
 
 import org.bson.types.Binary;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.test.TestJsoup;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,27 +40,31 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import com.google.common.io.CharStreams;
 import com.mongodb.client.result.UpdateResult;
 
 @Service("Store_Mongodb")
 public class Store_Mongodb implements IStore {
+	private static Set<String> proxy_urls;
 	private MessageDigest md5Digest;
 	private ConfUtil conf;
 	@Autowired
 	private MongoTemplate mongoTemplate;
 	private String[] fbsArr = { "\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|" };
-	private static Set<String> proxy_urls;
-
-	public ConfUtil getConf() throws IOException {
-		if (null == conf) {
-			conf = ConfUtil.getDefaultConf();
-		}
-		return conf;
-	}
+	private String template;
 
 	private Store_Mongodb() throws Exception {
 		System.out.println(">>>>>>>>>>>>>>>>>>Store_Mongodb");
 		md5Digest = MessageDigest.getInstance("MD5");
+	}
+
+	private String getTemplate() throws IOException {
+		if (null == template) {
+			this.template = CharStreams.toString(
+					new InputStreamReader(this.getClass().getClassLoader().getResource("template.html").openStream(),
+							Charset.forName("GBK")));
+		}
+		return template;
 	}
 
 	@Override
@@ -81,7 +92,17 @@ public class Store_Mongodb implements IStore {
 				Binary zip = (Binary) _source.get("context_zip");
 				if (null != zip) {
 					try {
-						return ZipUtil.uncompress(zip.getData());
+						String context = ZipUtil.uncompress(zip.getData());
+						try {
+							Map<String, String> details = JsonUtil.toObject(context, Map.class);
+							context = getTemplate();
+							for (Entry<String, String> entry : details.entrySet()) {
+								context = context.replace(String.format(TestJsoup.KEYFORMAT, entry.getKey()),
+										entry.getValue());
+							}
+						} catch (Exception e) {
+						}
+						return context;
 					} catch (DataFormatException e1) {
 						e1.printStackTrace();
 					}
@@ -96,6 +117,7 @@ public class Store_Mongodb implements IStore {
 	public void saveHtml(final String id, final String page, final String url, String title, String dateStr,
 			String text) throws Throwable {
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
+//		doument.outputSettings(new Document.OutputSettings().prettyPrint(false));
 		org.jsoup.nodes.Element h1 = doument.select("div.mainbox").select("h1").first();
 		if (null == h1)
 			throw new Exception("Lost title");
@@ -156,7 +178,7 @@ public class Store_Mongodb implements IStore {
 				if ("1楼".equals(floor)) {
 					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")) {
 //						context = comment.html();
-						context = toTextOnly(comment);
+						context = comment.text();// toTextOnly(comment);
 					}
 				} else {
 					String fm = "";
@@ -199,8 +221,27 @@ public class Store_Mongodb implements IStore {
 			json.put("fid", fid);
 			json.put("type", type);
 			json.put("context", context);
-			json.put("context_zip", ZipUtil.compress(text));
 			json.put("author", author);
+			Map<String, String> details = new LinkedHashMap<>();
+			for (org.jsoup.nodes.Element element : doument.select("div#wrapper form")) {
+				details.put("form", element.html());
+			}
+			for (org.jsoup.nodes.Element element : doument.select("div#wrapper div#foruminfo")) {
+				details.put("foruminfo", element.html());
+			}
+			for (org.jsoup.nodes.Element element : doument.select("div#wrapper div.maintable")) {
+				details.put("maintable", element.html());
+			}
+			for (org.jsoup.nodes.Element element : doument.select("meta")) {
+				if ("description".equals(element.attr("name"))) {
+					details.put("description", element.attr("content"));
+					break;
+				}
+			}
+			for (org.jsoup.nodes.Element element : doument.select("title")) {
+				details.put("title", element.text());
+			}
+			json.put("context_zip", ZipUtil.compress(JsonUtil.toJson(details)));
 		}
 		save("htmldoc", json, "fid", "id", "page");
 	}

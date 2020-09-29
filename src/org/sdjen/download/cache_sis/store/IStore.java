@@ -49,16 +49,6 @@ public interface IStore {
 
 	void removeProxyUrl(String url);
 
-	default String toTextOnly(org.jsoup.nodes.Node comment) {
-		if (comment instanceof TextNode) {
-			return ((TextNode) comment).text();
-		} else {
-			StringBuilder result = new StringBuilder();
-			comment.childNodes().forEach(child -> result.append(toTextOnly(child)).append(' '));
-			return result.toString().trim();
-		}
-	}
-
 	default StringBuilder getMsgText(Object pattern, Object... args) {
 		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));
 		builder.append("	,");

@@ -12,9 +12,9 @@ import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.test.TestJsoup;
 import org.sdjen.download.cache_sis.test.morebeen.MoreBeenItfc;
 import org.sdjen.download.cache_sis.test.morebeen.OneBeenItfc;
+import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -89,12 +89,11 @@ public class MainApp {
 //			Files.readAllLines(Paths.get(key + ".html"), Charset.forName("GBK"))
 //					.forEach(str -> stringBuffer.append(str));
 //			Map<String, String> details = TestJsoup.analysis(stringBuffer.toString());
-			Map<String, String> details = TestJsoup.analysis(CharStreams
-					.toString(new InputStreamReader(new FileInputStream(key + ".html"), Charset.forName("GBK"))));
-			details.remove("template");
+			Map<String, String> details = JsoupAnalysisor.split(CharStreams.toString(
+					new InputStreamReader(new FileInputStream(key + ".html"), Charset.forName("GBK"))), false);
 			String template = getTemplate();
 			for (Entry<String, String> entry : details.entrySet()) {
-				template = template.replace(String.format(TestJsoup.KEYFORMAT, entry.getKey()), entry.getValue());
+				template = template.replace(String.format(JsoupAnalysisor.KEYFORMAT, entry.getKey()), entry.getValue());
 			}
 			return template;
 		} catch (Exception e) {

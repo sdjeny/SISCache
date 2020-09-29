@@ -11,7 +11,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,13 +22,12 @@ import java.util.zip.DataFormatException;
 
 import org.bson.types.Binary;
 import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
-import org.sdjen.download.cache_sis.test.TestJsoup;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
+import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Order;
@@ -97,7 +95,7 @@ public class Store_Mongodb implements IStore {
 							Map<String, String> details = JsonUtil.toObject(context, Map.class);
 							context = getTemplate();
 							for (Entry<String, String> entry : details.entrySet()) {
-								context = context.replace(String.format(TestJsoup.KEYFORMAT, entry.getKey()),
+								context = context.replace(String.format(JsoupAnalysisor.KEYFORMAT, entry.getKey()),
 										entry.getValue());
 							}
 						} catch (Exception e) {
@@ -176,10 +174,10 @@ public class Store_Mongodb implements IStore {
 				if (floor.isEmpty())
 					continue;
 				if ("1楼".equals(floor)) {
-					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")) {
+					context = JsoupAnalysisor.toTextOnly(postcontent.select("div.postmessage.defaultpost"));
+//					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")) {
 //						context = comment.html();
-						context = comment.text();// toTextOnly(comment);
-					}
+//					}
 				} else {
 					String fm = "";
 					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")
@@ -222,26 +220,7 @@ public class Store_Mongodb implements IStore {
 			json.put("type", type);
 			json.put("context", context);
 			json.put("author", author);
-			Map<String, String> details = new LinkedHashMap<>();
-			for (org.jsoup.nodes.Element element : doument.select("div#wrapper form")) {
-				details.put("form", element.html());
-			}
-			for (org.jsoup.nodes.Element element : doument.select("div#wrapper div#foruminfo")) {
-				details.put("foruminfo", element.html());
-			}
-			for (org.jsoup.nodes.Element element : doument.select("div#wrapper div.maintable")) {
-				details.put("maintable", element.html());
-			}
-			for (org.jsoup.nodes.Element element : doument.select("meta")) {
-				if ("description".equals(element.attr("name"))) {
-					details.put("description", element.attr("content"));
-					break;
-				}
-			}
-			for (org.jsoup.nodes.Element element : doument.select("title")) {
-				details.put("title", element.text());
-			}
-			json.put("context_zip", ZipUtil.compress(JsonUtil.toJson(details)));
+			json.put("context_zip", ZipUtil.compress(JsonUtil.toJson(JsoupAnalysisor.split(doument, false))));
 		}
 		save("htmldoc", json, "fid", "id", "page");
 	}

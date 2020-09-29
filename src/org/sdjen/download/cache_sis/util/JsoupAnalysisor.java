@@ -19,7 +19,8 @@ public class JsoupAnalysisor {
 	public static String toTextOnly(org.jsoup.select.Elements elements) {
 		StringBuilder result = new StringBuilder(elements.text());
 		elements.select("[src]").forEach(e -> result.append(' ').append(e.attr("src")));
-		elements.select("[href]").forEach(e -> result.append(' ').append(e.attr("href")));
+		elements.select("div.postmessage.defaultpost div.box.postattachlist dl.t_attachlist a[href]")
+				.forEach(e -> result.append(' ').append(e.attr("href")));
 		return result.toString();
 	}
 
@@ -83,7 +84,7 @@ public class JsoupAnalysisor {
 		try {
 			return split(doument, splitTemplate);
 		} finally {
-			System.out.println(toTextOnly(doument.select("div.postmessage.defaultpost")).length());
+//			System.out.println(toTextOnly(doument.select("div.postmessage.defaultpost")));
 		}
 	}
 
@@ -92,12 +93,21 @@ public class JsoupAnalysisor {
 		for (org.jsoup.nodes.Element element : doument.select("div#wrapper form")) {
 			element.select("[onclick]").forEach(e -> e.removeAttr("onclick"));
 			element.select("[onload]").forEach(e -> e.removeAttr("onload"));
-			element.select("td.postauthor").forEach(e -> e.children().stream()
-					.filter(c -> !"cite".equalsIgnoreCase(c.tagName())).forEach(c -> c.remove()));
-			element.select("td.postcontent div.postinfo").forEach(e -> e.children().stream()
-					.filter(c -> !"strong".equalsIgnoreCase(c.tagName())).forEach(c -> c.remove()));
-			element.select(".postratings,.postactions").forEach(c -> c.remove());
-//			element.select("#:contains(ad_thread)").forEach(System.out::println);
+			element.select("table").forEach(t -> t.clearAttributes());
+			element.select("td.postauthor").forEach(e -> e.children().forEach(c -> {
+				if ("cite".equalsIgnoreCase(c.tagName())) {
+					c.select("a").forEach(a -> a.clearAttributes());
+				} else
+					c.remove();
+			}));
+			element.select("td.postcontent div.postinfo").forEach(e -> e.children().forEach(c -> {
+				if ("strong".equalsIgnoreCase(c.tagName()))
+					c.clearAttributes();
+				else
+					c.remove();
+			}));
+			element.select(".postratings,.postactions").remove();
+			element.select("div.postmessage.defaultpost div.box.postattachlist dl.t_attachlist a.hover").remove();
 			result.put("form", element.html());
 		}
 		for (org.jsoup.nodes.Element element : doument.select("div#wrapper div#foruminfo")) {

@@ -70,7 +70,8 @@ public class Store_Mongodb implements IStore {
 		Query query = new Query();
 		query.addCriteria(Criteria.where("id").is(Long.valueOf(id)));
 		query.addCriteria(Criteria.where("page").is(Long.valueOf(page)));
-		query.fields().include("context_zip").include("context_comments").include("context").include("page");
+		query.fields().include("context_zip").include("context_comments").include("context").include("page")
+				.include("fid");
 		Map<?, ?> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
 		if (null != _source) {
 			if (Long.valueOf(page) > 1) {
@@ -93,6 +94,8 @@ public class Store_Mongodb implements IStore {
 						String context = ZipUtil.uncompress(zip.getData());
 						try {
 							Map<String, String> details = JsonUtil.toObject(context, Map.class);
+							details.put("fid", (String) _source.get("fid"));
+							details.put("tid", id);
 							context = getTemplate();
 							for (Entry<String, String> entry : details.entrySet()) {
 								context = context.replace(String.format(JsoupAnalysisor.KEYFORMAT, entry.getKey()),

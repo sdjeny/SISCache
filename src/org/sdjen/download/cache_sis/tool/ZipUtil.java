@@ -3,11 +3,8 @@ package org.sdjen.download.cache_sis.tool;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Base64;
-import java.util.List;
 import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
@@ -17,7 +14,8 @@ import java.util.zip.ZipOutputStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.Base64Utils;
+
+import com.google.common.io.CharStreams;
 
 /**
  * 
@@ -142,14 +140,29 @@ public class ZipUtil {
 		return bos.toByteArray();
 	}
 
+	public static void main(String[] args) throws Throwable {
+		String s = CharStreams.toString(new InputStreamReader(
+				ZipUtil.class.getClassLoader().getResource("template.html").openStream(), Charset.forName("GBK")));
+		byte[] bytes = s.getBytes(CHARSET);
+		s = bytesToString(bytes);
+		System.out.println(s);
+		System.out.println(new String(stringToBytes(s)));
+	}
+
 	public static String bytesToString(byte[] bytes) throws IOException {
-		return new String(Base64Utils.encode(bytes), CHARSET);
+		return new String(org.apache.commons.codec.binary.Base64.encodeBase64(bytes, true), CHARSET);
+//		return org.apache.commons.codec.binary.Base64.encodeBase64String(bytes);
+//		return new String(Base64Utils.encode(bytes), CHARSET);
 //		return new String(Base64.getEncoder().encode(bytes), CHARSET);
+//		return new sun.misc.BASE64Encoder().encode(bytes);
 	}
 
 	public static byte[] stringToBytes(String str) throws IOException {
-		return Base64Utils.decodeFromString(str.replace("\n", "").replace("\r", ""));
-//		return Base64.getDecoder().decode(str.getBytes(CHARSET));
+		return org.apache.commons.codec.binary.Base64.decodeBase64(str.getBytes(CHARSET));
+//		return Base64Utils.decodeFromString(str.replace("\n", "").replace("\r", ""));
+//		return Base64Utils.decodeFromString(str);
+//		return java.util.Base64.getDecoder().decode(str.getBytes(CHARSET));
+//		return new sun.misc.BASE64Decoder().decodeBuffer(str);
 //		return str.getBytes(CHARSET);
 	}
 

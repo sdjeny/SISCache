@@ -34,7 +34,7 @@ public class DownloadList {
 	private HttpUtil httpUtil;
 
 	boolean autoFirst;
-	String list_url;
+	String list_url = "http://www.sexinsex.net/bbs/forum-{0}-{1}.html";;
 	ConfUtil conf;
 
 	public static void main(String[] args) throws Throwable {
@@ -50,12 +50,6 @@ public class DownloadList {
 		System.out.println(">>>>>>>>>>>>>>>>>>DownloadList");
 		conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
-		list_url = conf.getProperties().getProperty("list_url");
-		if (null == list_url) {
-			list_url = "http://www.sexinsex.net/bbs/forum-143-{0}.html";
-			conf.getProperties().setProperty("list_url", list_url);
-			conf.store();
-		}
 	}
 
 	public void execute(String type, int from, int to) throws Throwable {
@@ -104,8 +98,13 @@ public class DownloadList {
 	}
 
 	protected void list(final int i, String type) throws Throwable {
+		for (String fid : IStore.FIDDESCES.keySet())
+			list(fid, i, type);
+	}
+
+	protected void list(String fid, final int i, String type) throws Throwable {
 		long t = System.currentTimeMillis();
-		String uri = MessageFormat.format(list_url, String.valueOf(i));
+		String uri = MessageFormat.format(list_url, fid, String.valueOf(i));
 		String html = getHTML(uri);
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		ExecutorService executor = Executors.newFixedThreadPool(2);

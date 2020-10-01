@@ -74,6 +74,8 @@ public class Store_Mongodb implements IStore {
 				.include("fid");
 		Map<?, ?> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
 		if (null != _source) {
+			if ("Lost title".equals(_source.get("context")))
+				return "Lost title";
 			if (Long.valueOf(page) > 1) {
 				StringBuffer rst = new StringBuffer();
 				rst.append("</br><table border='0'>");
@@ -120,8 +122,15 @@ public class Store_Mongodb implements IStore {
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
 //		doument.outputSettings(new Document.OutputSettings().prettyPrint(false));
 		org.jsoup.nodes.Element h1 = doument.select("div.mainbox").select("h1").first();
-		if (null == h1)
+		if (null == h1) {
+			save("htmldoc", new EntryData()//
+					.put("fid", "")//
+					.put("id", Long.valueOf(id))//
+					.put("page", Long.valueOf(page))//
+					.put("context", "Lost title")//
+					.getData(), "fid", "id", "page");
 			throw new Exception("Lost title");
+		}
 		String type = h1.select("a").text();
 		String dat = null;
 		String context = null;

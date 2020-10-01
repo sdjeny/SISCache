@@ -25,6 +25,7 @@ import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.CopyEsToMongo;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
+import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -346,7 +347,8 @@ public class Controller_siscache {
 						rst.append(String.format("<td>%s</td>", timestr));
 						rst.append(String.format("<td align='center'>%s</td>", _source.get("type")));
 					} else {
-						rst.append(String.format("<td>%s&nbsp;%s&nbsp;%s</td>", datestr, timestr, _source.get("type")));
+						rst.append(String.format("<td>%s&nbsp;%s&nbsp;%s&nbsp;%s</td>", datestr, timestr,
+								"ALL".equalsIgnoreCase(fid) ? IStore.FIDDESCES.get(fid) : "", _source.get("type")));
 					}
 					rst.append("</tr></tbody>");
 					rst.append("<tbody><tr>");

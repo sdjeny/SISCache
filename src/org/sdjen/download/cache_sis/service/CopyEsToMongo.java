@@ -3,7 +3,6 @@ package org.sdjen.download.cache_sis.service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -12,9 +11,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Resource;
+
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.store.IStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +24,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,14 +37,15 @@ public class CopyEsToMongo {
 	private HttpUtil httpUtil;
 	@Autowired
 	private MongoTemplate mongoTemplate;
+	@Resource(name = "Store_Mongodb")
+	private IStore mongoStore;
 
 	public CopyEsToMongo() {
 		System.out.println(">>>>>>>>>>>>CopyEsToMongo");
 	}
 
 	public void copy(String type) throws Throwable {
-		Query query = new Query().addCriteria(Criteria.where("type").is("es_mongo_" + type));
-		Map<?, ?> last = mongoTemplate.findOne(query, Map.class, "last");
+		Map<String, Object> last = mongoStore.getLast("es_mongo_" + type);
 		String from = null;
 		if (null != last) {
 			if (last.containsKey("running") && (Boolean) last.get("running")) {
@@ -52,11 +54,7 @@ public class CopyEsToMongo {
 			}
 			from = (String) last.get("keyword");
 		}
-		com.mongodb.client.result.UpdateResult updateResult = mongoTemplate.upsert(query, new Update()//
-				.set("running", true)//
-				.set("time", new Date())//
-				.set("msg", " init")//
-				, "last");
+		mongoStore.running("es_mongo_" + type, from, " init");
 		logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
 		try {
 			switch (type) {
@@ -72,15 +70,9 @@ public class CopyEsToMongo {
 			default:
 				break;
 			}
-			updateResult = mongoTemplate.updateMulti(query, new Update().set("running", false), "last");
-			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, updateResult);
+			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, mongoStore.finish("es_mongo_" + type, "finsh"));
 		} catch (Throwable e) {
-			updateResult = mongoTemplate.updateMulti(query, new Update()//
-					.set("running", false)//
-					.set("time", new Date())//
-					.set("msg", e.getMessage())//
-					, "last");
-			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, updateResult);
+			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, mongoStore.finish("es_mongo_" + type, e.getMessage()));
 			throw e;
 		}
 	}
@@ -130,7 +122,7 @@ public class CopyEsToMongo {
 		long sTime = System.currentTimeMillis() - startTime;
 		logger.info("查{}:	{}ms	共:{}ms	Last:{}	total:{}", type, sTime, (System.currentTimeMillis() - startTime),
 				result, hits.get("total"));
-		logLast("es_mongo_" + type, result, hits.get("total").toString());
+		mongoStore.running("es_mongo_" + type, result, hits.get("total").toString());
 		int total = (Integer) hits.get("total");
 		return result;
 	}
@@ -189,7 +181,7 @@ public class CopyEsToMongo {
 			} finally {
 			}
 		}
-		logLast("es_mongo_html", String.valueOf(result), hits.get("total").toString());
+		mongoStore.running("es_mongo_html", String.valueOf(result), hits.get("total").toString());
 		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", sTime, (System.currentTimeMillis() - startTime), from,
 				result, hits.get("total"));
 		return result;
@@ -210,14 +202,5 @@ public class CopyEsToMongo {
 				logger.info("{}+{}	{}	{}", id, hits.get("total"), _source.get("datetime", String.class), title);
 			}
 		}
-	}
-
-	private void logLast(String type, String keyword, String msg) {
-		mongoTemplate.upsert(new Query().addCriteria(Criteria.where("type").is(type)), new Update()//
-				.set("keyword", keyword)//
-				.set("running", true)//
-				.set("msg", msg)//
-				.set("time", new Date())//
-				, "last");
 	}
 }

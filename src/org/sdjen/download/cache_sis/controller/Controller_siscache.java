@@ -103,9 +103,20 @@ public class Controller_siscache {
 			rst.append("</tr></tbody>");
 		}
 		{
+		}
+		IStore.FIDDESCES.forEach((k, v) -> {
+			rst.append("<tbody><tr>");
+			rst.append(String.format("<td>%s</td>", v));
+			rst.append(String.format(
+					"<td><a href='/siscache/list/%s/1/100?debug=true' title='新窗口打开' target='_blank'>%s</a></td>", k,
+					v));
+			rst.append(String.format("<td>%s</td>", ""));
+			rst.append("</tr></tbody>");
+		});
+		{
 			rst.append("<tbody><tr>");
 			rst.append("<td><a href='/siscache/list/all/1/100?debug=true' title='新窗口打开' target='_blank'>list</a></td>");
-			rst.append(String.format("<td>%s</td>", "list"));
+			rst.append(String.format("<td>%s</td>", "List ALL"));
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
 		}
@@ -126,9 +137,7 @@ public class Controller_siscache {
 			rst.append("</tr></tbody>");
 		}
 		if (can_copy_es_mongo) {
-			Set<String> running = new HashSet<>();
-			mongoTemplate.find(new Query().addCriteria(Criteria.where("running").is(true)), Map.class, "last")
-					.forEach(m -> running.add((String) m.get("type")));
+			Set<String> running = store.getRunnings();
 			if (!running.contains("es_mongo_html")) {
 				rst.append("<tbody><tr>");
 				rst.append(
@@ -261,7 +270,13 @@ public class Controller_siscache {
 				}
 			}
 		}).start();
-		return list(1);
+//		return list(1);
+		try {
+			return JsonUtil.toJson(store.getLast("download_list"));
+		} catch (JsonProcessingException e) {
+			e.printStackTrace();
+			return e.getMessage();
+		}
 		// return "redirect:/siscache/cache_result";
 	}
 
@@ -348,7 +363,8 @@ public class Controller_siscache {
 						rst.append(String.format("<td align='center'>%s</td>", _source.get("type")));
 					} else {
 						rst.append(String.format("<td>%s&nbsp;%s&nbsp;%s&nbsp;%s</td>", datestr, timestr,
-								"ALL".equalsIgnoreCase(fid) ? IStore.FIDDESCES.get(fid) : "", _source.get("type")));
+								"ALL".equalsIgnoreCase(fid) ? IStore.FIDDESCES.get(_source.get("fid")) : "",
+								_source.get("type")));
 					}
 					rst.append("</tr></tbody>");
 					rst.append("<tbody><tr>");

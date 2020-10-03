@@ -393,8 +393,8 @@ public class Store_Mongodb implements IStore {
 //		query.limit(pageSize);
 //		Sort sort = new Sort(Sort.Direction.ASC, "DEVID").and(new Sort(Sort.Direction.ASC, "TIME"));// 多条件DEVID、time
 //		query.with(Sort.by(Order.asc("DEVID"), Order.desc("TIME")));
-		query.fields().include("datetime").include("date_str").include("id").include("page").include("type")
-				.include("title");
+		query.fields().include("datetime").include("date_str").include("fid").include("id").include("page")
+				.include("type").include("title");
 		List<Map<String, Object>> ls = new ArrayList<>();
 		Map<String, Object> result = new HashMap<>();
 		result.put("list", ls);
@@ -420,6 +420,7 @@ public class Store_Mongodb implements IStore {
 			ls.add(new EntryData<String, Object>()//
 					.put("date", datestr)//
 					.put("time", timestr)//
+					.put("fid", _source.get("fid"))//
 					.put("id", _source.get("id"))//
 					.put("page", _source.get("page"))//
 					.put("type", _source.get("type"))//
@@ -457,5 +458,38 @@ public class Store_Mongodb implements IStore {
 			msg(">>>>>>>>>REMOVE:	{0}",
 					mongoTemplate.findAllAndRemove(Query.query(Criteria.where("url").is(proxy_url)), "urls_proxy"));
 		}
+	}
+
+	@Override
+	public Map<String, Object> getLast(String type) {
+		Query query = new Query().addCriteria(Criteria.where("type").is(type));
+		return mongoTemplate.findOne(query, Map.class, "last");
+	}
+
+	@Override
+	public Object running(String type, String keyword, String msg) {
+		return mongoTemplate.upsert(new Query().addCriteria(Criteria.where("type").is(type)), new Update()//
+				.set("keyword", keyword)//
+				.set("running", true)//
+				.set("msg", msg)//
+				.set("time", new Date())//
+				, "last");
+	}
+
+	@Override
+	public Set<String> getRunnings() {
+		Set<String> running = new HashSet<>();
+		mongoTemplate.find(new Query().addCriteria(Criteria.where("running").is(true)), Map.class, "last")
+				.forEach(m -> running.add((String) m.get("type")));
+		return running;
+	}
+
+	@Override
+	public Object finish(String type, String msg) {
+		return mongoTemplate.updateMulti(new Query().addCriteria(Criteria.where("type").is(type)), new Update()//
+				.set("running", false)//
+				.set("time", new Date())//
+				.set("msg", msg)//
+				, "last");
 	}
 }

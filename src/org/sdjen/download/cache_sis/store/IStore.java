@@ -3,6 +3,7 @@ package org.sdjen.download.cache_sis.store;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -82,6 +83,22 @@ public interface IStore {
 	void addProxyUrl(String url);
 
 	void removeProxyUrl(String url);
+
+	default Map<String,Object> getLast(String type) {
+		return null;
+	}
+
+	default Object running(String type, String keyword, String msg) {
+		return null;
+	}
+
+	default Object finish(String type, String msg) {
+		return null;
+	}
+
+	default Set<String> getRunnings() {
+		return new HashSet<String>();
+	}
 
 	default StringBuilder getMsgText(Object pattern, Object... args) {
 		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));

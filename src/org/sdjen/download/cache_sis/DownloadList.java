@@ -4,6 +4,7 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,8 +17,10 @@ import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
 import org.sdjen.download.cache_sis.store.IStore;
+import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +56,16 @@ public class DownloadList {
 	}
 
 	public void execute(String type, int from, int to) throws Throwable {
+
+		Map<String, Object> last = store.getLast("download_list");
+		if (null != last) {
+			if (last.containsKey("running") && (Boolean) last.get("running")) {
+				logger.info(">>>>>>>>>>>>download_list is Running");
+				return;
+			}
+		}
+		store.running("download_list", JsonUtil
+				.toJson(new EntryData<>().put("type", type).put("from", from).put("to", to).getData()),"init");
 		try {
 			autoFirst = true;
 			try {
@@ -76,14 +89,18 @@ public class DownloadList {
 						store.refreshMsgLog();
 					}
 					list(i, type);
+					store.running("download_list", JsonUtil
+							.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to).getData()),"");
 					if (autoFirst) {
 						conf.getProperties().setProperty("list_start", String.valueOf(i));
 						conf.store();// 自动记录最后一次执行完成
 					}
 				}
+				store.finish("download_list", "finish");
 			} finally {
 			}
 		} catch (Throwable e) {
+			store.finish("download_list", e.getMessage());
 			store.err("异常终止	{0}", e);
 			throw e;
 		} finally {

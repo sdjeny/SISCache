@@ -1,6 +1,7 @@
 package org.sdjen.download.cache_sis.timer;
 
 import java.io.File;
+import java.util.Collection;
 import java.util.HashMap;
 
 import javax.annotation.Resource;
@@ -12,6 +13,7 @@ import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.google.common.io.Files;
@@ -22,12 +24,15 @@ public class TestTimer implements InitStartTimer {
 	private HttpUtil httpUtil;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
+	@Value("${siscache.conf.fids}")
+	private Collection<String> fids;
 
 	public TestTimer() {
 		System.out.println(">>>>>>>>>>>>TestTimer");
 	}
 
 	public void restart(double hours) throws Throwable {
+		System.out.println(">>>>>>>>>>>>TestTimer:" + fids);
 //		String s = httpUtil.doLocalGet("http://192.168.0.237:9200/siscache_html/_doc/{key}",
 //				new EntryData<String, String>().put("key", "8757080_1").getData());
 //		ESMap esMap = JsonUtil.toObject(s, ESMap.class);

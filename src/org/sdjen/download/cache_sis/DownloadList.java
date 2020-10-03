@@ -3,6 +3,7 @@ package org.sdjen.download.cache_sis;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -24,6 +25,7 @@ import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -33,6 +35,8 @@ public class DownloadList {
 	private DownloadSingle downloadSingle;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
+	@Value("${siscache.conf.fids}")
+	private Collection<String> fids;
 	@Autowired
 	private HttpUtil httpUtil;
 
@@ -64,8 +68,8 @@ public class DownloadList {
 				return;
 			}
 		}
-		store.running("download_list", JsonUtil
-				.toJson(new EntryData<>().put("type", type).put("from", from).put("to", to).getData()),"init");
+		store.running("download_list",
+				JsonUtil.toJson(new EntryData<>().put("type", type).put("from", from).put("to", to).getData()), "init");
 		try {
 			autoFirst = true;
 			try {
@@ -82,15 +86,16 @@ public class DownloadList {
 			}
 			try {
 				for (int i = from; i <= to; i++) {
-					if (i != from && ((i - from) % pageU == 0)) {// 执行到一定数量重新下载3页，保证齐全
-						for (int j = 2; j < 3; j++) {
-							list(j, "");
-						}
-						store.refreshMsgLog();
-					}
+//					if (i != from && ((i - from) % pageU == 0)) {// 执行到一定数量重新下载3页，保证齐全
+//						for (int j = 2; j < 3; j++) {
+//							list(j, "");
+//						}
+//						store.refreshMsgLog();
+//					}
 					list(i, type);
-					store.running("download_list", JsonUtil
-							.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to).getData()),"");
+					store.running("download_list",
+							JsonUtil.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to).getData()),
+							"");
 					if (autoFirst) {
 						conf.getProperties().setProperty("list_start", String.valueOf(i));
 						conf.store();// 自动记录最后一次执行完成
@@ -115,8 +120,9 @@ public class DownloadList {
 	}
 
 	protected void list(final int i, String type) throws Throwable {
-		for (String fid : IStore.FIDDESCES.keySet())
-			list(fid, i, type);
+		for (String fid : fids)
+			if (IStore.FIDDESCES.containsKey(fid))
+				list(fid, i, type);
 	}
 
 	protected void list(String fid, final int i, String type) throws Throwable {

@@ -3,11 +3,15 @@ package org.sdjen.download.cache_sis.timer;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.annotation.Resource;
+
 import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.store.IStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +20,8 @@ public class SISDownloadTimer implements InitStartTimer {
 	private Timer timer;
 	@Autowired
 	private DownloadList downloadList;
+	@Resource(name = "${definde.service.name.store}")
+	private IStore store;
 
 	public SISDownloadTimer() {
 		System.out.println(">>>>>>>>>>>>SISDownloadTimer");
@@ -53,6 +59,13 @@ public class SISDownloadTimer implements InitStartTimer {
 
 			@Override
 			public void run() {
+				Map<String, Object> last = store.getLast("download_list");
+				if (null != last) {
+					if (last.containsKey("running") && (Boolean) last.get("running")) {
+						logger.info(">>>>>>>>>>>>download_list is Running");
+						return;
+					}
+				}
 				synchronized (times) {
 					String[] range = ranges.get((int) (times % ranges.size()));
 					String type = (String) range[0];

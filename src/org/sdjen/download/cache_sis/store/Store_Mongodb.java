@@ -533,7 +533,7 @@ public class Store_Mongodb implements IStore {
 				if (System.currentTimeMillis() - ((Date) findOne.get("time")).getTime() < 3600000
 						* url_fail_retry_in_hours) {
 					result.put("continue", false);
-					result.put("msg", "1小时内禁止连接：" + findOne.get("msg"));
+					result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.get("msg"));
 				} else {
 					mongoTemplate.updateMulti(new Query().addCriteria(Criteria.where("url").is(url)), new Update()//
 							.set("count", url_fail_retry_begin)//

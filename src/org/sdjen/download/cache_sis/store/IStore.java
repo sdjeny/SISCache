@@ -65,8 +65,7 @@ public interface IStore {
 
 	void refreshMsgLog();
 
-	public Map<String, Object> getTitleList(String fid, int page, int size, String query, String order)
-			throws Throwable;
+	Map<String, Object> getTitleList(String fid, int page, int size, String query, String order) throws Throwable;
 
 	default String cutForProxy(String url) {
 		int index = url.indexOf('/', 9);
@@ -84,7 +83,13 @@ public interface IStore {
 
 	void removeProxyUrl(String url);
 
-	default Map<String,Object> getLast(String type) {
+	void logFailedUrl(String url, Throwable e);
+
+	void logSucceedUrl(String url);
+
+	void connectCheck(String url) throws Throwable;
+
+	default Map<String, Object> getLast(String type) {
 		return null;
 	}
 

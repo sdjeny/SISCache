@@ -144,6 +144,7 @@ public class HttpUtil {
 	}
 
 	public void execute(String uri, Executor<?> executor) throws Throwable {
+		store.connectCheck(uri);
 		logger.debug(">	" + uri);
 		try {
 			boolean needProxy = needProxy(uri);
@@ -165,11 +166,13 @@ public class HttpUtil {
 //					throw e;// 已经经过代理的直接终止了
 				}
 			}
+			store.logSucceedUrl(uri);
 			if (rsp == null || !rsp.getStatusCode().is2xxSuccessful()) {
 				return;
 			}
 			executor.execute(rsp.getBody());
 		} catch (Throwable e) {
+			store.logFailedUrl(uri, e);
 			throw e;
 		} finally {
 		}

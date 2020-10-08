@@ -531,4 +531,22 @@ public class Store_ElasticSearch implements IStore {
 			e.printStackTrace();
 		}
 	}
+
+	@Override
+	public void logFailedUrl(String url, Throwable e) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void connectCheck(String url) throws Throwable {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void logSucceedUrl(String url) {
+		// TODO Auto-generated method stub
+		
+	}
 }

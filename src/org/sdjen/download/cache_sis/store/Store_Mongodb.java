@@ -442,21 +442,23 @@ public class Store_Mongodb implements IStore {
 
 	@Override
 	public synchronized void addProxyUrl(String url) {
-		String proxy_url = cutForProxy(url);
-		if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
-			proxy_urls.add(proxy_url);
-			msg(">>>>>>>>>ADD:	{0}", mongoTemplate
-					.insert(new EntryData<String, Object>().put("url", proxy_url).getData(), "urls_proxy"));
+		url = cutForProxy(url);
+		if (!url.isEmpty() && !proxy_urls.contains(url)) {
+			proxy_urls.add(url);
+			Map<String, Object> result = mongoTemplate.insert(new EntryData<String, Object>().put("url", url).getData(),
+					"urls_proxy");
+			msg(">>>>>>>>>ADD:	{0}", result);
 		}
 	}
 
 	@Override
 	public synchronized void removeProxyUrl(String url) {
-		String proxy_url = cutForProxy(url);
-		if (!proxy_url.isEmpty() && proxy_urls.contains(proxy_url)) {
-			proxy_urls.remove(proxy_url);
-			msg(">>>>>>>>>REMOVE:	{0}",
-					mongoTemplate.findAllAndRemove(Query.query(Criteria.where("url").is(proxy_url)), "urls_proxy"));
+		url = cutForProxy(url);
+		if (!url.isEmpty() && proxy_urls.contains(url)) {
+			proxy_urls.remove(url);
+			List<Object> result = mongoTemplate.findAllAndRemove(Query.query(Criteria.where("url").is(url)),
+					"urls_proxy");
+			msg(">>>>>>>>>REMOVE:	{0}", result);
 		}
 	}
 
@@ -491,5 +493,38 @@ public class Store_Mongodb implements IStore {
 				.set("time", new Date())//
 				.set("msg", msg)//
 				, "last");
+	}
+
+	@Override
+	public void logFailedUrl(String url, Throwable e) {
+		UpdateResult updateResult = mongoTemplate.upsert(
+				new Query().addCriteria(Criteria.where("url").is(cutForProxy(url))),
+				new Update().inc("count", 1).set("msg", e.getMessage()).set("time", new Date()), "urls_failed");
+		logger.debug("logFailedUrl	>>>>>failurl:{}", updateResult);
+	}
+
+	@Override
+	public void connectCheck(String url) throws Throwable {
+		url = cutForProxy(url);
+		Map<String, Object> result = mongoTemplate.findOne(new Query().addCriteria(Criteria.where("url").is(url)),
+				Map.class, "urls_failed");
+		if (null != result) {
+			int count = (int) result.get("count");
+			Date time = (Date) result.get("time");
+			if (count > 30) {
+				if (System.currentTimeMillis() - time.getTime() > 1000 * 60 * 60) {
+					throw new Exception("1小时内禁止连接：" + result.get("msg"));
+				} else {
+					mongoTemplate.updateMulti(new Query().addCriteria(Criteria.where("url").is(url)), new Update()//
+							.set("count", 10)//
+							, "urls_failed");
+				}
+			}
+		}
+	}
+
+	@Override
+	public void logSucceedUrl(String url) {
+		mongoTemplate.findAllAndRemove(Query.query(Criteria.where("url").is(url)), "urls_failed");
 	}
 }

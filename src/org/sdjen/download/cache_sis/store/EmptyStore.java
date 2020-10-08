@@ -90,10 +90,4 @@ public class EmptyStore implements IStore {
 		
 	}
 
-	@Override
-	public void connectCheck(String url) throws Throwable {
-		// TODO Auto-generated method stub
-		
-	}
-
 }

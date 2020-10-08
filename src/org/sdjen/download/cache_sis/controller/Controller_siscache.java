@@ -477,67 +477,28 @@ public class Controller_siscache {
 			if (ss.length > 2)
 				page = ss[2];
 		}
-		Map<String, Object> params = new HashMap<>();
-		ESMap _source = ESMap.get();
-		_source.put("includes", Arrays.asList("context*"));
-		_source.put("excludes", Arrays.asList());
-		params.put("_source", _source);
-		params.put("query", Collections.singletonMap("bool"//
-				, Collections.singletonMap("filter", Arrays.asList(//
-						Collections.singletonMap("term", Collections.singletonMap("id", id))//
-						, Collections.singletonMap("term", Collections.singletonMap("page", page))//
-				))//
-		)//
-		);
-		StringBuffer rst = new StringBuffer();
+//		Map<String, Object> params = new HashMap<>();
+//		ESMap _source = ESMap.get();
+//		_source.put("includes", Arrays.asList("context*"));
+//		_source.put("excludes", Arrays.asList());
+//		params.put("_source", _source);
+//		params.put("query", Collections.singletonMap("bool"//
+//				, Collections.singletonMap("filter", Arrays.asList(//
+//						Collections.singletonMap("term", Collections.singletonMap("id", id))//
+//						, Collections.singletonMap("term", Collections.singletonMap("page", page))//
+//				))//
+//		)//
+//		);
 		try {
-			String text = store.getLocalHtml(id, page);
-			org.jsoup.nodes.Document doument = Jsoup.parse(text);
-			boolean update = false;
-			for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
-				if (e.text().isEmpty()) {
-					update = true;
-					e.text(DefaultCss.getCss());
-				}
-			}
-			for (org.jsoup.nodes.Element e : doument//
-					.select("div.mainbox.viewthread")//
-					.select("td.postcontent")//
-					.select("div.postmessage.defaultpost")//
-					.select("div.box.postattachlist")//
-					.select("dl.t_attachlist")//
-					.select("a[href]")//
-			) {
-				String href = e.attr("href");
-				if (href.startsWith("../../torrent/20")) {
-					update = true;
-					e.attr("href", "../" + href);
-				} else if (href.startsWith("../")) {
-					href = href.replace("../", "");
-					if (href.startsWith("http")) {
-						update = true;
-						e.attr("href", href);
-					}
-				}
-			}
-			for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
-				String src = e.attr("src");
-				if (src.startsWith("../../images/20")) {
-					update = true;
-					e.attr("src", "../" + src);
-				}
-			}
-			if (update) {
-				text = doument.html();
-			}
-			rst.append(text);
+			return store.getLocalHtml(id, page);
 		} catch (Throwable e) {
+			StringBuffer rst = new StringBuffer();
 			e.printStackTrace();
 			rst.append(e.getMessage());
 			for (java.lang.StackTraceElement element : e.getStackTrace()) {
 				rst.append(element.toString());
 			}
+			return rst.toString();
 		}
-		return rst.toString();
 	}
 }

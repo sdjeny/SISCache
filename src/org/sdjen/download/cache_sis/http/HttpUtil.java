@@ -1,6 +1,7 @@
 package org.sdjen.download.cache_sis.http;
 
 import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.Resource;
@@ -144,7 +145,9 @@ public class HttpUtil {
 	}
 
 	public void execute(String uri, Executor<?> executor) throws Throwable {
-		store.connectCheck(uri);
+		Map<String, Object> connectCheck = store.connectCheck(uri);
+		if (!(boolean) connectCheck.get("continue"))
+			throw new Exception((String) connectCheck.get("msg"));
 		logger.debug(">	" + uri);
 		try {
 			boolean needProxy = needProxy(uri);
@@ -166,7 +169,8 @@ public class HttpUtil {
 //					throw e;// 已经经过代理的直接终止了
 				}
 			}
-			store.logSucceedUrl(uri);
+			if ((boolean) connectCheck.get("found"))
+				store.logSucceedUrl(uri);
 			if (rsp == null || !rsp.getStatusCode().is2xxSuccessful()) {
 				return;
 			}

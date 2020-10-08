@@ -1,12 +1,16 @@
 package org.sdjen.download.cache_sis.store;
 
+import java.io.IOException;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.jsoup.Jsoup;
+import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,7 +91,49 @@ public interface IStore {
 
 	void logSucceedUrl(String url);
 
-	void connectCheck(String url) throws Throwable;
+	default org.jsoup.nodes.Document replaceLocalHtmlUrl(String text) throws IOException {
+		org.jsoup.nodes.Document doument = Jsoup.parse(text);
+		boolean update = false;
+		for (org.jsoup.nodes.Element e : doument//
+				.select("div.mainbox.viewthread")//
+				.select("td.postcontent")//
+				.select("div.postmessage.defaultpost")//
+				.select("div.box.postattachlist")//
+				.select("dl.t_attachlist")//
+				.select("a[href]")//
+		) {
+			String href = e.attr("href");
+			if (href.startsWith("../../torrent/20")) {
+				update = true;
+				e.attr("href", "../" + href);
+			} else if (href.startsWith("../")) {
+				href = href.replace("../", "");
+				if (href.startsWith("http")) {
+					update = true;
+					e.attr("href", href);
+				}
+			}
+		}
+		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
+			String src = e.attr("src");
+			if (src.startsWith("../../images/20")) {
+				update = true;
+				e.attr("src", "../" + src);
+			}
+		}
+		return doument;
+//		if (update) {
+//			text = doument.html();
+//		}
+	}
+
+	default Map<String, Object> connectCheck(String url) {
+		Map<String, Object> result = new HashMap<>();
+		result.put("found", false);
+		result.put("continue", true);
+		result.put("msg", "");
+		return result;
+	}
 
 	default Map<String, Object> getLast(String type) {
 		return null;

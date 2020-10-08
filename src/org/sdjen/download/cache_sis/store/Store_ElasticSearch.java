@@ -21,6 +21,7 @@ import javax.annotation.Resource;
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
@@ -132,6 +133,7 @@ public class Store_ElasticSearch implements IStore {
 				new EntryData<String, String>().put("key", key).getData());
 		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
 		ESMap _source = esMap.get("_source", ESMap.class);
+		String result = null;
 		if (null != _source) {
 			if (page.compareTo("1") > 0) {
 				StringBuffer rst = new StringBuffer();
@@ -143,7 +145,7 @@ public class Store_ElasticSearch implements IStore {
 					rst.append("</tr></tbody>");
 				}
 				rst.append("</table>");
-				return rst.toString();
+				result = rst.toString();
 			} else {
 				String text = _source.get("context_zip", String.class);
 				if (null != text) {
@@ -155,11 +157,20 @@ public class Store_ElasticSearch implements IStore {
 					}
 				}
 				if (null == text) {
-					return _source.get("context", String.class);
+					result = _source.get("context", String.class);
 				}
 			}
 		}
-		return null;
+		if(null != result) {
+			org.jsoup.nodes.Document document = replaceLocalHtmlUrl(result);
+			for (org.jsoup.nodes.Element e : document.select("head").select("style")) {
+				if (e.text().isEmpty()) {
+					e.text(DefaultCss.getCss());
+				}
+			}
+			result = document.html();
+		}
+		return result;
 	}
 
 	@Override
@@ -535,18 +546,12 @@ public class Store_ElasticSearch implements IStore {
 	@Override
 	public void logFailedUrl(String url, Throwable e) {
 		// TODO Auto-generated method stub
-		
-	}
 
-	@Override
-	public void connectCheck(String url) throws Throwable {
-		// TODO Auto-generated method stub
-		
 	}
 
 	@Override
 	public void logSucceedUrl(String url) {
 		// TODO Auto-generated method stub
-		
+
 	}
 }

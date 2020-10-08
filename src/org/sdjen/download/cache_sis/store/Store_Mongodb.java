@@ -31,6 +31,7 @@ import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -52,6 +53,12 @@ public class Store_Mongodb implements IStore {
 	private MongoTemplate mongoTemplate;
 	private String[] fbsArr = { "\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|" };
 	private String template;
+	@Value("${siscache.conf.url_fail_stop}")
+	private int url_fail_stop = 10;
+	@Value("${siscache.conf.url_fail_retry_begin}")
+	private int url_fail_retry_begin = 5;
+	@Value("${siscache.conf.url_fail_retry_in_hours}")
+	private int url_fail_retry_in_hours = 3;
 
 	private Store_Mongodb() throws Exception {
 		System.out.println(">>>>>>>>>>>>>>>>>>Store_Mongodb");
@@ -77,6 +84,7 @@ public class Store_Mongodb implements IStore {
 		query.fields().include("context_zip").include("context_comments").include("context").include("page")
 				.include("fid");
 		Map<?, ?> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
+		String result = null;
 		if (null != _source) {
 			if ("Lost title".equals(_source.get("context")))
 				return "Lost title";
@@ -92,7 +100,7 @@ public class Store_Mongodb implements IStore {
 						rst.append("</tr></tbody>");
 					});
 				rst.append("</table>");
-				return rst.toString();
+				result = rst.toString();
 			} else {
 				Binary zip = (Binary) _source.get("context_zip");
 				if (null != zip) {
@@ -114,10 +122,13 @@ public class Store_Mongodb implements IStore {
 						e1.printStackTrace();
 					}
 				}
-				return (String) _source.get("context");
+				result = (String) _source.get("context");
 			}
 		}
-		return null;
+		if (null != result) {
+			result = replaceLocalHtmlUrl(result).html();
+		}
+		return result;
 	}
 
 	@Override
@@ -508,27 +519,33 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public void connectCheck(String url) throws Throwable {
+	public Map<String, Object> connectCheck(String url) {
+		Map<String, Object> result = new HashMap<>();
+		result.put("found", false);
+		result.put("continue", true);
+		result.put("msg", "");
 		url = cutForProxy(url);
-		Map<String, Object> result = mongoTemplate.findOne(new Query().addCriteria(Criteria.where("url").is(url)),
+		Map<String, Object> findOne = mongoTemplate.findOne(new Query().addCriteria(Criteria.where("url").is(url)),
 				Map.class, "urls_failed");
-		if (null != result) {
-			int count = (int) result.get("count");
-			Date time = (Date) result.get("time");
-			if (count > 30) {
-				if (System.currentTimeMillis() - time.getTime() > 1000 * 60 * 60) {
-					throw new Exception("1小时内禁止连接：" + result.get("msg"));
+		if (null != findOne) {
+			result.put("found", true);
+			if ((int) findOne.get("count") > url_fail_stop) {
+				if (System.currentTimeMillis() - ((Date) findOne.get("time")).getTime() < 3600000
+						* url_fail_retry_in_hours) {
+					result.put("continue", false);
+					result.put("msg", "1小时内禁止连接：" + findOne.get("msg"));
 				} else {
 					mongoTemplate.updateMulti(new Query().addCriteria(Criteria.where("url").is(url)), new Update()//
-							.set("count", 10)//
+							.set("count", url_fail_retry_begin)//
 							, "urls_failed");
 				}
 			}
 		}
+		return result;
 	}
 
 	@Override
 	public void logSucceedUrl(String url) {
-		mongoTemplate.findAllAndRemove(Query.query(Criteria.where("url").is(url)), "urls_failed");
+		mongoTemplate.findAllAndRemove(Query.query(Criteria.where("url").is(cutForProxy(url))), "urls_failed");
 	}
 }

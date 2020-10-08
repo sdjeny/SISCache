@@ -1,5 +1,7 @@
 package org.sdjen.download.cache_sis.store;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
@@ -58,9 +60,11 @@ public class Store_Mongodb implements IStore {
 
 	private String getTemplate() throws IOException {
 		if (null == template) {
-			this.template = CharStreams.toString(
-					new InputStreamReader(this.getClass().getClassLoader().getResource("template.html").openStream(),
-							Charset.forName("GBK")));
+			File file = new File("template.html");
+			this.template = CharStreams.toString(new InputStreamReader(
+					file.exists() ? new FileInputStream(file)
+							: this.getClass().getClassLoader().getResource("template.html").openStream(),
+					Charset.forName("GBK")));
 		}
 		return template;
 	}

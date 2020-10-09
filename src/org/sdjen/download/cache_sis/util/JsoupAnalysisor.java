@@ -73,12 +73,15 @@ public class JsoupAnalysisor {
 				if (null != contents && !contents.isEmpty()) {
 					form.append("<table cellspacing='0' cellpadding='0'>");
 					contents.forEach(content -> {
+						form.append("<tr>");
 						form.append(MessageFormat.format(
-								"<tr><td class='postauthor'><cite><a target='_blank' class='dropmenu'>{0}</a></cite><p><em><font color='skyblue'>{1}</font></em></p></td>",
-								content.get("author"), content.get("level")));
+								"<td class='postauthor' style='width:0'><cite><a target='_blank' class='dropmenu'>{0}</a></cite><p><em><font color='skyblue'>{1}</font></em></p></td>",
+								content.get("author"), content.get("level")));// 隐藏作者列
 						form.append("<td class='postcontent'>");
-						form.append(MessageFormat.format("<div class='postinfo'> <strong>{0}</strong>{1}</div>",
-								content.get("floor"), content.get("datetime")));
+						form.append(MessageFormat.format(
+								"<div class='postinfo'> <strong>{0}</strong>{1} <em>{2} {3}</em></div>",
+								content.get("floor"), content.get("datetime"), content.get("author"),
+								content.get("level")));// 在info增加作者列
 						form.append("<div class='postmessage defaultpost'>");
 						if ("1楼".equals(content.get("floor"))) {
 							form.append(MessageFormat.format("<h2>{0}</h2>", title));

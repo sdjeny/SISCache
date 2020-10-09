@@ -7,8 +7,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -26,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -37,6 +36,8 @@ public class DownloadList {
 	private IStore store;
 	@Value("${siscache.conf.fids}")
 	private Collection<String> fids;
+	@Resource(name = "downloadListExecutor")
+	private ThreadPoolTaskExecutor executor;
 	@Autowired
 	private HttpUtil httpUtil;
 
@@ -130,7 +131,6 @@ public class DownloadList {
 		String uri = MessageFormat.format(list_url, fid, String.valueOf(i));
 		String html = getHTML(uri);
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
-		ExecutorService executor = Executors.newFixedThreadPool(2);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
 		for (final org.jsoup.nodes.Element element : doument.select("tbody").select("tr")) {
 			resultList.add(executor.submit(new Callable<Long>() {
@@ -161,7 +161,7 @@ public class DownloadList {
 							String page = threadpages ? href.text() : "1";
 							String url = httpUtil.joinUrlPath(uri, href.attr("href"));
 							try {
-								Long length = downloadSingle.startDownload(type, id, page, url, title, date);
+								Long length = downloadSingle.startDownload(type, fid, id, page, url, title, date);
 								if (null != length) {
 									if (null == result)
 										result = 0l;
@@ -178,7 +178,6 @@ public class DownloadList {
 				}
 			}));// ������ִ�н���洢��List��
 		}
-		executor.shutdown();
 		long count = 0, length_download = 0;
 		for (Future<Long> fs : resultList) {
 			try {

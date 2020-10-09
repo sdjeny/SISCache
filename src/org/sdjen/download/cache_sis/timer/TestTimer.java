@@ -1,29 +1,33 @@
 package org.sdjen.download.cache_sis.timer;
 
-import java.io.File;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import javax.annotation.Resource;
 
-import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.http.HttpUtil;
-import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
-import org.sdjen.download.cache_sis.tool.ZipUtil;
-import org.sdjen.download.cache_sis.util.EntryData;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
-
-import com.google.common.io.Files;
 
 @Service("TestTimer")
 public class TestTimer implements InitStartTimer {
+	final static Logger logger = LoggerFactory.getLogger(TestTimer.class);
 	@Autowired
 	private HttpUtil httpUtil;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
+	@Resource(name = "downloadListExecutor")
+	private ThreadPoolTaskExecutor dlExecutor;
+	@Resource(name = "downloadSingleExecutor")
+	private ThreadPoolTaskExecutor dsExecutor;
 	@Value("${siscache.conf.fids}")
 	private Collection<String> fids;
 
@@ -33,6 +37,38 @@ public class TestTimer implements InitStartTimer {
 
 	public void restart(double hours) throws Throwable {
 		System.out.println(">>>>>>>>>>>>TestTimer:" + fids);
+//		List<Future> dl = new ArrayList<>();
+//		for (int i = 0; i < 10; i++) {
+//			int ii = i;
+//			logger.info("begin:	{}", ii);
+//			dl.add(dlExecutor.submit(() -> {
+//				List<Future> ds = new ArrayList<>();
+//				for (int j = 10; j < 60; j++) {
+//					int jj = j;
+//					logger.info("begin:	{}:{}", ii,jj);
+//					ds.add(dsExecutor.submit(() -> {
+//						logger.info("finish:	{}:{}", ii,jj);
+//						try {
+//							Thread.sleep(300l);
+//						} catch (InterruptedException e) {
+//						}
+//					}));
+//				}
+//				ds.forEach(f -> {
+//					try {
+//						f.get();
+//					} catch (Exception e) {
+//					}
+//				});
+//				logger.info("finish:	{}", ii);
+//			}));
+//		}
+//		dl.forEach(f -> {
+//			try {
+//				f.get();
+//			} catch (Exception e) {
+//			}
+//		});
 //		String s = httpUtil.doLocalGet("http://192.168.0.237:9200/siscache_html/_doc/{key}",
 //				new EntryData<String, String>().put("key", "8757080_1").getData());
 //		ESMap esMap = JsonUtil.toObject(s, ESMap.class);

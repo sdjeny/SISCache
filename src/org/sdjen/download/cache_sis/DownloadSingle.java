@@ -7,10 +7,9 @@ import java.security.MessageDigest;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -30,6 +29,8 @@ import org.sdjen.download.cache_sis.tool.Comparor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -48,7 +49,6 @@ public class DownloadSingle {
 	// private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_db = new ReentrantReadWriteLock().writeLock();
 	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
-	private int download_threads = 6;
 	private long count = 0;
 	// private org.sdjen.download.cache_sis.log.CassandraFactory
 	// cassandraFactory;
@@ -58,6 +58,10 @@ public class DownloadSingle {
 	private IStore store;
 	@Autowired
 	private HttpUtil httpUtil;
+	@Value("${siscache.conf.fids_unreplace_img}")
+	private Collection<String> fids_unreplace_img;
+	@Resource(name = "downloadSingleExecutor")
+	private ThreadPoolTaskExecutor executor;
 
 	public DownloadSingle() throws Exception {
 		System.out.println(">>>>>>>>>>>>>>>>>>DownloadSingle");
@@ -66,12 +70,6 @@ public class DownloadSingle {
 		chatset = conf.getProperties().getProperty("chatset");
 		save_path = conf.getProperties().getProperty("save_path");
 		boolean isStore = false;
-		try {
-			download_threads = Integer.valueOf(conf.getProperties().getProperty("download_threads"));
-		} catch (Exception e) {
-			conf.getProperties().setProperty("download_threads", String.valueOf(download_threads));
-			isStore = true;
-		}
 		try {
 			length_flag_min_byte = Long.valueOf(conf.getProperties().getProperty("length_flag_min_byte"));
 		} catch (Exception e) {
@@ -149,8 +147,8 @@ public class DownloadSingle {
 		return new BigInteger(1, md5.digest(bytes)).toString(Character.MAX_RADIX);
 	}
 
-	public Long startDownload(final String type, final String id, final String page, final String url, String title,
-			String dateStr) throws Throwable {
+	public Long startDownload(final String type, String fid, final String id, final String page, final String url,
+			String title, String dateStr) throws Throwable {
 		try {
 			if (Integer.valueOf(page) > 30)
 				return null;
@@ -238,7 +236,6 @@ public class DownloadSingle {
 		}
 		Long length_download = 0l;
 		StringBuilder msg = new StringBuilder(MessageFormat.format("{0} {1}	{2}", dateStr, title, url));
-		ExecutorService executor = Executors.newFixedThreadPool(download_threads);
 		List<Future<String[]>> resultList = new ArrayList<Future<String[]>>();
 		for (org.jsoup.nodes.Element a : doument//
 				.select("div.mainbox.viewthread")//
@@ -269,40 +266,39 @@ public class DownloadSingle {
 				}));
 			}
 		}
-		for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
-			final String src = e.attr("src");
-			if (src.contains("../images/20") //
-					|| src.contains("../images/unknow")//
-					|| src.contains("../torrent/20") //
-					|| src.contains("../torrent/unknow")//
-			)
-				continue;// 本地缓存文件就过了吧
-			resultList.add(executor.submit(new Callable<String[]>() {
+		if (!fids_unreplace_img.contains(fid)) {
+			for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
+				final String src = e.attr("src");
+				if (src.contains("../images/20") //
+						|| src.contains("../images/unknow")//
+						|| src.contains("../torrent/20") //
+						|| src.contains("../torrent/unknow")//
+				)
+					continue;// 本地缓存文件就过了吧
+				resultList.add(executor.submit(new Callable<String[]>() {
 
-				public String[] call() throws Exception {
-					String downloadUrl = httpUtil.joinUrlPath(url, src);
-					String newName;// = getMD5(downloadUrl.getBytes("utf-8"));
-					if (src.contains("."))
-						newName = getFileName(src.substring(src.lastIndexOf("."), src.length()));
-					else {
-						newName = ".jpg";
+					public String[] call() throws Exception {
+						String downloadUrl = httpUtil.joinUrlPath(url, src);
+						String newName;// = getMD5(downloadUrl.getBytes("utf-8"));
+						if (src.contains("."))
+							newName = getFileName(src.substring(src.lastIndexOf("."), src.length()));
+						else {
+							newName = ".jpg";
+						}
+						try {
+							newName = downloadFile(downloadUrl, sub_images, newName, type.contains("image"));
+							replace(e, "src", newName);
+						} catch (Throwable e) {
+							store.err("异常	{0}	{1}", downloadUrl, e);
+						}
+						// if (!newName.equals(downloadUrl))
+						// replaceAll(src, newName);
+						return new String[] { src, newName };
 					}
-					try {
-						newName = downloadFile(downloadUrl, sub_images, newName, type.contains("image"));
-						replace(e, "src", newName);
-					} catch (Throwable e) {
-						store.err("异常	{0}	{1}", downloadUrl, e);
-					}
-					// if (!newName.equals(downloadUrl))
-					// replaceAll(src, newName);
-					return new String[] { src, newName };
-				}
-			}));
+				}));
+			}
 		}
-		executor.shutdown();
-		for (
-
-		Future<String[]> fs : resultList) {
+		for (Future<String[]> fs : resultList) {
 			try {
 				String[] names = fs.get(1, TimeUnit.MINUTES);// 1分钟超时
 				if (null != names && !names[0].equals(names[1])) {

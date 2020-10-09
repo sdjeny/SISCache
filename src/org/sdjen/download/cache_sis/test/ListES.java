@@ -190,7 +190,7 @@ public class ListES {
 			String url = String.format("http://www.sexinsex.net/bbs/viewthread.php?tid=%s&page=%s", id.toString(),
 					page.toString());
 			// System.out.println(url);torrent cover
-			downloadSingle.startDownload(type, id.toString(), page.toString()//
+			downloadSingle.startDownload(type, "143", id.toString(), page.toString()//
 					, url// http://www.sexinsex.net/bbs/thread-%s-%s-300.html
 					, title, null);
 		}

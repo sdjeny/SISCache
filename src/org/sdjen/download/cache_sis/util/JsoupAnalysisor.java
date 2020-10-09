@@ -64,32 +64,34 @@ public class JsoupAnalysisor {
 				title_tmp = title_tmp.substring(0, title_tmp.lastIndexOf(" - "));
 				String title = title_tmp.substring(0, title_tmp.lastIndexOf(" - "));
 				form.append(MessageFormat.format(
-						"<span class='headactions'>	<a href=\"viewthread.php?action=printable&amp;tid={0}\" target='_blank' class='notabs'>{0}</a></span>",
+						"<span class=\"headactions\">	<a href=\"viewthread.php?action=printable&amp;tid={0}\" target=\"_blank\" class=\"notabs\">{0}</a></span>",
 						details.get("id")));
 				form.append(MessageFormat.format(
 						"<h1><a href=\"forumdisplay.php?fid={0}&amp;filter=type&amp;typeid={1}\">{1}</a>{2}</h1>",
 						details.get("fid"), details.get("type"), title));
 				List<Map<String, String>> contents = (List<Map<String, String>>) details.get("contents");
 				if (null != contents && !contents.isEmpty()) {
-					form.append("<table cellspacing='0' cellpadding='0'>");
+					form.append("<table cellspacing=\"0\" cellpadding=\"0\">");
 					contents.forEach(content -> {
 						form.append("<tr>");
 						form.append(MessageFormat.format(
-								"<td class='postauthor' style='width:0'><cite><a target='_blank' class='dropmenu'>{0}</a></cite><p><em><font color='skyblue'>{1}</font></em></p></td>",
+								"<td class=\"postauthor\" style=\"width:0\"><cite><a target=\"_blank\" class=\"dropmenu\">{0}</a></cite><p><em><font color=\"skyblue\">{1}</font></em></p></td>",
 								content.get("author"), content.get("level")));// 隐藏作者列
-						form.append("<td class='postcontent'>");
+						form.append("<td class=\"postcontent\">");
 						form.append(MessageFormat.format(
-								"<div class='postinfo'> <strong>{0}</strong>{1} <em>{2} {3}</em></div>",
+								"<div class=\"postinfo\"> <strong>{0}</strong>{1} <em>{2} {3}</em></div>",
 								content.get("floor"), content.get("datetime"), content.get("author"),
 								content.get("level")));// 在info增加作者列
-						form.append("<div class='postmessage defaultpost'>");
 						if ("1楼".equals(content.get("floor"))) {
-							form.append(MessageFormat.format("<h2>{0}</h2>", title));
+							form.append(MessageFormat
+									.format("<div class=\"postmessage defaultpost firstfloor\"><h2>{0}</h2>", title));
+						} else {
+							form.append("<div class=\"postmessage defaultpost\">");
 						}
-						form.append(MessageFormat.format("<div class='t_msgfont'>{0}</div>", content.get("message")));
+						form.append(MessageFormat.format("<div class=\"t_msgfont\">{0}</div>", content.get("message")));
 						if (!StringUtils.isEmpty(content.get("attachlist"))) {
 							form.append(MessageFormat.format(
-									"<div class='box postattachlist'><h4>附件</h4><dl class='t_attachlist'><dt>{0}<em>{1}</em></dt></dl></div>",
+									"<div class=\"box postattachlist\"><h4>附件</h4><dl class=\"t_attachlist\"><dt>{0}<em>{1}</em></dt></dl></div>",
 									content.get("attachlist"), content.get("attachlist_size")));
 						}
 						form.append("</div></td></tr>");
@@ -98,9 +100,9 @@ public class JsoupAnalysisor {
 				}
 				Map<String, String> actions = (Map<String, String>) details.get("actions");
 				if (null != actions && !actions.isEmpty()) {
-					form.append("<div class='postinfo postactions' style='height:auto'>其他主题:<br>");
+					form.append("<div class=\"postinfo postactions\" style=\"height:auto\">其他主题:<br>");
 					actions.forEach((k, v) -> form.append(MessageFormat.format(
-							"<a style='float:left;width:30%' href=\"viewthread.php?tid={0}\" target='_blank'>{1}</a>",
+							"<a style=\"float:left;width:30%\" href=\"viewthread.php?tid={0}\" target=\"_blank\">{1}</a>",
 							k, v)));
 					form.append("</div>");
 				}

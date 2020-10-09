@@ -89,13 +89,8 @@ public class MainApp {
 //			Files.readAllLines(Paths.get(key + ".html"), Charset.forName("GBK"))
 //					.forEach(str -> stringBuffer.append(str));
 //			Map<String, String> details = TestJsoup.analysis(stringBuffer.toString());
-			Map<String, String> details = JsoupAnalysisor.split(CharStreams.toString(
-					new InputStreamReader(new FileInputStream(key + ".html"), Charset.forName("GBK"))), false);
-			String template = getTemplate();
-			for (Entry<String, String> entry : details.entrySet()) {
-				template = template.replace(String.format(JsoupAnalysisor.KEYFORMAT, entry.getKey()), entry.getValue());
-			}
-			return template;
+			return JsoupAnalysisor.restoreToHtml(JsoupAnalysisor.split(CharStreams
+					.toString(new InputStreamReader(new FileInputStream(key + ".html"), Charset.forName("GBK")))));
 		} catch (Exception e) {
 			e.printStackTrace();
 			return e.getMessage();

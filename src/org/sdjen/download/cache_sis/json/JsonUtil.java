@@ -43,6 +43,10 @@ public class JsonUtil {
 		// });
 	}
 
+	public static synchronized String toPrettyJson(Object obj) throws JsonProcessingException {
+		return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(obj);
+	}
+
 	public static synchronized String toJson(Object obj) throws JsonProcessingException {
 		return mapper.writeValueAsString(obj);
 	}

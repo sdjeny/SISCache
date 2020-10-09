@@ -105,17 +105,18 @@ public class Controller_siscache {
 			rst.append(String.format("<td>%s</td>", ""));
 			rst.append("</tr></tbody>");
 		}
-		{
+		for (String fid : fids) {
+			if (IStore.FIDDESCES.containsKey(fid)) {
+				rst.append("<tbody><tr>");
+				rst.append(String.format(
+						"<td><a href='/siscache/list/%s/1/100?debug=true' title='新窗口打开' target='_blank'>%s</a></td>",
+						fid, IStore.FIDDESCES.get(fid)));
+				rst.append(String.format("<td>%s</td>", IStore.FIDDESCES.get(fid)));
+				rst.append(String.format("<td>%s</td>", ""));
+				rst.append("</tr></tbody>");
+
+			}
 		}
-		IStore.FIDDESCES.forEach((k, v) -> {
-			rst.append("<tbody><tr>");
-			rst.append(String.format(
-					"<td><a href='/siscache/list/%s/1/100?debug=true' title='新窗口打开' target='_blank'>%s</a></td>", k,
-					v));
-			rst.append(String.format("<td>%s</td>", v));
-			rst.append(String.format("<td>%s</td>", ""));
-			rst.append("</tr></tbody>");
-		});
 		{
 			rst.append("<tbody><tr>");
 			rst.append("<td><a href='/siscache/list/all/1/100?debug=true' title='新窗口打开' target='_blank'>list</a></td>");

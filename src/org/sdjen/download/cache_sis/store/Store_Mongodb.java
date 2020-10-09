@@ -52,7 +52,6 @@ public class Store_Mongodb implements IStore {
 	@Autowired
 	private MongoTemplate mongoTemplate;
 	private String[] fbsArr = { "\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|" };
-	private String template;
 	@Value("${siscache.conf.url_fail_stop}")
 	private int url_fail_stop = 10;
 	@Value("${siscache.conf.url_fail_retry_begin}")
@@ -65,24 +64,13 @@ public class Store_Mongodb implements IStore {
 		md5Digest = MessageDigest.getInstance("MD5");
 	}
 
-	private String getTemplate() throws IOException {
-		if (null == template) {
-			File file = new File("template.html");
-			this.template = CharStreams.toString(new InputStreamReader(
-					file.exists() ? new FileInputStream(file)
-							: this.getClass().getClassLoader().getResource("template.html").openStream(),
-					Charset.forName("GBK")));
-		}
-		return template;
-	}
-
 	@Override
 	public String getLocalHtml(final String id, final String page) throws Throwable {
 		Query query = new Query();
 		query.addCriteria(Criteria.where("id").is(Long.valueOf(id)));
 		query.addCriteria(Criteria.where("page").is(Long.valueOf(page)));
 		query.fields().include("context_zip").include("context_comments").include("context").include("page")
-				.include("fid");
+				.include("fid").include("type");
 		Map<?, ?> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
 		String result = null;
 		if (null != _source) {
@@ -107,14 +95,11 @@ public class Store_Mongodb implements IStore {
 					try {
 						String context = ZipUtil.uncompress(zip.getData());
 						try {
-							Map<String, String> details = JsonUtil.toObject(context, Map.class);
+							Map<String, Object> details = JsonUtil.toObject(context, Map.class);
 							details.put("fid", (String) _source.get("fid"));
+							details.put("type", (String) _source.get("type"));
 							details.put("tid", id);
-							context = getTemplate();
-							for (Entry<String, String> entry : details.entrySet()) {
-								context = context.replace(String.format(JsoupAnalysisor.KEYFORMAT, entry.getKey()),
-										entry.getValue());
-							}
+							context = JsoupAnalysisor.restoreToHtml(details);
 						} catch (Exception e) {
 						}
 						return context;
@@ -247,7 +232,7 @@ public class Store_Mongodb implements IStore {
 			json.put("type", type);
 			json.put("context", context);
 			json.put("author", author);
-			json.put("context_zip", ZipUtil.compress(JsonUtil.toJson(JsoupAnalysisor.split(doument, false))));
+			json.put("context_zip", ZipUtil.compress(JsonUtil.toJson(JsoupAnalysisor.split(doument))));
 		}
 		save("htmldoc", json, "fid", "id", "page");
 	}

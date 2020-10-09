@@ -204,8 +204,9 @@ public class JsoupAnalysisor {
 		result.put("fid", fid);
 		org.jsoup.select.Elements mainbox = doument.select(".mainbox.viewthread");
 		result.put("type", mainbox.select("h1").select("a").text());
-		result.put("id", mainbox.select(".headactions").select("a").attr("href")
-				.substring("viewthread.php?action=printable&tid=".length()));
+		String id = mainbox.select(".headactions").select("a").attr("href");
+		if (id.contains("viewthread.php?action=printable&tid="))// 不靠谱，再找 XXX
+			result.put("id", id.substring("viewthread.php?action=printable&tid=".length()));
 		for (org.jsoup.nodes.Element element : doument.select("div#wrapper form")) {
 			element.select("[onclick]").forEach(e -> e.removeAttr("onclick"));
 			element.select("[onload]").forEach(e -> e.removeAttr("onload"));

@@ -88,9 +88,10 @@ public class MainApp {
 //			StringBuffer stringBuffer = new StringBuffer();
 //			Files.readAllLines(Paths.get(key + ".html"), Charset.forName("GBK"))
 //					.forEach(str -> stringBuffer.append(str));
-//			Map<String, String> details = TestJsoup.analysis(stringBuffer.toString());
-			return JsoupAnalysisor.restoreToHtml(JsoupAnalysisor.split(CharStreams
-					.toString(new InputStreamReader(new FileInputStream(key + ".html"), Charset.forName("GBK")))));
+			Map<String, Object> details = JsoupAnalysisor.split(CharStreams
+					.toString(new InputStreamReader(new FileInputStream(key + ".html"), Charset.forName("GBK"))));
+//			details.put("id", "testid");
+			return JsoupAnalysisor.restoreToHtml(details);
 		} catch (Exception e) {
 			e.printStackTrace();
 			return e.getMessage();

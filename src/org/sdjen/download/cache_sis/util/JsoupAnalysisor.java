@@ -191,13 +191,26 @@ public class JsoupAnalysisor {
 		List<Map<String, String>> contents = new ArrayList<>();
 		Map<String, String> actions = new HashMap<>();
 		result.put("actions", actions);
+		String fid = null;
+		for (org.jsoup.nodes.Element element : doument.select("#foruminfo").select("a")) {
+			String href = element.attr("href");
+			if (null != href && href.startsWith("forum-")) {
+				href = href.substring("forum-".length());
+				fid = href.split("-")[0];
+			}
+		}
+		result.put("fid", fid);
+		org.jsoup.select.Elements mainbox = doument.select(".mainbox.viewthread");
+		result.put("type", mainbox.select("h1").select("a").text());
+		result.put("id", mainbox.select(".headactions").select("a").attr("href")
+				.substring("viewthread.php?action=printable&tid=".length()));
 		for (org.jsoup.nodes.Element element : doument.select("div#wrapper form")) {
 			element.select("[onclick]").forEach(e -> e.removeAttr("onclick"));
 			element.select("[onload]").forEach(e -> e.removeAttr("onload"));
 			for (org.jsoup.nodes.Element a : element.select(".postinfo.postactions").select("a")) {
 				actions.put(a.attr("href").substring("viewthread.php?tid=".length()), a.ownText());
 			}
-			for (org.jsoup.nodes.Element tr : element.select("div.mainbox.viewthread")//// class=mainbox的div
+			for (org.jsoup.nodes.Element tr : element.select(".mainbox.viewthread")//// class=mainbox的div
 					.select("table")//
 					.select("tbody")//
 					.select("tr")//

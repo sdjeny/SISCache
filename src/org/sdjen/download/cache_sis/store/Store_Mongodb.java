@@ -1,11 +1,7 @@
 package org.sdjen.download.cache_sis.store;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -16,7 +12,6 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -41,7 +36,6 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.google.common.io.CharStreams;
 import com.mongodb.client.result.UpdateResult;
 
 @Service("Store_Mongodb")
@@ -76,39 +70,25 @@ public class Store_Mongodb implements IStore {
 		if (null != _source) {
 			if ("Lost title".equals(_source.get("context")))
 				return "Lost title";
-			if (Long.valueOf(page) > 1) {
-				StringBuffer rst = new StringBuffer();
-				rst.append("</br><table border='0'>");
-				List<Map<?, ?>> comments = (List<Map<?, ?>>) _source.get("context_comments");
-				if (null != comments)
-					comments.forEach(m -> {
-						rst.append("<tbody><tr>");
-						rst.append(String.format("<td>%s</td>", m.get("floor")));
-						rst.append(String.format("<td>%s</td>", m.get("context")));
-						rst.append("</tr></tbody>");
-					});
-				rst.append("</table>");
-				result = rst.toString();
-			} else {
-				Binary zip = (Binary) _source.get("context_zip");
-				if (null != zip) {
+			Binary zip = (Binary) _source.get("context_zip");
+			if (null != zip) {
+				try {
+					String context = ZipUtil.uncompress(zip.getData());
 					try {
-						String context = ZipUtil.uncompress(zip.getData());
-						try {
-							Map<String, Object> details = JsonUtil.toObject(context, Map.class);
-							details.put("fid", (String) _source.get("fid"));
-							details.put("type", (String) _source.get("type"));
-							details.put("tid", id);
-							context = JsoupAnalysisor.restoreToHtml(details);
-						} catch (Exception e) {
-						}
-						return context;
-					} catch (DataFormatException e1) {
-						e1.printStackTrace();
+						Map<String, Object> details = JsonUtil.toObject(context, Map.class);
+						details.put("fid", (String) _source.get("fid"));
+						details.put("type", (String) _source.get("type"));
+						details.put("tid", id);
+						context = JsoupAnalysisor.restoreToHtml(details);
+					} catch (Exception e) {
 					}
+					return context;
+				} catch (DataFormatException e1) {
+					e1.printStackTrace();
 				}
-				result = (String) _source.get("context");
 			}
+			result = (String) _source.get("context");
+		
 		}
 		if (null != result) {
 			result = replaceLocalHtmlUrl(result).html();
@@ -185,21 +165,7 @@ public class Store_Mongodb implements IStore {
 				}
 				if (floor.isEmpty())
 					continue;
-				if ("1楼".equals(floor)) {
-					context = JsoupAnalysisor.toTextOnly(postcontent.select("div.postmessage.defaultpost"));
-//					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")) {
-//						context = comment.html();
-//					}
-				} else {
-					String fm = "";
-					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")
-							.select("div.t_msgfont")) {
-						if (!fm.isEmpty())
-							fm += ",";
-						fm += comment.text();
-					}
-					comments.add(ESMap.get().set("floor", floor).set("context", fm));
-				}
+				context = JsoupAnalysisor.toTextOnly(postcontent.select("div.postmessage.defaultpost"));
 			}
 		}
 		boolean update = false;
@@ -218,22 +184,21 @@ public class Store_Mongodb implements IStore {
 		json.put("page", Long.valueOf(page));
 		json.put("context_comments", comments);
 		json.put("title", title);
-		if (page.equals("1")) {
-			json.put("datetime", dat);
-			try {
-				if (null != dat) {
-					SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-					Date dt = dtf.parse(dat);
-					json.put("datetime", dtf.format(dt));
-				}
-			} catch (Exception e1) {
+		json.put("datetime", dat);
+		try {
+			if (null != dat) {
+				SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+				Date dt = dtf.parse(dat);
+				json.put("datetime", dtf.format(dt));
 			}
-			json.put("fid", fid);
-			json.put("type", type);
-			json.put("context", context);
-			json.put("author", author);
-			json.put("context_zip", ZipUtil.compress(JsonUtil.toJson(JsoupAnalysisor.split(doument))));
+		} catch (Exception e1) {
 		}
+		json.put("fid", fid);
+		json.put("type", type);
+		json.put("context", context);
+		json.put("author", author);
+		json.put("context_zip", ZipUtil.compress(JsonUtil.toJson(JsoupAnalysisor.split(doument))));
+	
 		save("htmldoc", json, "fid", "id", "page");
 	}
 

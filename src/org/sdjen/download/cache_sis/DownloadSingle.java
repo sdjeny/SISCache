@@ -248,21 +248,19 @@ public class DownloadSingle {
 			String href = a.attr("href");
 			final String text = a.text();
 			if (href.contains("attachment.php?aid=")) {
-				resultList.add(executor.submit(new Callable<String[]>() {
-					public String[] call() throws Exception {
-						String newName = href.contains("&") ? href.substring(0, href.indexOf("&")) : href;
-						newName = getFileName(
-								"(" + newName.substring(newName.lastIndexOf("=") + 1, newName.length()) + ")" + text);
-						String downloadUrl = httpUtil.joinUrlPath(url, href);
-						try {
-							newName = downloadFile(downloadUrl, sub_torrent, newName, type.contains("torrent"));
-							replace(a, "href", newName);
-						} catch (Throwable e) {
-							e.printStackTrace();
-							store.err("异常	{0}	{1}", downloadUrl, e);
-						}
-						return new String[] { href, newName };
+				resultList.add(executor.submit(() -> {
+					String newName = href.contains("&") ? href.substring(0, href.indexOf("&")) : href;
+					newName = getFileName(
+							"(" + newName.substring(newName.lastIndexOf("=") + 1, newName.length()) + ")" + text);
+					String downloadUrl = httpUtil.joinUrlPath(url, href);
+					try {
+						newName = downloadFile(downloadUrl, sub_torrent, newName, type.contains("torrent"));
+						replace(a, "href", newName);
+					} catch (Throwable ex) {
+						ex.printStackTrace();
+						store.err("异常	{0}	{1}", downloadUrl, ex);
 					}
+					return new String[] { href, newName };
 				}));
 			}
 		}
@@ -275,26 +273,24 @@ public class DownloadSingle {
 						|| src.contains("../torrent/unknow")//
 				)
 					continue;// 本地缓存文件就过了吧
-				resultList.add(executor.submit(new Callable<String[]>() {
-
-					public String[] call() throws Exception {
-						String downloadUrl = httpUtil.joinUrlPath(url, src);
-						String newName;// = getMD5(downloadUrl.getBytes("utf-8"));
-						if (src.contains("."))
-							newName = getFileName(src.substring(src.lastIndexOf("."), src.length()));
-						else {
-							newName = ".jpg";
-						}
-						try {
-							newName = downloadFile(downloadUrl, sub_images, newName, type.contains("image"));
-							replace(e, "src", newName);
-						} catch (Throwable e) {
-							store.err("异常	{0}	{1}", downloadUrl, e);
-						}
-						// if (!newName.equals(downloadUrl))
-						// replaceAll(src, newName);
-						return new String[] { src, newName };
+				resultList.add(executor.submit(() -> {
+					String downloadUrl = httpUtil.joinUrlPath(url, src);
+					String newName;// = getMD5(downloadUrl.getBytes("utf-8"));
+					if (src.contains("."))
+						newName = getFileName(src.substring(src.lastIndexOf("."), src.length()));
+					else {
+						newName = ".jpg";
 					}
+					try {
+						newName = downloadFile(downloadUrl, sub_images, newName, type.contains("image"));
+						replace(e, "src", newName);
+					} catch (Throwable ex) {
+						ex.printStackTrace();
+						store.err("异常	{0}	{1}", downloadUrl, ex);
+					}
+					// if (!newName.equals(downloadUrl))
+					// replaceAll(src, newName);
+					return new String[] { src, newName };
 				}));
 			}
 		}

@@ -93,10 +93,8 @@ public class DownloadList {
 //						}
 //						store.refreshMsgLog();
 //					}
-					list(i, type);
-					store.running("download_list",
-							JsonUtil.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to).getData()),
-							"");
+					list(i, type, JsonUtil
+							.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to).getData()));
 					if (autoFirst) {
 						conf.getProperties().setProperty("list_start", String.valueOf(i));
 						conf.store();// 自动记录最后一次执行完成
@@ -120,10 +118,13 @@ public class DownloadList {
 		return httpUtil.getHTML(uri);
 	}
 
-	protected void list(final int i, String type) throws Throwable {
-		for (String fid : fids)
-			if (IStore.FIDDESCES.containsKey(fid))
+	protected void list(final int i, String type, String logMsg) throws Throwable {
+		for (String fid : fids) {
+			if (IStore.FIDDESCES.containsKey(fid)) {
 				list(fid, i, type);
+				store.running("download_list", logMsg, fid);
+			}
+		}
 	}
 
 	protected void list(String fid, final int i, String type) throws Throwable {

@@ -19,8 +19,6 @@ import java.util.zip.DataFormatException;
 
 import org.bson.types.Binary;
 import org.jsoup.Jsoup;
-import org.sdjen.download.cache_sis.ESMap;
-import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
@@ -42,7 +40,6 @@ import com.mongodb.client.result.UpdateResult;
 public class Store_Mongodb implements IStore {
 	private static Set<String> proxy_urls;
 	private MessageDigest md5Digest;
-	private ConfUtil conf;
 	@Autowired
 	private MongoTemplate mongoTemplate;
 	private String[] fbsArr = { "\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|" };
@@ -63,8 +60,9 @@ public class Store_Mongodb implements IStore {
 		Query query = new Query();
 		query.addCriteria(Criteria.where("id").is(Long.valueOf(id)));
 		query.addCriteria(Criteria.where("page").is(Long.valueOf(page)));
-		query.fields().include("context_zip").include("context_comments").include("context").include("page")
-				.include("fid").include("type");
+		query.fields().include("context_zip")
+//		.include("context_comments")
+				.include("context").include("page").include("fid").include("type");
 		Map<?, ?> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
 		String result = null;
 		if (null != _source) {
@@ -78,7 +76,7 @@ public class Store_Mongodb implements IStore {
 						Map<String, Object> details = JsonUtil.toObject(context, Map.class);
 						details.put("fid", (String) _source.get("fid"));
 						details.put("type", (String) _source.get("type"));
-						details.put("tid", id);
+						details.put("id", id);
 						context = JsoupAnalysisor.restoreToHtml(details);
 					} catch (Exception e) {
 					}
@@ -88,7 +86,7 @@ public class Store_Mongodb implements IStore {
 				}
 			}
 			result = (String) _source.get("context");
-		
+
 		}
 		if (null != result) {
 			result = replaceLocalHtmlUrl(result).html();
@@ -100,106 +98,27 @@ public class Store_Mongodb implements IStore {
 	public void saveHtml(final String id, final String page, final String url, String title, String dateStr,
 			String text) throws Throwable {
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
-//		doument.outputSettings(new Document.OutputSettings().prettyPrint(false));
-		org.jsoup.nodes.Element h1 = doument.select("div.mainbox").select("h1").first();
-		if (null == h1) {
-			save("htmldoc", new EntryData()//
-					.put("fid", "")//
-					.put("id", Long.valueOf(id))//
-					.put("page", Long.valueOf(page))//
-					.put("context", "Lost title")//
-					.getData(), "fid", "id", "page");
-			throw new Exception("Lost title");
-		}
-		String type = h1.select("a").text();
-		String dat = null;
-		String context = null;
-		String author = null;
-		String fid = null;
-		for (org.jsoup.nodes.Element element : doument.select("#foruminfo").select("a")) {
-			String href = element.attr("href");
-			if (null != href && href.startsWith("forum-")) {
-				href = href.substring("forum-".length());
-				fid = href.split("-")[0];
-			}
-		}
-		for (org.jsoup.nodes.Element tbody : doument.select("div.mainbox.viewthread")//// class=mainbox的div
-				.select("table")//
-				.select("tbody")//
-				.select("tr")//
-		) {
-			String floor = "";
-			for (org.jsoup.nodes.Element postinfo : tbody.select("td.postcontent").select("div.postinfo")) {
-				org.jsoup.nodes.Element temp = postinfo.select("strong").first();
-				if (null != temp) {
-					floor = temp.ownText();
-					if ("1楼".equals(floor)) {
-						dat = postinfo.ownText().replace("发表于 ", "");
-						for (org.jsoup.nodes.Element postauthor : tbody.select("td.postauthor").select("cite")
-								.select("a[href]")) {
-							author = postauthor.text();
-						}
-					}
-				}
-			}
-			if (null != author)
+		Map<String, Object> details = JsoupAnalysisor.split(doument);
+		Map<String, Object> data = new HashMap<>();
+		data.put("id", Long.valueOf(id));
+		data.put("page", Long.valueOf(page));
+		data.put("title", title);
+		new EntryData<String, String>()//
+				.put("fid", "fid")//
+				.put("type", "type")//
+				.put("context", "content_txt")//
+				.getData().forEach((k_data, k_detail) -> {
+					data.put(k_data, (String) details.get(k_detail));
+					details.remove(k_detail);
+				});
+		for (Map<String, String> map : (List<Map<String, String>>) details.get("contents")) {
+			if ("1楼".equals(map.get("floor"))) {
+				Arrays.asList("datetime", "author", "level").forEach(k -> data.put(k, (String) map.get(k)));
 				break;
-		}
-		List<ESMap> comments = new ArrayList<>();
-		{
-			for (org.jsoup.nodes.Element postcontent : doument.select("div.mainbox.viewthread")//// class=mainbox的div
-					.select("table")//
-					.select("tbody")//
-					.select("tr")//
-					.select("td.postcontent")//
-			) {
-				String floor = "";
-				for (org.jsoup.nodes.Element postinfo : postcontent.select("div.postinfo")) {
-					org.jsoup.nodes.Element temp = postinfo.select("strong").first();
-					if (null != temp) {
-						floor = temp.ownText();
-						if ("1楼".equals(floor)) {
-							dat = postinfo.ownText().replace("发表于 ", "");
-						}
-					}
-				}
-				if (floor.isEmpty())
-					continue;
-				context = JsoupAnalysisor.toTextOnly(postcontent.select("div.postmessage.defaultpost"));
 			}
 		}
-		boolean update = false;
-		for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
-			update = true;
-			e.text("");
-		}
-		for (org.jsoup.nodes.Element e : doument.select("head").select("script")) {
-			update = true;
-			e.remove();
-		}
-		if (update)
-			text = doument.html();
-		Map<String, Object> json = new HashMap<>();
-		json.put("id", Long.valueOf(id));
-		json.put("page", Long.valueOf(page));
-		json.put("context_comments", comments);
-		json.put("title", title);
-		json.put("datetime", dat);
-		try {
-			if (null != dat) {
-				SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-				Date dt = dtf.parse(dat);
-				json.put("datetime", dtf.format(dt));
-			}
-		} catch (Exception e1) {
-		}
-		json.put("fid", fid);
-		json.put("type", type);
-		json.put("context", context);
-		json.put("author", author);
-		json.put("context_zip", ZipUtil.compress(JsonUtil.toJson(JsoupAnalysisor.split(doument))));
-	
-		save("htmldoc", json, "fid", "id", "page");
+		data.put("context_zip", ZipUtil.compress(JsonUtil.toJson(details)));
+		save("htmldoc", data, "fid", "id", "page");
 	}
 
 	private void save(String collectionName, Map<String, Object> objectToSave, String... keys) {
@@ -310,7 +229,7 @@ public class Store_Mongodb implements IStore {
 				and.add(new Criteria().orOperator(//
 						Criteria.where("title").regex(pattern)//
 						, Criteria.where("context").regex(pattern)//
-						, Criteria.where("context_comments.context").regex(pattern)//
+//						, Criteria.where("context_comments.context").regex(pattern)//
 				));
 			}
 		} else {

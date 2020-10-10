@@ -127,11 +127,16 @@ public class JsoupAnalysisor {
 			StringBuffer stringBuffer = new StringBuffer();
 			Files.readAllLines(Paths.get(f.toURI()), Charset.forName("GBK")).forEach(str -> stringBuffer.append(str));
 			Map<String, Object> details = split(stringBuffer.toString());
+			String content_txt = (String) details.get("content_txt");
+//			details.remove("fid");
+//			details.remove("type");
+//			details.remove("content_txt");
 			String temp = stringBuffer.toString();
 			System.out.println(temp.getBytes().length + "	->	" + ZipUtil.compress(temp).length);
 			temp = JsonUtil.toJson(details);
-			System.out.println(temp.getBytes().length + "	->	" + ZipUtil.compress(temp).length);
-			System.out.println(JsonUtil.toPrettyJson(details));
+			System.out.println(temp.getBytes().length + "	->	"
+					+ (content_txt.length() + ZipUtil.compress(temp).length) + "(" + content_txt.length() + ")");
+//			System.out.println(JsonUtil.toPrettyJson(details));
 		}
 //		com.google.common.io.Files.write(details.get("template").getBytes("GBK"), new File("template.html"));
 	}
@@ -188,25 +193,32 @@ public class JsoupAnalysisor {
 		}
 	}
 
+	private static String getSingleName(String name) {
+		name = name.replace('\\', '/');
+		int index = name.lastIndexOf("/");
+		if (index > -1) {
+			name = name.substring(index + 1);
+		}
+		return name;
+	}
+
 	public static Map<String, Object> split(org.jsoup.nodes.Document doument) {
 		Map<String, Object> result = new LinkedHashMap<>();
 		List<Map<String, String>> contents = new ArrayList<>();
 		Map<String, String> actions = new HashMap<>();
 		result.put("actions", actions);
-		String fid = null;
-		for (org.jsoup.nodes.Element element : doument.select("#foruminfo").select("a")) {
-			String href = element.attr("href");
-			if (null != href && href.startsWith("forum-")) {
-				href = href.substring("forum-".length());
-				fid = href.split("-")[0];
+		String threadflow = doument.select(".pages_btns .threadflow a[href]").attr("href");
+		if (threadflow.startsWith("redirect.php?")) {
+			for (String s : threadflow.substring("redirect.php?".length()).split("&")) {
+				if (s.startsWith("fid=")) {
+					result.put("fid", s.substring("fid=".length()));
+				} else if (s.startsWith("tid=")) {
+					result.put("id", s.substring("tid=".length()));
+				}
 			}
 		}
-		result.put("fid", fid);
-		org.jsoup.select.Elements mainbox = doument.select(".mainbox.viewthread");
-		result.put("type", mainbox.select("h1").select("a").text());
-		String id = mainbox.select(".headactions").select("a").attr("href");
-		if (id.contains("viewthread.php?action=printable&tid="))// 不靠谱，再找 XXX
-			result.put("id", id.substring("viewthread.php?action=printable&tid=".length()));
+		result.put("type", doument.select(".mainbox.viewthread h1 a").text());
+		StringBuilder content_txt = new StringBuilder();
 		for (org.jsoup.nodes.Element element : doument.select("div#wrapper form")) {
 			element.select("[onclick]").forEach(e -> e.removeAttr("onclick"));
 			element.select("[onload]").forEach(e -> e.removeAttr("onload"));
@@ -221,7 +233,7 @@ public class JsoupAnalysisor {
 				Map<String, String> content = new HashMap<String, String>();
 				String floor = "";
 				for (org.jsoup.nodes.Element postinfo : tr.select("div.postinfo")) {
-					org.jsoup.nodes.Element temp = postinfo.select("strong").first();
+					org.jsoup.nodes.Element temp = tr.select("div.postinfo").select("strong").first();
 					if (null != temp) {
 						floor = temp.ownText();
 						content.put("floor", floor);
@@ -234,27 +246,30 @@ public class JsoupAnalysisor {
 				content.put("author", postauthor.select("cite").select("a").first().ownText());
 				content.put("level", postauthor.select("p").select("em").first().text());
 				org.jsoup.select.Elements message = tr.select("div.postmessage.defaultpost");
-				content.put("message", message.select(".t_msgfont").html());
+				org.jsoup.select.Elements t_msgfont = message.select(".t_msgfont");
+				content_txt.append(' ').append(t_msgfont.text());
+				t_msgfont.select("[src]").forEach(e -> content_txt.append(' ').append(getSingleName(e.attr("src"))));
+				content.put("message", t_msgfont.html());
 				org.jsoup.select.Elements postattachlist = message.select(".box.postattachlist")
 						.select(".t_attachlist");
 				postattachlist.select("a.hover").remove();
+				content_txt.append(' ').append(postattachlist.text());
+				postattachlist.select("a[href]")
+						.forEach(e -> content_txt.append(' ').append(getSingleName(e.attr("href"))));
 				content.put("attachlist", postattachlist.select("a").outerHtml());
 				content.put("attachlist_size", postattachlist.select("em").html());
 				contents.add(content);
 			}
 		}
 		result.put("contents", contents);
+		result.put("content_txt", content_txt.toString());
 		result.put("foruminfo", doument.select("div#wrapper div#foruminfo #nav").html());
-		for (org.jsoup.nodes.Element element : doument.select("div#wrapper div.maintable")) {
-			result.put("maintable", element.html());
-		}
+		result.put("maintable", doument.select("div#wrapper div.maintable").html());
 		for (org.jsoup.nodes.Element element : doument.select("meta")) {
 			if ("description".equals(element.attr("name")))
 				result.put("description", element.attr("content"));
 		}
-		for (org.jsoup.nodes.Element element : doument.select("title")) {
-			result.put("title", element.text());
-		}
+		result.put("title", doument.select("title").text());
 		return result;
 	}
 

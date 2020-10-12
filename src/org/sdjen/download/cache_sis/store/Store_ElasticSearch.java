@@ -174,7 +174,7 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public void saveHtml(final String id, final String page, final String url, String title, String dateStr,
+	public Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
 			String text) throws Throwable {
 		String key = getKey(id, page);
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
@@ -308,6 +308,7 @@ public class Store_ElasticSearch implements IStore {
 			json.put("author", author);
 		}
 		String r = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json));
+		return json;
 	}
 
 	@Override

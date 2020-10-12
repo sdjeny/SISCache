@@ -95,13 +95,21 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public void saveHtml(final String id, final String page, final String url, String title, String dateStr,
+	public Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
 			String text) throws Throwable {
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
 		Map<String, Object> details = JsoupAnalysisor.split(doument);
 		Map<String, Object> data = new HashMap<>();
 		data.put("id", Long.valueOf(id));
 		data.put("page", Long.valueOf(page));
+		if (StringUtils.isEmpty(title)) {
+			title = (String) details.get("title");
+			for (int i = 0; i < 2; i++) {
+				int index = title.lastIndexOf(" - ");
+				if (index > -1)
+					title = title.substring(0, index);
+			}
+		}
 		data.put("title", title);
 		new EntryData<String, String>()//
 				.put("fid", "fid")//
@@ -119,6 +127,7 @@ public class Store_Mongodb implements IStore {
 		}
 		data.put("context_zip", ZipUtil.compress(JsonUtil.toJson(details)));
 		save("htmldoc", data, "fid", "id", "page");
+		return data;
 	}
 
 	private void save(String collectionName, Map<String, Object> objectToSave, String... keys) {

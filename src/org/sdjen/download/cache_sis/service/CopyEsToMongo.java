@@ -21,9 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -35,17 +32,17 @@ public class CopyEsToMongo {
 	private String path_es_start;
 	@Autowired
 	private HttpUtil httpUtil;
-	@Autowired
-	private MongoTemplate mongoTemplate;
 	@Resource(name = "Store_Mongodb")
-	private IStore mongoStore;
+	private IStore store_mongo;
+	@Resource(name = "Store_ElasticSearch")
+	private IStore store_es;
 
 	public CopyEsToMongo() {
 		System.out.println(">>>>>>>>>>>>CopyEsToMongo");
 	}
 
 	public void copy(String type) throws Throwable {
-		Map<String, Object> last = mongoStore.getLast("es_mongo_" + type);
+		Map<String, Object> last = store_mongo.getLast("es_mongo_" + type);
 		String from = null;
 		if (null != last) {
 			if (last.containsKey("running") && (Boolean) last.get("running")) {
@@ -54,7 +51,7 @@ public class CopyEsToMongo {
 			}
 			from = (String) last.get("keyword");
 		}
-		mongoStore.running("es_mongo_" + type, from, " init");
+		store_mongo.running("es_mongo_" + type, from, " init");
 		logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
 		try {
 			switch (type) {
@@ -70,9 +67,9 @@ public class CopyEsToMongo {
 			default:
 				break;
 			}
-			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, mongoStore.finish("es_mongo_" + type, "finsh"));
+			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, store_mongo.finish("es_mongo_" + type, "finsh"));
 		} catch (Throwable e) {
-			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, mongoStore.finish("es_mongo_" + type, e.getMessage()));
+			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, store_mongo.finish("es_mongo_" + type, e.getMessage()));
 			throw e;
 		}
 	}
@@ -117,12 +114,16 @@ public class CopyEsToMongo {
 		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);
 //			logger.info("{}	{}	{}", type, hit.get("_id"), _source);
+			if ("url".equals(type))
+				store_mongo.saveURL((String) _source.get("url"), (String) _source.get("path"));
+			if ("path".equals(type))
+				store_mongo.saveMD5((String) _source.get("key"), (String) _source.get("path"));
 			result = _source.get("path", String.class);
 		}
 		long sTime = System.currentTimeMillis() - startTime;
 		logger.info("查{}:	{}ms	共:{}ms	Last:{}	total:{}", type, sTime, (System.currentTimeMillis() - startTime),
 				result, hits.get("total"));
-		mongoStore.running("es_mongo_" + type, result, hits.get("total").toString());
+		store_mongo.running("es_mongo_" + type, result, hits.get("total").toString());
 		int total = (Integer) hits.get("total");
 		return result;
 	}
@@ -181,26 +182,27 @@ public class CopyEsToMongo {
 			} finally {
 			}
 		}
-		mongoStore.running("es_mongo_html", String.valueOf(result), hits.get("total").toString());
+		store_mongo.running("es_mongo_html", String.valueOf(result), hits.get("total").toString());
 		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", sTime, (System.currentTimeMillis() - startTime), from,
 				result, hits.get("total"));
 		return result;
 	}
 
 	private void single(Long id) throws Throwable {
-		Map<Object, Object> params = ESMap.get();
-		params.put("query", ESMap.get().set("bool", ESMap.get().set("must",
-				Arrays.asList(ESMap.get().set("term", Collections.singletonMap("id", Long.valueOf(id)))))));
-//		params.put("query", ESMap.get().set("term", ESMap.get().set("id", Long.valueOf(id))));
-		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
-		ESMap hits = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
-		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
-			ESMap _source = hit.get("_source", ESMap.class);
-			Long page = Long.valueOf(_source.get("page").toString());
-			String title = _source.get("title", String.class);
-			if (1l == page) {
-				logger.info("{}+{}	{}	{}", id, hits.get("total"), _source.get("datetime", String.class), title);
-			}
-		}
+		store_mongo.saveHtml(String.valueOf(id), "1", "url", "", "dateStr", store_es.getLocalHtml(id.toString(), "1"));
+//		Map<Object, Object> params = ESMap.get();
+//		params.put("query", ESMap.get().set("bool", ESMap.get().set("must",
+//				Arrays.asList(ESMap.get().set("term", Collections.singletonMap("id", Long.valueOf(id)))))));
+////		params.put("query", ESMap.get().set("term", ESMap.get().set("id", Long.valueOf(id))));
+//		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
+//		ESMap hits = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
+//		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
+//			ESMap _source = hit.get("_source", ESMap.class);
+//			Long page = Long.valueOf(_source.get("page").toString());
+//			String title = _source.get("title", String.class);
+//			if (1l == page) {
+//				logger.info("{}+{}	{}	{}", id, hits.get("total"), _source.get("datetime", String.class), title);
+//			}
+//		}
 	}
 }

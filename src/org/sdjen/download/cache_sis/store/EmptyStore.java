@@ -40,10 +40,9 @@ public class EmptyStore implements IStore {
 	}
 
 	@Override
-	public void saveHtml(String id, String page, String url, String title, String dateStr, String html)
+	public Map<String, Object> saveHtml(String id, String page, String url, String title, String dateStr, String html)
 			throws Throwable {
-		// TODO Auto-generated method stub
-
+		return null;
 	}
 
 	@Override
@@ -62,13 +61,13 @@ public class EmptyStore implements IStore {
 	@Override
 	public void addProxyUrl(String url) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void removeProxyUrl(String url) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
@@ -81,13 +80,13 @@ public class EmptyStore implements IStore {
 	@Override
 	public void logFailedUrl(String url, Throwable e) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	@Override
 	public void logSucceedUrl(String url) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 }

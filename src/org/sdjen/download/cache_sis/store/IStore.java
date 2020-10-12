@@ -64,7 +64,7 @@ public interface IStore {
 
 	String getURL_Path(String key) throws Throwable;
 
-	void saveHtml(final String id, final String page, final String url, String title, String dateStr, String html)
+	Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr, String html)
 			throws Throwable;
 
 	void refreshMsgLog();

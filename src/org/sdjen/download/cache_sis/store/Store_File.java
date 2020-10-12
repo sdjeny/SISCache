@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.Map;
 
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;
@@ -49,7 +50,7 @@ public abstract class Store_File implements IStore {
 
 	}
 
-	public void saveHtml(final String id, final String page, final String url, String title, String dateStr,
+	public Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
 			String html) throws Throwable {
 		OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(getKey(id, page)),
 				ConfUtil.getDefaultConf().getProperties().getProperty("chatset"));
@@ -57,6 +58,7 @@ public abstract class Store_File implements IStore {
 		bw.write(html);
 		bw.close();
 		writer.close();
+		return null;
 	}
 
 	@Override

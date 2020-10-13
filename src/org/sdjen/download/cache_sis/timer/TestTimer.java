@@ -1,21 +1,21 @@
 package org.sdjen.download.cache_sis.timer;
 
+import java.io.File;
 import java.util.Collection;
 
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.http.HttpUtil;
-import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.test.WithoutInterfaceService;
-import org.sdjen.download.cache_sis.util.EntryData;
-import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
+
+import com.google.common.io.Files;
 
 @Service("TestTimer")
 public class TestTimer implements InitStartTimer {
@@ -39,9 +39,10 @@ public class TestTimer implements InitStartTimer {
 
 	public void restart(double hours) throws Throwable {
 		System.out.println(">>>>>>>>>>>>TestTimer:" + fids);
-		String s = httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-8694622-1-1.html");
-		System.out.println(s);
-		System.out.println(JsonUtil.toPrettyJson(JsoupAnalysisor.split(s)));
+//		String s = httpUtil.getHTML("http://www.sexinsex.net/bbs/thread-8694622-1-1.html");
+//		Files.write(s.getBytes("GBK"),new File("sisdemo_8694622.html"));
+//		System.out.println(s);
+//		System.out.println(JsonUtil.toPrettyJson(JsoupAnalysisor.split(s)));
 //		for (int i = 0; i < 100; i++) {
 //			service.async();
 //		}

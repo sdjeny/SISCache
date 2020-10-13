@@ -243,8 +243,8 @@ public class JsoupAnalysisor {
 				if (floor.isEmpty())
 					continue;
 				org.jsoup.select.Elements postauthor = tr.select(".postauthor");
-				content.put("author", postauthor.select("cite").select("a").first().ownText());
-				content.put("level", postauthor.select("p").select("em").first().text());
+				content.put("author", postauthor.select("cite").text());
+				content.put("level", postauthor.select("p").select("em").text());
 				org.jsoup.select.Elements message = tr.select("div.postmessage.defaultpost");
 				org.jsoup.select.Elements t_msgfont = message.select(".t_msgfont");
 				content_txt.append(' ').append(t_msgfont.text());

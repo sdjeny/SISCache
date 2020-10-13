@@ -107,12 +107,11 @@ public class CopyEsToMongo {
 		));
 		params.put("size", size);
 		params.put("from", 0);
-		long l = System.currentTimeMillis();
 		String json = JsonUtil.toJson(params);
 //		logger.info("{}	{}", type, json);
 		json = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search", json);
 //		logger.info("{}	{}", type, json);
-		l = System.currentTimeMillis() - l;
+		long l = System.currentTimeMillis() - startTime;
 		ESMap hits = JsonUtil.toObject(json, ESMap.class).get("hits", ESMap.class);
 		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);
@@ -123,11 +122,10 @@ public class CopyEsToMongo {
 				store_mongo.saveMD5((String) _source.get("key"), (String) _source.get("path"));
 			result = _source.get("path", String.class);
 		}
-		long sTime = System.currentTimeMillis() - startTime;
-		logger.info("查{}:	{}ms	共:{}ms	Last:{}	total:{}", type, sTime, (System.currentTimeMillis() - startTime),
+		logger.info("查{}:	{}ms	共:{}ms	Last:{}	total:{}", type, l, (System.currentTimeMillis() - startTime),
 				result, hits.get("total"));
 		store_mongo.running("es_mongo_" + type, result, hits.get("total").toString());
-		int total = (Integer) hits.get("total");
+//		int total = (Integer) hits.get("total");
 		return result;
 	}
 
@@ -148,9 +146,8 @@ public class CopyEsToMongo {
 		));
 		params.put("size", size);
 		params.put("from", 0);
-		long l = System.currentTimeMillis();
 		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
-		l = System.currentTimeMillis() - l;
+		long l = System.currentTimeMillis() - startTime;
 		ESMap hits = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
 		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
@@ -172,8 +169,6 @@ public class CopyEsToMongo {
 				}
 			}));
 		}
-		long sTime = System.currentTimeMillis() - startTime;
-		executor.shutdown();
 		for (Future<Long> fs : resultList) {
 			try {
 				fs.get(30, TimeUnit.MINUTES);
@@ -185,7 +180,7 @@ public class CopyEsToMongo {
 			}
 		}
 		store_mongo.running("es_mongo_html", String.valueOf(result), hits.get("total").toString());
-		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", sTime, (System.currentTimeMillis() - startTime), from,
+		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", l, (System.currentTimeMillis() - startTime), from,
 				result, hits.get("total"));
 		return result;
 	}

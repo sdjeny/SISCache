@@ -141,8 +141,7 @@ public class Controller_siscache {
 			rst.append("</tr></tbody>");
 		}
 		if (can_copy_es_mongo) {
-			Set<String> running = store.getRunnings();
-			if (!running.contains("es_mongo_html")) {
+			{
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/html' title='新窗口打开' target='_blank'>es->mongo html</a></td>");
@@ -150,7 +149,7 @@ public class Controller_siscache {
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
-			if (!running.contains("es_mongo_url")) {
+			{
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>es->mongo url</a></td>");
@@ -158,7 +157,7 @@ public class Controller_siscache {
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
-			if (!running.contains("es_mongo_path")) {
+			{
 				rst.append("<tbody><tr>");
 				rst.append(
 						"<td><a href='/siscache/copy/es/mongo/path' title='新窗口打开' target='_blank'>es->mongo path</a></td>");
@@ -250,11 +249,13 @@ public class Controller_siscache {
 	}
 
 	@RequestMapping("/cache")
+	@ResponseBody
 	String cache() {
 		return cache(1, 1);
 	}
 
 	@RequestMapping("/cache/{from}/{to}")
+	@ResponseBody
 	String cache(@PathVariable("from") int from, @PathVariable("to") int to) {
 		return cache(from, to, "");
 	}
@@ -263,17 +264,12 @@ public class Controller_siscache {
 	@ResponseBody
 	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type) {
 		ConfUtil.reload();
-		new Thread(new Runnable() {
-			public void run() {
-
-				try {
-					logger.info(type + "	" + from + "	" + to);
-					downloadList.execute(type, from, to);
-				} catch (Throwable e) {
-					logger.error(e.getMessage(), e);
-				}
-			}
-		}).start();
+		try {
+			logger.info(type + "	" + from + "	" + to);
+			downloadList.execute_async(type, from, to);
+		} catch (Throwable e) {
+			logger.error(e.getMessage(), e);
+		}	
 //		return list(1);
 		try {
 			return JsonUtil.toJson(store.getLast("download_list"));

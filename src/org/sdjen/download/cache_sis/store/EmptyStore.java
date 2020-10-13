@@ -89,4 +89,10 @@ public class EmptyStore implements IStore {
 
 	}
 
+	@Override
+	public void init() {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 
@@ -58,6 +59,11 @@ public class DownloadList {
 		System.out.println(">>>>>>>>>>>>>>>>>>DownloadList");
 		conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
+	}
+
+	@Async("taskExecutor")
+	public void execute_async(String type, int from, int to) throws Throwable {
+		execute(type, from, to);
 	}
 
 	public void execute(String type, int from, int to) throws Throwable {

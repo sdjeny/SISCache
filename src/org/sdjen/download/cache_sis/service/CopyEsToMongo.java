@@ -6,8 +6,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -21,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -36,12 +35,16 @@ public class CopyEsToMongo {
 	private IStore store_mongo;
 	@Resource(name = "Store_ElasticSearch")
 	private IStore store_es;
+	@Resource(name = "cpES2MGExecutor")
+	private ThreadPoolTaskExecutor executor;
 
 	public CopyEsToMongo() {
 		System.out.println(">>>>>>>>>>>>CopyEsToMongo");
 	}
 
 	public void copy(String type) throws Throwable {
+		store_es.init();
+		store_mongo.init();
 		Map<String, Object> last = store_mongo.getLast("es_mongo_" + type);
 		String from = null;
 		if (null != last) {
@@ -149,7 +152,6 @@ public class CopyEsToMongo {
 		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
 		l = System.currentTimeMillis() - l;
 		ESMap hits = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
-		ExecutorService executor = Executors.newFixedThreadPool(3);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
 		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);

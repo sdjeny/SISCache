@@ -33,7 +33,7 @@ public class TaskPoolConfig {
 		taskExecutor.setMaxPoolSize(50);//配置最大线程数
 		taskExecutor.setQueueCapacity(200);//配置队列大小
 		taskExecutor.setKeepAliveSeconds(60);
-		taskExecutor.setThreadNamePrefix("taskExecutor--");//配置线程池中的线程的名称前缀
+		taskExecutor.setThreadNamePrefix("async-");//配置线程池中的线程的名称前缀
 		taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
 		taskExecutor.setAwaitTerminationSeconds(60);
 		return taskExecutor;
@@ -46,7 +46,7 @@ public class TaskPoolConfig {
 		taskExecutor.setMaxPoolSize(num_single_max);
 		taskExecutor.setQueueCapacity(queue_capacity);
 //		taskExecutor.setKeepAliveSeconds(seconds_alive);
-		taskExecutor.setThreadNamePrefix("DS--");
+		taskExecutor.setThreadNamePrefix("DS-");
 		taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
 //		taskExecutor.setAwaitTerminationSeconds(seconds_alive);
 		taskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
@@ -60,7 +60,21 @@ public class TaskPoolConfig {
 		taskExecutor.setMaxPoolSize(num_list_max);
 		taskExecutor.setQueueCapacity(queue_capacity);
 //		taskExecutor.setKeepAliveSeconds(seconds_alive);
-		taskExecutor.setThreadNamePrefix("DL--");
+		taskExecutor.setThreadNamePrefix("DL-");
+		taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
+//		taskExecutor.setAwaitTerminationSeconds(seconds_alive);
+		taskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+		return taskExecutor;
+	}
+
+	@Bean("cpES2MGExecutor")
+	public ThreadPoolTaskExecutor cpES2MGExecutor() {
+		ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
+		taskExecutor.setCorePoolSize(3);
+		taskExecutor.setMaxPoolSize(5);
+		taskExecutor.setQueueCapacity(9999);
+//		taskExecutor.setKeepAliveSeconds(seconds_alive);
+		taskExecutor.setThreadNamePrefix("CPE2M-");
 		taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
 //		taskExecutor.setAwaitTerminationSeconds(seconds_alive);
 		taskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());

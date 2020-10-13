@@ -1,19 +1,17 @@
 package org.sdjen.download.cache_sis.timer;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.store.IStore;
+import org.sdjen.download.cache_sis.test.WithoutInterfaceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +28,8 @@ public class TestTimer implements InitStartTimer {
 	private ThreadPoolTaskExecutor dsExecutor;
 	@Value("${siscache.conf.fids}")
 	private Collection<String> fids;
+	@Autowired
+	WithoutInterfaceService service;
 
 	public TestTimer() {
 		System.out.println(">>>>>>>>>>>>TestTimer");
@@ -37,6 +37,9 @@ public class TestTimer implements InitStartTimer {
 
 	public void restart(double hours) throws Throwable {
 		System.out.println(">>>>>>>>>>>>TestTimer:" + fids);
+//		for (int i = 0; i < 100; i++) {
+//			service.async();
+//		}
 //		List<Future> dl = new ArrayList<>();
 //		for (int i = 0; i < 10; i++) {
 //			int ii = i;

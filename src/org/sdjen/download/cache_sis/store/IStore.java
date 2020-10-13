@@ -54,6 +54,8 @@ public interface IStore {
 	SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd HH:mm:ss:SSS");
 //	String getKey(final String id, final String page, final String url, String title, String dateStr) throws Throwable;
 
+	void init() throws Throwable;
+
 	String getLocalHtml(final String id, final String page) throws Throwable;
 
 	void saveURL(String url, String path) throws Throwable;
@@ -64,8 +66,8 @@ public interface IStore {
 
 	String getURL_Path(String key) throws Throwable;
 
-	Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr, String html)
-			throws Throwable;
+	Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
+			String html) throws Throwable;
 
 	void refreshMsgLog();
 
@@ -145,10 +147,6 @@ public interface IStore {
 
 	default Object finish(String type, String msg) {
 		return null;
-	}
-
-	default Set<String> getRunnings() {
-		return new HashSet<String>();
 	}
 
 	default StringBuilder getMsgText(Object pattern, Object... args) {

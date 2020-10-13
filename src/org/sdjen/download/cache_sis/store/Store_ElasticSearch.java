@@ -32,6 +32,7 @@ import org.springframework.stereotype.Service;
 
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
+	boolean inited = false;
 	@Autowired
 	private HttpUtil httpUtil;
 	@Resource(name = "Store_Mongodb")
@@ -74,12 +75,12 @@ public class Store_ElasticSearch implements IStore {
 		return logName;
 	}
 
-	private Store_ElasticSearch() throws Exception {
-		System.out.println(">>>>>>>>>>>>>>>>>>Store_ElasticSearch");
+	@Override
+	public void init() throws Throwable {
+		if (inited)
+			return;
 //		connection = GetConnection.getConnection();
 		md5Digest = MessageDigest.getInstance("MD5");
-		ConfUtil conf = getConf();
-		boolean isStore = false;
 		refreshMsgLog();
 		{// html.context_zip字段不参与检索
 			StringBuilder postStr = new StringBuilder();
@@ -89,37 +90,38 @@ public class Store_ElasticSearch implements IStore {
 			postStr.append("\n");
 			String rst;
 			try {
-				try {
-					rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
-				} catch (Throwable e) {
-					msg("ES未启动，5分钟后重试1次");
-					Thread.sleep(300);// 300000
-					rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
-				}
-				msg(rst);
-				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_mapping/"//
-						, JsonUtil.toJson(//
-								ESMap.get()//
-										.set("properties", ESMap.get()//
-												.set("context_zip", ESMap.get()//
-														.set("type", "text")//
-														.set("index", false)//
-														.set("norms", false)//
-														.set("fields", ESMap.get()//
-																.set("keyword", ESMap.get()//
-																		.set("type", "keyword")//
-																		.set("ignore_above", 256)//
-																)//
-														)//
-												)//
-										)//
-						)//
-				);
-				msg(rst);
+				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 			} catch (Throwable e) {
-				msg("ES启动失败");
+				msg("ES未启动，5分钟后重试1次");
+				Thread.sleep(300000);// 300000
+				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 			}
+			msg(rst);
+			rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_mapping/"//
+					, JsonUtil.toJson(//
+							ESMap.get()//
+									.set("properties", ESMap.get()//
+											.set("context_zip", ESMap.get()//
+													.set("type", "text")//
+													.set("index", false)//
+													.set("norms", false)//
+													.set("fields", ESMap.get()//
+															.set("keyword", ESMap.get()//
+																	.set("type", "keyword")//
+																	.set("ignore_above", 256)//
+															)//
+													)//
+											)//
+									)//
+					)//
+			);
+			msg(rst);
+			inited = true;
 		}
+	}
+
+	private Store_ElasticSearch() throws Exception {
+		System.out.println(">>>>>>>>>>>>>>>>>>Store_ElasticSearch");
 	}
 
 	private String getKey(String id, String page) {
@@ -161,7 +163,7 @@ public class Store_ElasticSearch implements IStore {
 				}
 			}
 		}
-		if(null != result) {
+		if (null != result) {
 			org.jsoup.nodes.Document document = replaceLocalHtmlUrl(result);
 			for (org.jsoup.nodes.Element e : document.select("head").select("style")) {
 				if (e.text().isEmpty()) {
@@ -174,8 +176,8 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
-			String text) throws Throwable {
+	public Map<String, Object> saveHtml(final String id, final String page, final String url, String title,
+			String dateStr, String text) throws Throwable {
 		String key = getKey(id, page);
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
 		org.jsoup.nodes.Element h1 = doument.select("div.mainbox").select("h1").first();

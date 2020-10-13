@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.index.Index;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
@@ -38,6 +39,7 @@ import com.mongodb.client.result.UpdateResult;
 
 @Service("Store_Mongodb")
 public class Store_Mongodb implements IStore {
+	boolean inited = false;
 	private static Set<String> proxy_urls;
 	private MessageDigest md5Digest;
 	@Autowired
@@ -53,6 +55,34 @@ public class Store_Mongodb implements IStore {
 	private Store_Mongodb() throws Exception {
 		System.out.println(">>>>>>>>>>>>>>>>>>Store_Mongodb");
 		md5Digest = MessageDigest.getInstance("MD5");
+	}
+
+	@Override
+	public void init() {
+		if (inited)
+			return;
+		try {
+			Index index = new Index();
+			index.unique();
+			index.on("type", Sort.Direction.ASC);
+			index.on("key", Sort.Direction.ASC);
+			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("md").ensureIndex(index));
+		} catch (Exception e) {
+			logger.info("+++++++++++Index:	" + e);
+		}
+		try {
+			Index index = new Index();
+			index.unique();
+			index.on("fid", Sort.Direction.ASC);
+			index.on("id", Sort.Direction.ASC);
+			index.on("page", Sort.Direction.ASC);
+			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
+		} catch (Exception e) {
+			logger.info("+++++++++++Index:	" + e);
+		}
+		logger.info("~~~~~~~~~clean running:{}",
+				mongoTemplate.updateMulti(new Query(), new Update().set("running", false), "last"));
+		inited = true;
 	}
 
 	@Override
@@ -95,8 +125,8 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
-			String text) throws Throwable {
+	public Map<String, Object> saveHtml(final String id, final String page, final String url, String title,
+			String dateStr, String text) throws Throwable {
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
 		Map<String, Object> details = JsoupAnalysisor.split(doument);
 		Map<String, Object> data = new HashMap<>();
@@ -369,14 +399,6 @@ public class Store_Mongodb implements IStore {
 				.set("msg", msg)//
 				.set("time", new Date())//
 				, "last");
-	}
-
-	@Override
-	public Set<String> getRunnings() {
-		Set<String> running = new HashSet<>();
-		mongoTemplate.find(new Query().addCriteria(Criteria.where("running").is(true)), Map.class, "last")
-				.forEach(m -> running.add((String) m.get("type")));
-		return running;
 	}
 
 	@Override

@@ -5,13 +5,15 @@ import java.util.Collection;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.test.WithoutInterfaceService;
+import org.sdjen.download.cache_sis.util.EntryData;
+import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -37,6 +39,8 @@ public class TestTimer implements InitStartTimer {
 
 	public void restart(double hours) throws Throwable {
 		System.out.println(">>>>>>>>>>>>TestTimer:" + fids);
+		System.out.println(JsonUtil.toPrettyJson(JsoupAnalysisor.split(httpUtil.doLocalGet(
+				"http://www.sexinsex.net/bbs/thread-8694622-1-1.html", new EntryData<String, String>().getData()))));
 //		for (int i = 0; i < 100; i++) {
 //			service.async();
 //		}

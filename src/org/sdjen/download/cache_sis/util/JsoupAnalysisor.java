@@ -217,6 +217,7 @@ public class JsoupAnalysisor {
 				}
 			}
 		}
+		result.put("tid", result.get("id"));
 		result.put("type", doument.select(".mainbox.viewthread h1 a").text());
 		StringBuilder content_txt = new StringBuilder();
 		for (org.jsoup.nodes.Element element : doument.select("div#wrapper form")) {

@@ -106,6 +106,7 @@ public class Store_Mongodb implements IStore {
 						Map<String, Object> details = JsonUtil.toObject(context, Map.class);
 						details.put("fid", (String) _source.get("fid"));
 						details.put("type", (String) _source.get("type"));
+						details.put("tid", id);
 						details.put("id", id);
 						context = JsoupAnalysisor.restoreToHtml(details);
 					} catch (Exception e) {
@@ -129,6 +130,8 @@ public class Store_Mongodb implements IStore {
 			String dateStr, String text) throws Throwable {
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
 		Map<String, Object> details = JsoupAnalysisor.split(doument);
+		details.remove("id");
+		details.remove("tid");
 		Map<String, Object> data = new HashMap<>();
 		data.put("id", Long.valueOf(id));
 		data.put("page", Long.valueOf(page));

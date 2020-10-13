@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
@@ -42,9 +43,8 @@ public class CopyEsToMongo {
 		System.out.println(">>>>>>>>>>>>CopyEsToMongo");
 	}
 
+	@Async("taskExecutor")
 	public void copy(String type) throws Throwable {
-		store_es.init();
-		store_mongo.init();
 		Map<String, Object> last = store_mongo.getLast("es_mongo_" + type);
 		String from = null;
 		if (null != last) {
@@ -54,9 +54,11 @@ public class CopyEsToMongo {
 			}
 			from = (String) last.get("keyword");
 		}
-		store_mongo.running("es_mongo_" + type, from, " init");
-		logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
 		try {
+			store_mongo.running("es_mongo_" + type, from, " init");
+			store_es.init();
+			store_mongo.init();
+			logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
 			switch (type) {
 			case "html": {
 				copyHtml(null == from ? 0l : Long.valueOf(from));
@@ -180,8 +182,8 @@ public class CopyEsToMongo {
 			}
 		}
 		store_mongo.running("es_mongo_html", String.valueOf(result), hits.get("total").toString());
-		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", l, (System.currentTimeMillis() - startTime), from,
-				result, hits.get("total"));
+		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", l, (System.currentTimeMillis() - startTime), from, result,
+				hits.get("total"));
 		return result;
 	}
 

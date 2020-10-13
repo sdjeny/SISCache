@@ -5,32 +5,22 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
-import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.DownloadList;
-import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
-import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.CopyEsToMongo;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
-import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Required;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -201,15 +191,11 @@ public class Controller_siscache {
 	@RequestMapping("/copy/es/mongo/{type}")
 	@ResponseBody
 	private String copyEsToMongo(@PathVariable("type") String type) {
-		new Thread(new Runnable() {
-			public void run() {
-				try {
-					copyEsToMongo.copy(type);
-				} catch (Throwable e) {
-					logger.error(e.getMessage(), e);
-				}
-			}
-		}).start();
+		try {
+			copyEsToMongo.copy(type);
+		} catch (Throwable e) {
+			logger.error(e.getMessage(), e);
+		}
 		try {
 			return JsonUtil.toJson(mongoTemplate.findOne(
 					new Query().addCriteria(Criteria.where("type").is("es_mongo_" + type)), Map.class, "last"));
@@ -269,7 +255,7 @@ public class Controller_siscache {
 			downloadList.execute_async(type, from, to);
 		} catch (Throwable e) {
 			logger.error(e.getMessage(), e);
-		}	
+		}
 //		return list(1);
 		try {
 			return JsonUtil.toJson(store.getLast("download_list"));

@@ -322,7 +322,8 @@ public class DownloadSingle {
 			}
 			int length = html.length();
 			length_download += length;
-			if ((html.length() - cssLen) > (55000 - DefaultCss.getLength())) {
+			if (true// 先忽略长度，存了再说
+					|| (html.length() - cssLen) > (55000 - DefaultCss.getLength())) {
 				try {
 					lock_w_db.lock();
 					store.saveHtml(id, page, url, title, dateStr, html);

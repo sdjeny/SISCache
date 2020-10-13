@@ -50,14 +50,14 @@ public class MyApplicationRunner implements ApplicationRunner {
 			ConfUtil.getDefaultConf().store();
 		}
 		try {
-			timer.restart(hour);
-		} catch (Throwable e) {
-			logger.error("timer", e);
-		}
-		try {
 			store.init();
 		} catch (Throwable e) {
 			logger.error("store.init", e);
+		}
+		try {
+			timer.restart(hour);
+		} catch (Throwable e) {
+			logger.error("timer", e);
 		}
 //		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeenA.getInfo());
 //		System.out.println("~~~~~~~~~~~~~~~~~" + moreBeenB.getInfo());

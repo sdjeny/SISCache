@@ -80,6 +80,30 @@ public class Store_Mongodb implements IStore {
 		} catch (Exception e) {
 			logger.info("+++++++++++Index:	" + e);
 		}
+		try {
+			Index index = new Index();
+			index.background();
+			index.on("id", Sort.Direction.DESC);
+			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
+		} catch (Exception e) {
+			logger.info("+++++++++++Index:	" + e);
+		}
+		try {
+			Index index = new Index();
+			index.background();
+			index.on("id", Sort.Direction.ASC);
+			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
+		} catch (Exception e) {
+			logger.info("+++++++++++Index:	" + e);
+		}
+		try {
+			Index index = new Index();
+			index.background();
+			index.on("fid", Sort.Direction.ASC);
+			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
+		} catch (Exception e) {
+			logger.info("+++++++++++Index:	" + e);
+		}
 		logger.info("~~~~~~~~~clean running:{}",
 				mongoTemplate.updateMulti(new Query(), new Update().set("running", false), "last"));
 		inited = true;

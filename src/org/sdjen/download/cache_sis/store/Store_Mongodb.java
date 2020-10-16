@@ -73,6 +73,7 @@ public class Store_Mongodb implements IStore {
 		try {
 			Index index = new Index();
 			index.unique();
+			index.background();
 			index.on("fid", Sort.Direction.ASC);
 			index.on("id", Sort.Direction.ASC);
 			index.on("page", Sort.Direction.ASC);

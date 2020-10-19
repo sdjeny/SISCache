@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class CopyMongoToES {
 	final static Logger logger = LoggerFactory.getLogger(CopyMongoToES.class);
-	@Value("${siscache.conf.copy_copy_unit_limit}")
+	@Value("${siscache.conf.copy_es_mongo_unit_limit}")
 	private int size = 300;
 	@Value("${siscache.conf.path_es_start}")
 	private String path_es_start;

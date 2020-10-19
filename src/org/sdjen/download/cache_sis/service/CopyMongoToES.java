@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class CopyMongoToES {
 	final static Logger logger = LoggerFactory.getLogger(CopyMongoToES.class);
-	@Value("${siscache.conf.copy_es_mongo_unit_limit}")
+	@Value("${siscache.conf.copy_copy_unit_limit}")
 	private int size = 300;
 	@Value("${siscache.conf.path_es_start}")
 	private String path_es_start;
@@ -48,36 +48,40 @@ public class CopyMongoToES {
 
 	@Async("taskExecutor")
 	public void copy(String type) throws Throwable {
-		Map<String, Object> last = store_es.getLast("es_mongo_" + type);
-		String from = null;
-		if (null != last) {
-			if (last.containsKey("running") && (Boolean) last.get("running")) {
-				logger.info(">>>>>>>>>>>>Copy {} is Running", type);
-				return;
-			}
-			from = (String) last.get("keyword");
-		}
 		try {
 			store_es.init();
 			store_mongo.init();
-			store_es.running("es_mongo_" + type, from, " init");
+			Map<String, Object> last;
+			try {
+				last = store_es.getLast("copy_" + type);
+			} catch (Throwable e1) {
+				last = null;
+			}
+			String from = null;
+			if (null != last) {
+				if (last.containsKey("running") && (Boolean) last.get("running")) {
+					logger.info(">>>>>>>>>>>>Copy {} is Running", type);
+					return;
+				}
+				from = (String) last.get("keyword");
+			}
+			store_es.running("copy_" + type, from, " init");
 			logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
 			switch (type) {
 			case "html": {
 				copyHtml(null == from ? 0l : Long.valueOf(from));
 				break;
 			}
-			case "url":
-			case "path": {
-				copyMd(type, null == from ? " " : from);
+			case "md": {
+				copyMd(null == from ? " " : from);
 				break;
 			}
 			default:
 				break;
 			}
-			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, store_mongo.finish("es_mongo_" + type, "finsh"));
+			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, store_es.finish("copy_" + type, "finsh"));
 		} catch (Throwable e) {
-			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, store_mongo.finish("es_mongo_" + type, e.getMessage()));
+			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, store_es.finish("copy_" + type, e.getMessage()));
 			throw e;
 		}
 	}
@@ -90,35 +94,35 @@ public class CopyMongoToES {
 
 	}
 
-	void copyMd(String type, String from) throws Throwable {
+	void copyMd(String from) throws Throwable {
 		String listResult = from;
 		do {
-			listResult = listMd(type, from = listResult);
+			listResult = listMd(from = listResult);
 //			logger.info("{}	{}={}", listResult, from, listResult.equals(from));
 		} while (!listResult.equals(from));
 	}
 
-	private String listMd(String type, String from) throws Throwable {
+	private String listMd(String from) throws Throwable {
 		String result = from;
 		long startTime = System.currentTimeMillis();
 		Query query = new Query();
-		query.addCriteria(new Criteria().andOperator(Criteria.where("type").is(type), Criteria.where("id").gt(from)));
+		query.addCriteria(Criteria.where("key").gt(from));
+		Object total = mongoTemplate.count(query, "md");
 //		query.skip(0);
 		query.limit(size);
-		query.with(Sort.by(Order.asc("id")));
+		query.with(Sort.by(Order.asc("key")));
 		List<Map> hits = mongoTemplate.find(query, Map.class, "md");
-		Object total = mongoTemplate.count(query, "md");
 		long l = System.currentTimeMillis() - startTime;
 		for (Map<?, ?> _source : hits) {
+			String type = (String) _source.get("type");
 //			if ("url".equals(type))
 //				store_es.saveURL((String) _source.get("url"), (String) _source.get("path"));
 //			if ("path".equals(type))
 //				store_es.saveMD5((String) _source.get("key"), (String) _source.get("path"));
-			result = (String) _source.get("path");
+			result = (String) _source.get("key");
 		}
-		store_es.running("es_mongo_" + type, result, total.toString());
-		logger.info("查{}:	{}ms	共:{}ms	Last:{}	total:{}", type, l, (System.currentTimeMillis() - startTime),
-				result, total);
+		store_es.running("copy_md", result, total.toString());
+		logger.info("查:	{}ms	共:{}ms	Last:{}	total:{}", l, (System.currentTimeMillis() - startTime), result, total);
 		return result;
 	}
 
@@ -126,12 +130,12 @@ public class CopyMongoToES {
 		Long result = from, startTime = System.currentTimeMillis();
 		Query query = new Query();
 		query.addCriteria(Criteria.where("id").gt(from));
+		Object total = mongoTemplate.count(query, "htmldoc");
 //		query.skip(0);
 		query.limit(size);
 		query.with(Sort.by(Order.asc("id")));
 		query.fields().include("id");
 		List<Map> ms = mongoTemplate.find(query, Map.class, "htmldoc");
-		Object total = mongoTemplate.count(query, "htmldoc");
 		long l = System.currentTimeMillis() - startTime;
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
 		for (Map<?, ?> _source : ms) {
@@ -161,7 +165,7 @@ public class CopyMongoToES {
 			} finally {
 			}
 		}
-		store_es.running("es_mongo_html", String.valueOf(result), total.toString());
+		store_es.running("copy_html", String.valueOf(result), total.toString());
 		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", l, (System.currentTimeMillis() - startTime), from, result,
 				total);
 		return result;

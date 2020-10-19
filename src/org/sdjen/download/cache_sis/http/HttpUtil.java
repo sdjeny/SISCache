@@ -85,6 +85,18 @@ public class HttpUtil {
 //		return restTemplate.postForEntity(url, new HttpEntity<>(content, headers), String.class).getBody();
 	}
 
+	public String doLocalPutUtf8Json(String url, String content) throws Throwable {
+//		HttpHeaders headers = new HttpHeaders();
+//		headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+		return retry(() -> {
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+			return restTemplate.exchange(url, HttpMethod.PUT, new HttpEntity<>(content, headers), String.class)
+					.getBody();
+		});
+//		return restTemplate.postForEntity(url, new HttpEntity<>(content, headers), String.class).getBody();
+	}
+
 	public String doLocalGet(String url, Map<String, String> uriVariables) throws Throwable {
 //		Map<String, Object> map = new HashMap<String, Object>();
 //		map.put("flag", flag);

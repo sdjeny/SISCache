@@ -66,14 +66,14 @@ public class Store_ElasticSearch implements IStore {
 				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 			}
 			msg(rst);
-			rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_mapping/"//
+			msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_mapping/"//
 					, JsonUtil.toJson(//
 							ESMap.get()//
 									.set("properties", ESMap.get()//
 											.set("context_zip", ESMap.get()//
 													.set("type", "binary")// text
 													.set("index", false)//
-													.set("norms", false)//
+//													.set("norms", false)//
 //													.set("fields", ESMap.get()//
 //															.set("keyword", ESMap.get()//
 //																	.set("type", "keyword")//
@@ -83,8 +83,10 @@ public class Store_ElasticSearch implements IStore {
 											)//
 									)//
 					)//
-			);
-			msg(rst);
+			));
+			for (String index : new String[] { "last", "md", "urls_failed","test" }) {
+				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(path_es_start + index + "/_doc/_init_", "{}"));
+			}
 			String js = httpUtil.doLocalGet(path_es_start + "last/_doc/_search", new HashMap<>());
 			ESMap r = JsonUtil.toObject(js, ESMap.class);
 			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");

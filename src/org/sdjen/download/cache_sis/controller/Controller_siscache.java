@@ -152,8 +152,7 @@ public class Controller_siscache {
 			}
 			{
 				rst.append("<tbody><tr>");
-				rst.append(
-						"<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>copy url</a></td>");
+				rst.append("<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>copy url</a></td>");
 				rst.append(String.format("<td>%s</td>", "copy es->mongo url"));
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
@@ -178,17 +177,8 @@ public class Controller_siscache {
 			}
 			{
 				rst.append("<tbody><tr>");
-				rst.append(
-						"<td><a href='/siscache/copy/mongo/es/url' title='新窗口打开' target='_blank'>copy url</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy mongo->es url"));
-				rst.append(String.format("<td>%s</td>", ""));
-				rst.append("</tr></tbody>");
-			}
-			{
-				rst.append("<tbody><tr>");
-				rst.append(
-						"<td><a href='/siscache/copy/mongo/es/path' title='新窗口打开' target='_blank'>copy path</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy mongo->es path"));
+				rst.append("<td><a href='/siscache/copy/mongo/es/md' title='新窗口打开' target='_blank'>copy md</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy mongo->es md"));
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
@@ -251,7 +241,7 @@ public class Controller_siscache {
 		}
 		try {
 			return httpUtil.doLocalGet(path_es_start + "last/_doc/{type}",
-					new EntryData<String, String>().put("type", "es_mongo_" + type).getData());
+					new EntryData<String, String>().put("type", "copy_" + type).getData());
 		} catch (Throwable e) {
 			return e.getMessage();
 		} // "redirect:/siscache/list/all/1/100?debug=true";

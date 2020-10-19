@@ -146,11 +146,11 @@ public class ZipUtil {
 		byte[] bytes = s.getBytes(CHARSET);
 		s = bytesToString(bytes);
 		System.out.println(s);
-		System.out.println(new String(stringToBytes(s)));
+		System.out.println(new String(stringToBytes(s), CHARSET));
 	}
 
 	public static String bytesToString(byte[] bytes) throws IOException {
-		return new String(org.apache.commons.codec.binary.Base64.encodeBase64(bytes, true), CHARSET);
+		return new String(org.apache.commons.codec.binary.Base64.encodeBase64(bytes, false), CHARSET);
 //		return org.apache.commons.codec.binary.Base64.encodeBase64String(bytes);
 //		return new String(Base64Utils.encode(bytes), CHARSET);
 //		return new String(Base64.getEncoder().encode(bytes), CHARSET);

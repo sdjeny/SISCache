@@ -1,6 +1,5 @@
 package org.sdjen.download.cache_sis.store;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -12,23 +11,22 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.zip.DataFormatException;
 
 import javax.annotation.Resource;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
-import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
+import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
@@ -39,49 +37,20 @@ public class Store_ElasticSearch implements IStore {
 	private IStore store;
 	@Value("${siscache.conf.path_es_start}")
 	private String path_es_start;
+	@Value("${siscache.conf.url_fail_stop}")
+	private int url_fail_stop = 10;
+	@Value("${siscache.conf.url_fail_retry_begin}")
+	private int url_fail_retry_begin = 5;
+	@Value("${siscache.conf.url_fail_retry_in_hours}")
+	private int url_fail_retry_in_hours = 3;
 	private MessageDigest md5Digest;
-	private String logName;
-	private String charset;
-	private ConfUtil conf;
 	private static Set<String> proxy_urls;
 
-	public ConfUtil getConf() throws IOException {
-		if (null == conf) {
-			conf = ConfUtil.getDefaultConf();
-		}
-		return conf;
-	}
-
-	public String getCharset() {
-		if (null == charset) {
-			try {
-				charset = getConf().getProperties().getProperty("chatset");
-			} catch (IOException e) {
-				logName = "GBK";
-			}
-		}
-		return charset;
-	}
-
-	public String getLogName() {
-		if (null == logName) {
-			try {
-				String save_path = getConf().getProperties().getProperty("save_path");
-				logName = save_path + "/download.log";
-			} catch (IOException e) {
-				logName = "/download.log";
-			}
-		}
-		return logName;
-	}
-
 	@Override
-	public void init() throws Throwable {
+	public synchronized void init() throws Throwable {
 		if (inited)
 			return;
-//		connection = GetConnection.getConnection();
 		md5Digest = MessageDigest.getInstance("MD5");
-		refreshMsgLog();
 		{// html.context_zip字段不参与检索
 			StringBuilder postStr = new StringBuilder();
 			postStr.append(JsonUtil.toJson(ESMap.get().set("index", ESMap.get().set("_id", "test"))));
@@ -92,8 +61,8 @@ public class Store_ElasticSearch implements IStore {
 			try {
 				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 			} catch (Throwable e) {
-				msg("ES未启动，5分钟后重试1次");
-				Thread.sleep(300000);// 300000
+				msg("ES未启动，10分钟后重试1次");
+				Thread.sleep(600000);// 300000
 				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 			}
 			msg(rst);
@@ -102,20 +71,33 @@ public class Store_ElasticSearch implements IStore {
 							ESMap.get()//
 									.set("properties", ESMap.get()//
 											.set("context_zip", ESMap.get()//
-													.set("type", "text")//
+													.set("type", "binary")// text
 													.set("index", false)//
 													.set("norms", false)//
-													.set("fields", ESMap.get()//
-															.set("keyword", ESMap.get()//
-																	.set("type", "keyword")//
-																	.set("ignore_above", 256)//
-															)//
-													)//
+//													.set("fields", ESMap.get()//
+//															.set("keyword", ESMap.get()//
+//																	.set("type", "keyword")//
+//																	.set("ignore_above", 256)//
+//															)//
+//													)//
 											)//
 									)//
 					)//
 			);
 			msg(rst);
+			String js = httpUtil.doLocalGet(path_es_start + "last/_doc/_search", new HashMap<>());
+			ESMap r = JsonUtil.toObject(js, ESMap.class);
+			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
+			if (null != hits)
+				for (ESMap hit : hits) {
+					ESMap _source = hit.get("_source", ESMap.class);
+					if (null != _source && _source.containsKey("running") && (Boolean) _source.get("running")) {
+						_source.put("running", false);
+						String s = httpUtil.doLocalPostUtf8Json(path_es_start + "last/_doc/" + _source.get("type"),
+								JsonUtil.toJson(_source));
+						logger.info("~~~~~~~~~clean running:{}", s);
+					}
+				}
 			inited = true;
 		}
 	}
@@ -137,40 +119,26 @@ public class Store_ElasticSearch implements IStore {
 		ESMap _source = esMap.get("_source", ESMap.class);
 		String result = null;
 		if (null != _source) {
-			if (page.compareTo("1") > 0) {
-				StringBuffer rst = new StringBuffer();
-				rst.append("</br><table border='0'>");
-				for (Entry<Object, Object> e : _source.get("context_comments", ESMap.class).entrySet()) {
-					rst.append("<tbody><tr>");
-					rst.append(String.format("<td>%s</td>", e.getKey()));
-					rst.append(String.format("<td>%s</td>", e.getValue()));
-					rst.append("</tr></tbody>");
+			String zip = _source.get("context_zip", String.class);
+			if (null != zip) {
+				try {
+					String context = ZipUtil.uncompress(ZipUtil.stringToBytes(zip));
+					Map<String, Object> details = JsonUtil.toObject(context, Map.class);
+					details.put("fid", (String) _source.get("fid"));
+					details.put("type", (String) _source.get("type"));
+					details.put("tid", id);
+					details.put("id", id);
+					result = JsoupAnalysisor.restoreToHtml(details);
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-				rst.append("</table>");
-				result = rst.toString();
-			} else {
-				String text = _source.get("context_zip", String.class);
-				if (null != text) {
-					try {
-						return ZipUtil.uncompress(text);
-					} catch (DataFormatException e1) {
-						e1.printStackTrace();
-						text = null;
-					}
-				}
-				if (null == text) {
-					result = _source.get("context", String.class);
-				}
+			}
+			if (null == zip) {
+				result = _source.get("context", String.class);
 			}
 		}
 		if (null != result) {
-			org.jsoup.nodes.Document document = replaceLocalHtmlUrl(result);
-			for (org.jsoup.nodes.Element e : document.select("head").select("style")) {
-				if (e.text().isEmpty()) {
-					e.text(DefaultCss.getCss());
-				}
-			}
-			result = document.html();
+			result = replaceLocalHtmlUrl(result).html();
 		}
 		return result;
 	}
@@ -178,153 +146,58 @@ public class Store_ElasticSearch implements IStore {
 	@Override
 	public Map<String, Object> saveHtml(final String id, final String page, final String url, String title,
 			String dateStr, String text) throws Throwable {
+		init();
 		String key = getKey(id, page);
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
-		org.jsoup.nodes.Element h1 = doument.select("div.mainbox").select("h1").first();
-		if (null == h1)
-			throw new Exception("Lost title");
-//		org.jsoup.nodes.Element pages = doument.select("div.pages_btns").select("div.pages").first();
-		String type = h1.select("a").text();
-//		String title = h1.ownText();
-//		String id = doument.select("div.mainbox").select("span.headactions").select("a[href]").first().attr("href")
-//				.replace("viewthread.php?action=printable&tid=", "");
-//		String page = null == pages ? "1" : pages.select("strong").text();
-		String dat = null;
-		String context = null;
-		String author = null;
-		if (false) {
-			String f = "1";
-			for (org.jsoup.nodes.Element e : doument.select("div.mainbox")//// class=mainbox的div
-					.select("table")//
-					.select("tbody")//
-					.select("tr")//
-					.select("td.postcontent")//
-					.select("div.postinfo")//
-			) {
-				f = e.select("strong").first().ownText().replace("楼", "");
-				if ("1".equals(f))
-					dat = e.ownText().replace("发表于 ", "");
+		Map<String, Object> details = JsoupAnalysisor.split(doument);
+		details.remove("id");
+		details.remove("tid");
+		Map<String, Object> data = new HashMap<>();
+		data.put("id", Long.valueOf(id));
+		data.put("page", Long.valueOf(page));
+		if (StringUtils.isEmpty(title)) {
+			title = (String) details.get("title");
+			for (int i = 0; i < 2; i++) {
+				int index = title.lastIndexOf(" - ");
+				if (index > -1)
+					title = title.substring(0, index);
 			}
 		}
-		for (org.jsoup.nodes.Element tbody : doument.select("div.mainbox.viewthread")//// class=mainbox的div
-				.select("table")//
-				.select("tbody")//
-				.select("tr")//
-		//
-		) {
-
-			String floor = "";
-			for (org.jsoup.nodes.Element postinfo : tbody.select("td.postcontent").select("div.postinfo")) {
-				org.jsoup.nodes.Element temp = postinfo.select("strong").first();
-				if (null != temp) {
-					floor = temp.ownText();
-					if ("1楼".equals(floor)) {
-						dat = postinfo.ownText().replace("发表于 ", "");
-						for (org.jsoup.nodes.Element postauthor : tbody.select("td.postauthor").select("cite")
-								.select("a[href]")) {
-							author = postauthor.text();
-						}
-					}
-				}
-			}
-			if (null != author)
+		data.put("title", title);
+		new EntryData<String, String>()//
+				.put("fid", "fid")//
+				.put("type", "type")//
+				.put("context", "content_txt")//
+				.getData().forEach((k_data, k_detail) -> {
+					data.put(k_data, (String) details.get(k_detail));
+					details.remove(k_detail);
+				});
+		for (Map<String, String> map : (List<Map<String, String>>) details.get("contents")) {
+			if ("1楼".equals(map.get("floor"))) {
+				Arrays.asList("datetime", "author", "level").forEach(k -> data.put(k, (String) map.get(k)));
 				break;
-		}
-		ESMap comments = ESMap.get();
-		{
-			for (org.jsoup.nodes.Element postcontent : doument.select("div.mainbox.viewthread")//// class=mainbox的div
-					.select("table")//
-					.select("tbody")//
-					.select("tr")//
-					.select("td.postcontent")//
-			//
-			) {
-				String floor = "";
-				for (org.jsoup.nodes.Element postinfo : postcontent.select("div.postinfo")) {
-					org.jsoup.nodes.Element temp = postinfo.select("strong").first();
-					if (null != temp) {
-						floor = temp.ownText();
-						if ("1楼".equals(floor)) {
-							dat = postinfo.ownText().replace("发表于 ", "");
-						}
-					}
-				}
-				if (floor.isEmpty())
-					continue;
-				if ("1楼".equals(floor)) {
-					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")) {
-						context = comment.html();
-					}
-				} else {
-					String fm = comments.get(floor, String.class);
-					if (null == fm)
-						fm = "";
-					for (org.jsoup.nodes.Element comment : postcontent.select("div.postmessage.defaultpost")
-							.select("div.t_msgfont")) {
-						if (!fm.isEmpty())
-							fm += ",";
-						fm += comment.text();
-					}
-					comments.set(floor, fm);
-				}
 			}
 		}
-
-		boolean update = false;
-
-		for (org.jsoup.nodes.Element e : doument.select("head").select("style")) {
-			// if (!e.text().isEmpty()) {
-			update = true;
-			e.text("");
-			// }
-		}
-		for (org.jsoup.nodes.Element e : doument.select("head").select("script")) {
-			update = true;
-			e.remove();
-		}
-		if (update)
-			text = doument.html();
-		key = id + "_" + page;
-		Map<String, Object> json = new HashMap<>();
-		json.put("id", Long.valueOf(id));
-		json.put("page", Long.valueOf(page));
-		json.put("context_comments", comments);
-		json.put("title", title);
-		if (page.equals("1")) {
-			json.put("datetime", dat);
-			try {
-				if (null != dat) {
-					SimpleDateFormat dtf = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-					Date dt = dtf.parse(dat);
-					json.put("datetime", dtf.format(dt));
-					// json.put("date", new
-					// SimpleDateFormat("yyyy-MM-dd").parse(dat));
-					// json.put("datetime", dt);
-				}
-			} catch (Exception e1) {
-			}
-			json.put("fid", 143);
-			json.put("type", type);
-			json.put("context", context);
-			json.put("context_zip", ZipUtil.bytesToString(ZipUtil.compress(text)));
-			json.put("author", author);
-		}
-		String r = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/" + key, JsonUtil.toJson(json));
-		return json;
+		data.put("context_zip", ZipUtil.bytesToString(ZipUtil.compress(JsonUtil.toJson(details))));
+		String r = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/" + key, JsonUtil.toJson(data));
+		return data;
 	}
 
 	@Override
 	public void saveURL(String url, String path) throws Throwable {
+		init();
 		Map<String, Object> json = new HashMap<>();
+		String md5 = getMD5(url.getBytes("utf8"));
+		json.put("key", md5);
 		json.put("url", url);
 		json.put("path", path);
 		json.put("type", "url");
-		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/" + getMD5(url.getBytes("utf8")),
-				JsonUtil.toJson(json));
+		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/" + md5, JsonUtil.toJson(json));
 	}
 
 	@Override
 	public void saveMD5(String md5, String path) throws Throwable {
+		init();
 		Map<String, Object> json = new HashMap<>();
 		json.put("key", md5);
 		json.put("path", path);
@@ -494,10 +367,6 @@ public class Store_ElasticSearch implements IStore {
 		return result;
 	}
 
-	@Override
-	public void refreshMsgLog() {
-	}
-
 	public synchronized Set<String> getProxyUrls() {
 		if (null == proxy_urls) {
 			proxy_urls = new HashSet<>();
@@ -547,14 +416,111 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public void logFailedUrl(String url, Throwable e) {
-		// TODO Auto-generated method stub
-
+	public synchronized void logFailedUrl(String url, Throwable e) throws Throwable {
+		init();
+		url = cutForProxy(url);
+		ESMap _source = JsonUtil.toObject(
+				httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
+						new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
+				ESMap.class).get("_source", ESMap.class);
+		if (null == _source) {
+			_source = ESMap.get();
+			_source.put("count", 0);
+		} else {
+			_source.put("count", Integer.valueOf(_source.get("count").toString()) + 1);
+		}
+		_source.put("url", url);
+		_source.put("msg", e.getMessage());
+		_source.put("time", dateFormat.format(new Date()));
+		httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
+				JsonUtil.toJson(_source));
 	}
 
 	@Override
-	public void logSucceedUrl(String url) {
-		// TODO Auto-generated method stub
+	public synchronized void logSucceedUrl(String url) throws Throwable {
+		init();
+		url = cutForProxy(url);
+		Map<String, Object> json = new HashMap<>();
+		json.put("count", 0);
+		json.put("url", url);
+		json.put("time", dateFormat.format(new Date()));
+		httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
+				JsonUtil.toJson(json));
+	}
 
+	@Override
+	public synchronized Map<String, Object> connectCheck(String url) throws Throwable {
+		init();
+		Map<String, Object> result = new HashMap<>();
+		result.put("found", false);
+		result.put("continue", true);
+		result.put("msg", "");
+		url = cutForProxy(url);
+		ESMap findOne = JsonUtil.toObject(
+				httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
+						new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
+				ESMap.class).get("_source", ESMap.class);
+		if (null != findOne) {
+			int count = Integer.valueOf(findOne.get("count").toString());
+			result.put("found", count > 0);
+			if (count > url_fail_stop) {
+				if (System.currentTimeMillis() - ((Date) findOne.get("time")).getTime() < 3600000
+						* url_fail_retry_in_hours) {
+					result.put("continue", false);
+					result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.get("msg"));
+				} else {
+					Map<String, Object> json = new HashMap<>();
+					json.put("count", url_fail_retry_begin);
+					json.put("url", url);
+					json.put("time", dateFormat.format(new Date()));
+					httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
+							JsonUtil.toJson(json));
+				}
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public synchronized Map<String, Object> getLast(String type) throws Throwable {
+		ESMap _source = JsonUtil
+				.toObject(httpUtil.doLocalGet(path_es_start + "last/_doc/{type}",
+						new EntryData<String, String>().put("type", type).getData()), ESMap.class)
+				.get("_source", ESMap.class);
+		if (null != _source) {
+			Map<String, Object> json = new HashMap<>();
+			json.put("type", type);
+			json.put("keyword", _source.get("keyword"));
+			json.put("running", _source.get("running"));
+			json.put("msg", _source.get("msg"));
+			json.put("time", dateFormat.parse(_source.get("time", String.class)));
+			return json;
+		}
+		return null;
+	}
+
+	@Override
+	public synchronized Object running(String type, String keyword, String msg) throws Throwable {
+		init();
+		Map<String, Object> json = new HashMap<>();
+		json.put("type", type);
+		json.put("keyword", keyword);
+		json.put("running", true);
+		json.put("msg", msg);
+		json.put("time", dateFormat.format(new Date()));
+		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "last/_doc/" + type, JsonUtil.toJson(json));
+		return s;
+	}
+
+	@Override
+	public synchronized Object finish(String type, String msg) throws Throwable {
+		init();
+		Map<String, Object> json = new HashMap<>();
+		json.put("type", type);
+		json.put("running", false);
+		json.put("msg", msg);
+		json.put("time", dateFormat.format(new Date()));
+		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "last/_doc/" + type, JsonUtil.toJson(json));
+		return s;
 	}
 }

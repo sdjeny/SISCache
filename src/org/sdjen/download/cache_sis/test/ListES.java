@@ -77,8 +77,6 @@ public class ListES {
 			do {
 				min = rs;
 				rs = list(min);
-				if (++i % limit == 0)
-					getStore().refreshMsgLog();
 			} while (rs.compareTo(min) > 0);
 		} finally {
 			httpUtil.finish();

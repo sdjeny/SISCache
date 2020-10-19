@@ -59,7 +59,12 @@ public class SISDownloadTimer implements InitStartTimer {
 
 			@Override
 			public void run() {
-				Map<String, Object> last = store.getLast("download_list");
+				Map<String, Object> last;
+				try {
+					last = store.getLast("download_list");
+				} catch (Throwable e2) {
+					last = null;
+				}
 				if (null != last) {
 					if (last.containsKey("running") && (Boolean) last.get("running")) {
 						logger.info(">>>>>>>>>>>>download_list is Running");

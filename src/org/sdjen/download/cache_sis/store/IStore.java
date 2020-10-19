@@ -4,13 +4,10 @@ import java.io.IOException;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.jsoup.Jsoup;
-import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +48,7 @@ public interface IStore {
 //			.put("183", "同性贴图区")//
 			.getData();
 	final static Logger logger = LoggerFactory.getLogger(IStore.class);
-	SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd HH:mm:ss:SSS");
+	SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss:SSS");
 //	String getKey(final String id, final String page, final String url, String title, String dateStr) throws Throwable;
 
 	void init() throws Throwable;
@@ -68,8 +65,6 @@ public interface IStore {
 
 	Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
 			String html) throws Throwable;
-
-	void refreshMsgLog();
 
 	Map<String, Object> getTitleList(String fid, int page, int size, String query, String order) throws Throwable;
 
@@ -89,9 +84,9 @@ public interface IStore {
 
 	void removeProxyUrl(String url);
 
-	void logFailedUrl(String url, Throwable e);
+	void logFailedUrl(String url, Throwable e) throws Throwable;
 
-	void logSucceedUrl(String url);
+	void logSucceedUrl(String url) throws Throwable;
 
 	default org.jsoup.nodes.Document replaceLocalHtmlUrl(String text) throws IOException {
 		org.jsoup.nodes.Document doument = Jsoup.parse(text);
@@ -129,25 +124,13 @@ public interface IStore {
 //		}
 	}
 
-	default Map<String, Object> connectCheck(String url) {
-		Map<String, Object> result = new HashMap<>();
-		result.put("found", false);
-		result.put("continue", true);
-		result.put("msg", "");
-		return result;
-	}
+	Map<String, Object> connectCheck(String url) throws Throwable;
 
-	default Map<String, Object> getLast(String type) {
-		return null;
-	}
+	Map<String, Object> getLast(String type) throws Throwable;
 
-	default Object running(String type, String keyword, String msg) {
-		return null;
-	}
+	Object running(String type, String keyword, String msg) throws Throwable;
 
-	default Object finish(String type, String msg) {
-		return null;
-	}
+	Object finish(String type, String msg) throws Throwable;
 
 	default StringBuilder getMsgText(Object pattern, Object... args) {
 		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));

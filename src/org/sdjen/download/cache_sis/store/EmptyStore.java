@@ -46,12 +46,6 @@ public class EmptyStore implements IStore {
 	}
 
 	@Override
-	public void refreshMsgLog() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
 	public Set<String> getProxyUrls() {
 		Set<String> s = new LinkedHashSet<String>();
 		s.add("http://www.sexinsex.net");
@@ -93,6 +87,30 @@ public class EmptyStore implements IStore {
 	public void init() {
 		// TODO Auto-generated method stub
 		
+	}
+
+	@Override
+	public Map<String, Object> connectCheck(String url) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Map<String, Object> getLast(String type) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object running(String type, String keyword, String msg) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Object finish(String type, String msg) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

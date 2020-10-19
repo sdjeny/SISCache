@@ -39,8 +39,6 @@ public class ListIDs {
 			do {
 				min = rs;
 				rs = list(min);
-				if (++i % 20 == 0)
-					getStore().refreshMsgLog();
 			} while (rs.compareTo(min) > 0);
 		} finally {
 			httpUtil.finish();

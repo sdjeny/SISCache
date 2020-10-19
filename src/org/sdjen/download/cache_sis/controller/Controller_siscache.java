@@ -14,10 +14,13 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.CopyEsToMongo;
+import org.sdjen.download.cache_sis.service.CopyMongoToES;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
+import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +52,13 @@ public class Controller_siscache {
 	@Autowired
 	private CopyEsToMongo copyEsToMongo;
 	@Autowired
+	private CopyMongoToES copyMongoToES;
+	@Autowired
 	private MongoTemplate mongoTemplate;
+	@Autowired
+	private HttpUtil httpUtil;
+	@Value("${siscache.conf.path_es_start}")
+	private String path_es_start;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
 	@Value("${siscache.conf.can_restart}")
@@ -58,6 +67,8 @@ public class Controller_siscache {
 	private boolean can_reload = true;
 	@Value("${siscache.conf.can_copy_es_mongo}")
 	private boolean can_copy_es_mongo = true;
+	@Value("${siscache.conf.can_copy_mongo_es}")
+	private boolean can_copy_mongo_es = true;
 	@Value("${siscache.conf.fids}")
 	private Collection<String> fids;
 //	static ConfUtil conf;
@@ -134,24 +145,50 @@ public class Controller_siscache {
 			{
 				rst.append("<tbody><tr>");
 				rst.append(
-						"<td><a href='/siscache/copy/es/mongo/html' title='新窗口打开' target='_blank'>es->mongo html</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy html"));
+						"<td><a href='/siscache/copy/es/mongo/html' title='新窗口打开' target='_blank'>copy html</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy es->mongo html"));
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
 			{
 				rst.append("<tbody><tr>");
 				rst.append(
-						"<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>es->mongo url</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy url"));
+						"<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>copy url</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy es->mongo url"));
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
 			{
 				rst.append("<tbody><tr>");
 				rst.append(
-						"<td><a href='/siscache/copy/es/mongo/path' title='新窗口打开' target='_blank'>es->mongo path</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy path"));
+						"<td><a href='/siscache/copy/es/mongo/path' title='新窗口打开' target='_blank'>copy path</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy es->mongo path"));
+				rst.append(String.format("<td>%s</td>", ""));
+				rst.append("</tr></tbody>");
+			}
+		}
+		if (can_copy_mongo_es) {
+			{
+				rst.append("<tbody><tr>");
+				rst.append(
+						"<td><a href='/siscache/copy/mongo/es/html' title='新窗口打开' target='_blank'>copy html</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy mongo->es html"));
+				rst.append(String.format("<td>%s</td>", ""));
+				rst.append("</tr></tbody>");
+			}
+			{
+				rst.append("<tbody><tr>");
+				rst.append(
+						"<td><a href='/siscache/copy/mongo/es/url' title='新窗口打开' target='_blank'>copy url</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy mongo->es url"));
+				rst.append(String.format("<td>%s</td>", ""));
+				rst.append("</tr></tbody>");
+			}
+			{
+				rst.append("<tbody><tr>");
+				rst.append(
+						"<td><a href='/siscache/copy/mongo/es/path' title='新窗口打开' target='_blank'>copy path</a></td>");
+				rst.append(String.format("<td>%s</td>", "copy mongo->es path"));
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 			}
@@ -200,6 +237,22 @@ public class Controller_siscache {
 			return JsonUtil.toJson(mongoTemplate.findOne(
 					new Query().addCriteria(Criteria.where("type").is("es_mongo_" + type)), Map.class, "last"));
 		} catch (JsonProcessingException e) {
+			return e.getMessage();
+		} // "redirect:/siscache/list/all/1/100?debug=true";
+	}
+
+	@RequestMapping("/copy/mongo/es/{type}")
+	@ResponseBody
+	private String copyMongoToEs(@PathVariable("type") String type) {
+		try {
+			copyMongoToES.copy(type);
+		} catch (Throwable e) {
+			logger.error(e.getMessage(), e);
+		}
+		try {
+			return httpUtil.doLocalGet(path_es_start + "last/_doc/{type}",
+					new EntryData<String, String>().put("type", "es_mongo_" + type).getData());
+		} catch (Throwable e) {
 			return e.getMessage();
 		} // "redirect:/siscache/list/all/1/100?debug=true";
 	}
@@ -259,7 +312,7 @@ public class Controller_siscache {
 //		return list(1);
 		try {
 			return JsonUtil.toJson(store.getLast("download_list"));
-		} catch (JsonProcessingException e) {
+		} catch (Throwable e) {
 			e.printStackTrace();
 			return e.getMessage();
 		}

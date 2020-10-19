@@ -61,50 +61,50 @@ public class Store_Mongodb implements IStore {
 	public void init() {
 		if (inited)
 			return;
-		try {
-			Index index = new Index();
-			index.unique();
-			index.on("type", Sort.Direction.ASC);
-			index.on("key", Sort.Direction.ASC);
-			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("md").ensureIndex(index));
-		} catch (Exception e) {
-			logger.info("+++++++++++Index:	" + e);
-		}
-		try {
-			Index index = new Index();
-			index.unique();
-			index.background();
-			index.on("fid", Sort.Direction.ASC);
-			index.on("id", Sort.Direction.ASC);
-			index.on("page", Sort.Direction.ASC);
-			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
-		} catch (Exception e) {
-			logger.info("+++++++++++Index:	" + e);
-		}
-		try {
-			Index index = new Index();
-			index.background();
-			index.on("id", Sort.Direction.DESC);
-			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
-		} catch (Exception e) {
-			logger.info("+++++++++++Index:	" + e);
-		}
-		try {
-			Index index = new Index();
-			index.background();
-			index.on("id", Sort.Direction.ASC);
-			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
-		} catch (Exception e) {
-			logger.info("+++++++++++Index:	" + e);
-		}
-		try {
-			Index index = new Index();
-			index.background();
-			index.on("fid", Sort.Direction.ASC);
-			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
-		} catch (Exception e) {
-			logger.info("+++++++++++Index:	" + e);
-		}
+//		try {
+//			Index index = new Index();
+//			index.unique();
+//			index.on("type", Sort.Direction.ASC);
+//			index.on("key", Sort.Direction.ASC);
+//			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("md").ensureIndex(index));
+//		} catch (Exception e) {
+//			logger.info("+++++++++++Index:	" + e);
+//		}
+//		try {
+//			Index index = new Index();
+//			index.unique();
+//			index.background();
+//			index.on("fid", Sort.Direction.ASC);
+//			index.on("id", Sort.Direction.ASC);
+//			index.on("page", Sort.Direction.ASC);
+//			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
+//		} catch (Exception e) {
+//			logger.info("+++++++++++Index:	" + e);
+//		}
+//		try {
+//			Index index = new Index();
+//			index.background();
+//			index.on("id", Sort.Direction.DESC);
+//			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
+//		} catch (Exception e) {
+//			logger.info("+++++++++++Index:	" + e);
+//		}
+//		try {
+//			Index index = new Index();
+//			index.background();
+//			index.on("id", Sort.Direction.ASC);
+//			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
+//		} catch (Exception e) {
+//			logger.info("+++++++++++Index:	" + e);
+//		}
+//		try {
+//			Index index = new Index();
+//			index.background();
+//			index.on("fid", Sort.Direction.ASC);
+//			logger.info("+++++++++++Index:	" + mongoTemplate.indexOps("htmldoc").ensureIndex(index));
+//		} catch (Exception e) {
+//			logger.info("+++++++++++Index:	" + e);
+//		}
 		logger.info("~~~~~~~~~clean running:{}",
 				mongoTemplate.updateMulti(new Query(), new Update().set("running", false), "last"));
 		inited = true;
@@ -121,28 +121,23 @@ public class Store_Mongodb implements IStore {
 		Map<?, ?> _source = mongoTemplate.findOne(query, Map.class, "htmldoc");
 		String result = null;
 		if (null != _source) {
-			if ("Lost title".equals(_source.get("context")))
-				return "Lost title";
 			Binary zip = (Binary) _source.get("context_zip");
 			if (null != zip) {
 				try {
 					String context = ZipUtil.uncompress(zip.getData());
-					try {
-						Map<String, Object> details = JsonUtil.toObject(context, Map.class);
-						details.put("fid", (String) _source.get("fid"));
-						details.put("type", (String) _source.get("type"));
-						details.put("tid", id);
-						details.put("id", id);
-						context = JsoupAnalysisor.restoreToHtml(details);
-					} catch (Exception e) {
-					}
-					return context;
-				} catch (DataFormatException e1) {
-					e1.printStackTrace();
+					Map<String, Object> details = JsonUtil.toObject(context, Map.class);
+					details.put("fid", (String) _source.get("fid"));
+					details.put("type", (String) _source.get("type"));
+					details.put("tid", id);
+					details.put("id", id);
+					result = JsoupAnalysisor.restoreToHtml(details);
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
 			}
-			result = (String) _source.get("context");
-
+			if (null == result) {
+				result = (String) _source.get("context");
+			}
 		}
 		if (null != result) {
 			result = replaceLocalHtmlUrl(result).html();
@@ -250,10 +245,6 @@ public class Store_Mongodb implements IStore {
 		query.fields().include("path");
 		Map<?, ?> rst = mongoTemplate.findOne(query, Map.class, "md");
 		return null == rst ? null : (String) rst.get("path");
-	}
-
-	@Override
-	public void refreshMsgLog() {
 	}
 
 	@Override
@@ -415,8 +406,7 @@ public class Store_Mongodb implements IStore {
 
 	@Override
 	public Map<String, Object> getLast(String type) {
-		Query query = new Query().addCriteria(Criteria.where("type").is(type));
-		return mongoTemplate.findOne(query, Map.class, "last");
+		return mongoTemplate.findOne(new Query().addCriteria(Criteria.where("type").is(type)), Map.class, "last");
 	}
 
 	@Override

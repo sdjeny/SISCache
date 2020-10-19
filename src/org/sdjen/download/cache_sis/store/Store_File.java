@@ -72,7 +72,7 @@ public abstract class Store_File implements IStore {
 		LogUtil.errLog.showMsg(pattern, args);
 	}
 
-	@Override
+//	@Override
 	public void refreshMsgLog() {
 		try {
 			LogUtil.refreshMsgLog();

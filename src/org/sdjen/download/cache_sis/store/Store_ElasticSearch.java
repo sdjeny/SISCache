@@ -1,5 +1,6 @@
 package org.sdjen.download.cache_sis.store;
 
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -27,6 +28,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.HttpClientErrorException.NotFound;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
@@ -84,7 +89,7 @@ public class Store_ElasticSearch implements IStore {
 									)//
 					)//
 			));
-			for (String index : new String[] { "last", "md", "urls_failed","test" }) {
+			for (String index : new String[] { "last", "md", "urls_failed", "test" }) {
 				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(path_es_start + index + "/_doc/_init_", "{}"));
 			}
 			String js = httpUtil.doLocalGet(path_es_start + "last/_doc/_search", new HashMap<>());
@@ -115,10 +120,15 @@ public class Store_ElasticSearch implements IStore {
 	@Override
 	public String getLocalHtml(final String id, final String page) throws Throwable {
 		String key = getKey(id, page);
-		String ss = httpUtil.doLocalGet(path_es_start + "html/_doc/{key}",
-				new EntryData<String, String>().put("key", key).getData());
-		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
-		ESMap _source = esMap.get("_source", ESMap.class);
+		ESMap _source;
+		try {
+			_source = JsonUtil
+					.toObject(httpUtil.doLocalGet(path_es_start + "html/_doc/{key}",
+							new EntryData<String, String>().put("key", key).getData()), ESMap.class)
+					.get("_source", ESMap.class);
+		} catch (NotFound notFound) {
+			_source = null;
+		}
 		String result = null;
 		if (null != _source) {
 			String zip = _source.get("context_zip", String.class);
@@ -209,10 +219,15 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public String getMD5_Path(String key) throws Throwable {
-		String ss = httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
-				new EntryData<String, String>().put("key", key).getData());
-		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
-		ESMap _source = esMap.get("_source", ESMap.class);
+		ESMap _source;
+		try {
+			_source = JsonUtil
+					.toObject(httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
+							new EntryData<String, String>().put("key", key).getData()), ESMap.class)
+					.get("_source", ESMap.class);
+		} catch (NotFound notFound) {
+			_source = null;
+		}
 		if (null != _source) {
 			return _source.get("path", String.class);
 		}
@@ -225,10 +240,15 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public String getURL_Path(String key) throws Throwable {
-		String ss = httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
-				new EntryData<String, String>().put("key", getMD5(key.getBytes("utf8"))).getData());
-		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
-		ESMap _source = esMap.get("_source", ESMap.class);
+		ESMap _source;
+		try {
+			_source = JsonUtil.toObject(
+					httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
+							new EntryData<String, String>().put("key", getMD5(key.getBytes("utf8"))).getData()),
+					ESMap.class).get("_source", ESMap.class);
+		} catch (NotFound notFound) {
+			_source = null;
+		}
 		if (null != _source) {
 			return _source.get("path", String.class);
 		}
@@ -421,10 +441,15 @@ public class Store_ElasticSearch implements IStore {
 	public synchronized void logFailedUrl(String url, Throwable e) throws Throwable {
 		init();
 		url = cutForProxy(url);
-		ESMap _source = JsonUtil.toObject(
-				httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
-						new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
-				ESMap.class).get("_source", ESMap.class);
+		ESMap _source;
+		try {
+			_source = JsonUtil.toObject(
+					httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
+							new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
+					ESMap.class).get("_source", ESMap.class);
+		} catch (NotFound notFound) {
+			_source = null;
+		}
 		if (null == _source) {
 			_source = ESMap.get();
 			_source.put("count", 0);
@@ -458,10 +483,15 @@ public class Store_ElasticSearch implements IStore {
 		result.put("continue", true);
 		result.put("msg", "");
 		url = cutForProxy(url);
-		ESMap findOne = JsonUtil.toObject(
-				httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
-						new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
-				ESMap.class).get("_source", ESMap.class);
+		ESMap findOne;
+		try {
+			findOne = JsonUtil.toObject(
+					httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
+							new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
+					ESMap.class).get("_source", ESMap.class);
+		} catch (NotFound notFound) {
+			findOne = null;
+		}
 		if (null != findOne) {
 			int count = Integer.valueOf(findOne.get("count").toString());
 			result.put("found", count > 0);
@@ -485,10 +515,15 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public synchronized Map<String, Object> getLast(String type) throws Throwable {
-		ESMap _source = JsonUtil
-				.toObject(httpUtil.doLocalGet(path_es_start + "last/_doc/{type}",
-						new EntryData<String, String>().put("type", type).getData()), ESMap.class)
-				.get("_source", ESMap.class);
+		ESMap _source;
+		try {
+			_source = JsonUtil
+					.toObject(httpUtil.doLocalGet(path_es_start + "last/_doc/{type}",
+							new EntryData<String, String>().put("type", type).getData()), ESMap.class)
+					.get("_source", ESMap.class);
+		} catch (NotFound notFound) {
+			_source = null;
+		}
 		if (null != _source) {
 			Map<String, Object> json = new HashMap<>();
 			json.put("type", type);

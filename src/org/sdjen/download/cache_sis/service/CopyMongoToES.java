@@ -51,12 +51,7 @@ public class CopyMongoToES {
 		try {
 			store_es.init();
 			store_mongo.init();
-			Map<String, Object> last;
-			try {
-				last = store_es.getLast("copy_" + type);
-			} catch (Throwable e1) {
-				last = null;
-			}
+			Map<String, Object> last = store_es.getLast("copy_" + type);
 			String from = null;
 			if (null != last) {
 				if (last.containsKey("running") && (Boolean) last.get("running")) {

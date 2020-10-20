@@ -26,6 +26,7 @@ import org.sdjen.download.cache_sis.util.EntryData;
 import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException.NotFound;
@@ -273,10 +274,8 @@ public class Store_ElasticSearch implements IStore {
 		List<ESMap> shoulds = new ArrayList<>();
 		List<ESMap> mustes = new ArrayList<>();
 		List<ESMap> mustNots = new ArrayList<>();
-		try {
-			mustes.add(ESMap.get().set("term", Collections.singletonMap("fid", Integer.valueOf(fid))));
-		} catch (NumberFormatException e1) {
-		}
+		if (!"ALL".equalsIgnoreCase(fid))
+			mustes.add(ESMap.get().set("term", Collections.singletonMap("fid", fid)));
 		if (query.isEmpty()) {
 			mustes.add(ESMap.get().set("term", Collections.singletonMap("page", 1)));
 			order = "id:desc";
@@ -380,6 +379,7 @@ public class Store_ElasticSearch implements IStore {
 			ls.add(new EntryData<String, Object>()//
 					.put("date", datestr)//
 					.put("time", timestr)//
+					.put("fid", _source.get("fid"))//
 					.put("id", _source.get("id"))//
 					.put("page", _source.get("page"))//
 					.put("type", _source.get("type"))//

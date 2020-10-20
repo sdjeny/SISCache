@@ -17,7 +17,7 @@ import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.CopyEsToMongo;
-import org.sdjen.download.cache_sis.service.CopyMongoToES;
+import org.sdjen.download.cache_sis.service.CopyESOToESN;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
 import org.sdjen.download.cache_sis.util.EntryData;
@@ -52,7 +52,7 @@ public class Controller_siscache {
 	@Autowired
 	private CopyEsToMongo copyEsToMongo;
 	@Autowired
-	private CopyMongoToES copyMongoToES;
+	private CopyESOToESN copyMongoToES;
 	@Autowired
 	private MongoTemplate mongoTemplate;
 	@Autowired

@@ -3,14 +3,21 @@ package org.sdjen.download.cache_sis.service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.DataFormatException;
 
 import javax.annotation.Resource;
 
+import org.sdjen.download.cache_sis.ESMap;
+import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
+import org.sdjen.download.cache_sis.tool.ZipUtil;
+import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,8 +32,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 
 @Service
-public class CopyMongoToES {
-	final static Logger logger = LoggerFactory.getLogger(CopyMongoToES.class);
+public class CopyESOToESN {
+	final static Logger logger = LoggerFactory.getLogger(CopyESOToESN.class);
 	@Value("${siscache.conf.copy_es_mongo_unit_limit}")
 	private int size = 300;
 	@Value("${siscache.conf.path_es_start}")
@@ -42,10 +49,56 @@ public class CopyMongoToES {
 	@Autowired
 	private MongoTemplate mongoTemplate;
 
-	public CopyMongoToES() {
+	public CopyESOToESN() {
 		System.out.println(">>>>>>>>>>>>CopyEsToMongo");
 	}
 
+	public String getOldHtml(final String id, final String page) throws Throwable {
+		String ss = httpUtil.doLocalGet("http://192.168.0.237:9200/siscache_bak_html/_doc/{key}",
+				new EntryData<String, String>().put("key", id + "_" + page).getData());
+		ESMap esMap = JsonUtil.toObject(ss, ESMap.class);
+		ESMap _source = esMap.get("_source", ESMap.class);
+		String result = null;
+		if (null != _source) {
+			if (page.compareTo("1") > 0) {
+				StringBuffer rst = new StringBuffer();
+				rst.append("</br><table border='0'>");
+				for (Entry<Object, Object> e : _source.get("context_comments", ESMap.class).entrySet()) {
+					rst.append("<tbody><tr>");
+					rst.append(String.format("<td>%s</td>", e.getKey()));
+					rst.append(String.format("<td>%s</td>", e.getValue()));
+					rst.append("</tr></tbody>");
+				}
+				rst.append("</table>");
+				result = rst.toString();
+			} else {
+				String text = _source.get("context_zip", String.class);
+				if (null != text) {
+					try {
+						return ZipUtil.uncompress(text);
+					} catch (DataFormatException e1) {
+						e1.printStackTrace();
+						text = null;
+					}
+				}
+				if (null == text) {
+					result = _source.get("context", String.class);
+				}
+			}
+		}
+		if (null != result) {
+			org.jsoup.nodes.Document document = store_es.replaceLocalHtmlUrl(result);
+			for (org.jsoup.nodes.Element e : document.select("head").select("style")) {
+				if (e.text().isEmpty()) {
+					e.text(DefaultCss.getCss());
+				}
+			}
+			result = document.html();
+		}
+		return result;
+	}
+	
+	
 	@Async("taskExecutor")
 	public void copy(String type) throws Throwable {
 		try {

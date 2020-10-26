@@ -130,6 +130,8 @@ public class Store_Mongodb implements IStore {
 					details.put("type", (String) _source.get("type"));
 					details.put("tid", id);
 					details.put("id", id);
+					if (StringUtils.isEmpty(details.get("title")))
+						details.put("id", (String) _source.get("title"));
 					result = JsoupAnalysisor.restoreToHtml(details);
 				} catch (Exception e) {
 					e.printStackTrace();

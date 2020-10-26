@@ -39,10 +39,10 @@ public class TestTimer implements InitStartTimer {
 
 	public void restart(double hours) throws Throwable {
 		System.out.println(">>>>>>>>>>>>TestTimer:" + fids);
-		String s = "http://www.sexinsex.net/bbs/thread-8694622-1-1.html";
-		s = "http://www.sexinsex.net/bbs/thread-8784871-1-1.html";
-		s = httpUtil.getHTML(s);
-		Files.write(s.getBytes("GBK"), new File("sisdemo_8784871.html"));
+//		String s = "http://www.sexinsex.net/bbs/thread-8694622-1-1.html";
+//		s = "http://www.sexinsex.net/bbs/thread-8784871-1-1.html";
+//		s = httpUtil.getHTML(s);
+//		Files.write(s.getBytes("GBK"), new File("sisdemo_8784871.html"));
 //		System.out.println(s);
 //		System.out.println(JsonUtil.toPrettyJson(JsoupAnalysisor.split(s)));
 //		for (int i = 0; i < 100; i++) {

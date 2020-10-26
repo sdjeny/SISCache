@@ -1,5 +1,6 @@
 package org.sdjen.download.cache_sis.store;
 
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -91,8 +92,11 @@ public class EmptyStore implements IStore {
 
 	@Override
 	public Map<String, Object> connectCheck(String url) throws Throwable {
-		// TODO Auto-generated method stub
-		return null;
+		Map<String, Object> result = new HashMap<>();
+		result.put("found", false);
+		result.put("continue", true);
+		result.put("msg", "");
+		return result;
 	}
 
 	@Override

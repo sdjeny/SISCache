@@ -5,7 +5,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -16,6 +18,7 @@ import org.sdjen.download.cache_sis.DownloadList;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.service.CopyEsToBck;
 import org.sdjen.download.cache_sis.service.CopyEsToMongo;
 import org.sdjen.download.cache_sis.service.CopyMongoToES;
 import org.sdjen.download.cache_sis.store.IStore;
@@ -53,6 +56,8 @@ public class Controller_siscache {
 	private CopyEsToMongo copyEsToMongo;
 	@Autowired
 	private CopyMongoToES copyMongoToES;
+	@Autowired
+	private CopyEsToBck copyEsToBck;
 	@Autowired
 	private MongoTemplate mongoTemplate;
 	@Autowired
@@ -142,46 +147,26 @@ public class Controller_siscache {
 			rst.append("</tr></tbody>");
 		}
 		if (can_copy_es_mongo) {
-			{
+			Arrays.asList("html", "url", "path").forEach(k -> {
 				rst.append("<tbody><tr>");
-				rst.append(
-						"<td><a href='/siscache/copy/es/mongo/html' title='新窗口打开' target='_blank'>copy html</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy es->mongo html"));
+				rst.append(String.format(
+						"\"<td><a href='/siscache/copy/es/mongo/%s' title='新窗口打开' target='_blank'>copy %s</a></td>\"",
+						k, k));
+				rst.append(String.format("<td>copy es->mongo %s</td>", k));
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
-			}
-			{
-				rst.append("<tbody><tr>");
-				rst.append("<td><a href='/siscache/copy/es/mongo/url' title='新窗口打开' target='_blank'>copy url</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy es->mongo url"));
-				rst.append(String.format("<td>%s</td>", ""));
-				rst.append("</tr></tbody>");
-			}
-			{
-				rst.append("<tbody><tr>");
-				rst.append(
-						"<td><a href='/siscache/copy/es/mongo/path' title='新窗口打开' target='_blank'>copy path</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy es->mongo path"));
-				rst.append(String.format("<td>%s</td>", ""));
-				rst.append("</tr></tbody>");
-			}
+			});
 		}
 		if (can_copy_mongo_es) {
-			{
+			Arrays.asList("html", "url").forEach(k -> {
 				rst.append("<tbody><tr>");
-				rst.append(
-						"<td><a href='/siscache/copy/mongo/es/html' title='新窗口打开' target='_blank'>copy html</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy mongo->es html"));
+				rst.append(String.format(
+						"\"<td><a href='/siscache/copy/mongo/es/%s' title='新窗口打开' target='_blank'>copy %s</a></td>\"",
+						k, k));
+				rst.append(String.format("<td>copy es bck %s</td>", k));
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
-			}
-			{
-				rst.append("<tbody><tr>");
-				rst.append("<td><a href='/siscache/copy/mongo/es/md' title='新窗口打开' target='_blank'>copy md</a></td>");
-				rst.append(String.format("<td>%s</td>", "copy mongo->es md"));
-				rst.append(String.format("<td>%s</td>", ""));
-				rst.append("</tr></tbody>");
-			}
+			});
 		}
 		if (can_restart) {
 			rst.append("<tbody><tr>");
@@ -235,13 +220,13 @@ public class Controller_siscache {
 	@ResponseBody
 	private String copyMongoToEs(@PathVariable("type") String type) {
 		try {
-			copyMongoToES.copy(type);
+			copyEsToBck.copy(type);
 		} catch (Throwable e) {
 			logger.error(e.getMessage(), e);
 		}
 		try {
 			return httpUtil.doLocalGet(path_es_start + "last/_doc/{type}",
-					new EntryData<String, String>().put("type", "copy_" + type).getData());
+					Collections.singletonMap("type", "es_bck_" + type));
 		} catch (Throwable e) {
 			return e.getMessage();
 		} // "redirect:/siscache/list/all/1/100?debug=true";

@@ -14,12 +14,15 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Resource;
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.store.entity.Urls_failed;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
@@ -47,6 +50,8 @@ public class Store_ElasticSearch implements IStore {
 	private MessageDigest md5Digest;
 	private static Set<String> proxy_urls;
 	private Map<String, Object> checkConnectUrls;
+	@PersistenceContext
+	private EntityManager em;
 
 	@Override
 	public synchronized void init() throws Throwable {
@@ -440,48 +445,21 @@ public class Store_ElasticSearch implements IStore {
 	public void logFailedUrl(String url, Throwable e) throws Throwable {
 		init();
 		url = cutForProxy(url);
-		Object lock = checkConnectUrls.get(url);
-		if (null == lock)
-			checkConnectUrls.put(url, lock = new Object());
-		synchronized (lock) {
-			ESMap _source;
-			try {
-				_source = JsonUtil.toObject(
-						httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
-								new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
-						ESMap.class).get("_source", ESMap.class);
-			} catch (NotFound notFound) {
-				_source = null;
-			}
-			if (null == _source) {
-				_source = ESMap.get();
-				_source.put("count", 0);
-			} else {
-				_source.put("count", Integer.valueOf(_source.get("count").toString()) + 1);
-			}
-			_source.put("url", url);
-			_source.put("msg", e.getMessage());
-			_source.put("time", dateFormat.format(new Date()));
-			httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-					JsonUtil.toJson(_source));
-		}
+		javax.persistence.Query query = em
+				.createQuery("update Urls_failed set count=count+:inc, msg=:msg, time=:time where url=:url");
+		query.setParameter("url", url);
+		query.setParameter("inc", 1);
+		query.setParameter("msg", e.getMessage());
+		query.setParameter("time", new Date());
+		query.executeUpdate();
 	}
 
 	@Override
 	public void logSucceedUrl(String url) throws Throwable {
 		init();
-		url = cutForProxy(url);
-		Object lock = checkConnectUrls.get(url);
-		if (null == lock)
-			checkConnectUrls.put(url, lock = new Object());
-		synchronized (lock) {
-			Map<String, Object> json = new HashMap<>();
-			json.put("count", 0);
-			json.put("url", url);
-			json.put("time", dateFormat.format(new Date()));
-			httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-					JsonUtil.toJson(json));
-		}
+		javax.persistence.Query query = em.createQuery("delete from Urls_failed where url=:url");
+		query.setParameter("url", url);
+		query.executeUpdate();
 	}
 
 	@Override
@@ -492,38 +470,25 @@ public class Store_ElasticSearch implements IStore {
 		result.put("continue", true);
 		result.put("msg", "");
 		url = cutForProxy(url);
-		Object lock = checkConnectUrls.get(url);
-		if (null == lock)
-			checkConnectUrls.put(url, lock = new Object());
-		synchronized (lock) {
-			ESMap findOne;
-			try {
-				findOne = JsonUtil.toObject(
-						httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
-								new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
-						ESMap.class).get("_source", ESMap.class);
-			} catch (NotFound notFound) {
-				findOne = null;
-			}
-			if (null != findOne) {
-				int count = Integer.valueOf(findOne.get("count").toString());
-				result.put("found", count > 0);
-				if (count > url_fail_stop) {
-					if (System.currentTimeMillis() - ((Date) findOne.get("time")).getTime() < 3600000
-							* url_fail_retry_in_hours) {
-						result.put("continue", false);
-						result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.get("msg"));
-					} else {
-						Map<String, Object> json = new HashMap<>();
-						json.put("count", url_fail_retry_begin);
-						json.put("url", url);
-						json.put("time", dateFormat.format(new Date()));
-						httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-								JsonUtil.toJson(json));
-					}
+		Urls_failed findOne = em.find(Urls_failed.class, url);
+		if (null != findOne) {
+			int count = findOne.getCount();
+			result.put("found", count > 0);
+			if (count > url_fail_stop) {
+				if (System.currentTimeMillis() - findOne.getTime().getTime() < 3600000 * url_fail_retry_in_hours) {
+					result.put("continue", false);
+					result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.getMsg());
+				} else {
+					javax.persistence.Query query = em
+							.createQuery("update Urls_failed set count=:count, time=:time where url=:url");
+					query.setParameter("url", url);
+					query.setParameter("count", url_fail_retry_begin);
+					query.setParameter("time", new Date());
+					query.executeUpdate();
 				}
 			}
 		}
+	
 		return result;
 	}
 

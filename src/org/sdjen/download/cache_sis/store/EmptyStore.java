@@ -5,10 +5,15 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+
 import org.springframework.stereotype.Service;
 
 @Service("Store_Empty")
 public class EmptyStore implements IStore {
+	@PersistenceContext
+	private EntityManager em;
 
 	@Override
 	public String getLocalHtml(String id, String page) throws Throwable {
@@ -21,7 +26,7 @@ public class EmptyStore implements IStore {
 		// TODO Auto-generated method stub
 
 	}
-
+	
 	@Override
 	public void saveMD5(String md5, String path) throws Throwable {
 		// TODO Auto-generated method stub
@@ -86,8 +91,7 @@ public class EmptyStore implements IStore {
 
 	@Override
 	public void init() {
-		// TODO Auto-generated method stub
-		
+		System.out.println(em.createQuery("from Urls_failed").getResultList());
 	}
 
 	@Override

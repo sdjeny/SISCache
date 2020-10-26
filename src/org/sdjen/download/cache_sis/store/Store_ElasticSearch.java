@@ -1,6 +1,5 @@
 package org.sdjen.download.cache_sis.store;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -26,13 +25,9 @@ import org.sdjen.download.cache_sis.util.EntryData;
 import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException.NotFound;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
@@ -51,11 +46,13 @@ public class Store_ElasticSearch implements IStore {
 	private int url_fail_retry_in_hours = 3;
 	private MessageDigest md5Digest;
 	private static Set<String> proxy_urls;
+	private Map<String, Object> checkConnectUrls;
 
 	@Override
 	public synchronized void init() throws Throwable {
 		if (inited)
 			return;
+		checkConnectUrls = new HashMap<>();
 		md5Digest = MessageDigest.getInstance("MD5");
 		{// html.context_zip字段不参与检索
 			StringBuilder postStr = new StringBuilder();
@@ -438,75 +435,90 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public synchronized void logFailedUrl(String url, Throwable e) throws Throwable {
+	public void logFailedUrl(String url, Throwable e) throws Throwable {
 		init();
 		url = cutForProxy(url);
-		ESMap _source;
-		try {
-			_source = JsonUtil.toObject(
-					httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
-							new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
-					ESMap.class).get("_source", ESMap.class);
-		} catch (NotFound notFound) {
-			_source = null;
+		Object lock = checkConnectUrls.get(url);
+		if (null == lock)
+			checkConnectUrls.put(url, lock = new Object());
+		synchronized (lock) {
+			ESMap _source;
+			try {
+				_source = JsonUtil.toObject(
+						httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
+								new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
+						ESMap.class).get("_source", ESMap.class);
+			} catch (NotFound notFound) {
+				_source = null;
+			}
+			if (null == _source) {
+				_source = ESMap.get();
+				_source.put("count", 0);
+			} else {
+				_source.put("count", Integer.valueOf(_source.get("count").toString()) + 1);
+			}
+			_source.put("url", url);
+			_source.put("msg", e.getMessage());
+			_source.put("time", dateFormat.format(new Date()));
+			httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
+					JsonUtil.toJson(_source));
 		}
-		if (null == _source) {
-			_source = ESMap.get();
-			_source.put("count", 0);
-		} else {
-			_source.put("count", Integer.valueOf(_source.get("count").toString()) + 1);
-		}
-		_source.put("url", url);
-		_source.put("msg", e.getMessage());
-		_source.put("time", dateFormat.format(new Date()));
-		httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-				JsonUtil.toJson(_source));
 	}
 
 	@Override
-	public synchronized void logSucceedUrl(String url) throws Throwable {
+	public void logSucceedUrl(String url) throws Throwable {
 		init();
 		url = cutForProxy(url);
-		Map<String, Object> json = new HashMap<>();
-		json.put("count", 0);
-		json.put("url", url);
-		json.put("time", dateFormat.format(new Date()));
-		httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-				JsonUtil.toJson(json));
+		Object lock = checkConnectUrls.get(url);
+		if (null == lock)
+			checkConnectUrls.put(url, lock = new Object());
+		synchronized (lock) {
+			Map<String, Object> json = new HashMap<>();
+			json.put("count", 0);
+			json.put("url", url);
+			json.put("time", dateFormat.format(new Date()));
+			httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
+					JsonUtil.toJson(json));
+		}
 	}
 
 	@Override
-	public synchronized Map<String, Object> connectCheck(String url) throws Throwable {
+	public Map<String, Object> connectCheck(String url) throws Throwable {
 		init();
 		Map<String, Object> result = new HashMap<>();
 		result.put("found", false);
 		result.put("continue", true);
 		result.put("msg", "");
 		url = cutForProxy(url);
-		ESMap findOne;
-		try {
-			findOne = JsonUtil.toObject(
-					httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
-							new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
-					ESMap.class).get("_source", ESMap.class);
-		} catch (NotFound notFound) {
-			findOne = null;
-		}
-		if (null != findOne) {
-			int count = Integer.valueOf(findOne.get("count").toString());
-			result.put("found", count > 0);
-			if (count > url_fail_stop) {
-				if (System.currentTimeMillis() - ((Date) findOne.get("time")).getTime() < 3600000
-						* url_fail_retry_in_hours) {
-					result.put("continue", false);
-					result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.get("msg"));
-				} else {
-					Map<String, Object> json = new HashMap<>();
-					json.put("count", url_fail_retry_begin);
-					json.put("url", url);
-					json.put("time", dateFormat.format(new Date()));
-					httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-							JsonUtil.toJson(json));
+		Object lock = checkConnectUrls.get(url);
+		if (null == lock)
+			checkConnectUrls.put(url, lock = new Object());
+		synchronized (lock) {
+			ESMap findOne;
+			try {
+				findOne = JsonUtil.toObject(
+						httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
+								new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
+						ESMap.class).get("_source", ESMap.class);
+			} catch (NotFound notFound) {
+				findOne = null;
+			}
+			if (null != findOne) {
+				int count = Integer.valueOf(findOne.get("count").toString());
+				result.put("found", count > 0);
+				if (count > url_fail_stop) {
+					if (System.currentTimeMillis() - ((Date) findOne.get("time")).getTime() < 3600000
+							* url_fail_retry_in_hours) {
+						result.put("continue", false);
+						result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.get("msg"));
+					} else {
+						Map<String, Object> json = new HashMap<>();
+						json.put("count", url_fail_retry_begin);
+						json.put("url", url);
+						json.put("time", dateFormat.format(new Date()));
+						httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
+								JsonUtil.toJson(json));
+					}
 				}
 			}
 		}

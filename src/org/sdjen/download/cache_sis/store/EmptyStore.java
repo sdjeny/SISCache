@@ -7,7 +7,9 @@ import java.util.Set;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.transaction.Transactional;
 
+import org.sdjen.download.cache_sis.store.entity.Last;
 import org.springframework.stereotype.Service;
 
 @Service("Store_Empty")
@@ -26,7 +28,7 @@ public class EmptyStore implements IStore {
 		// TODO Auto-generated method stub
 
 	}
-	
+
 	@Override
 	public void saveMD5(String md5, String path) throws Throwable {
 		// TODO Auto-generated method stub
@@ -90,8 +92,12 @@ public class EmptyStore implements IStore {
 	}
 
 	@Override
+	@Transactional
 	public void init() {
 		System.out.println(em.createQuery("from Urls_failed").getResultList());
+		System.out.println(em.createQuery("select url from Urls_proxy", String.class).getResultList());
+		logger.info("~~~~~~~~~clean running:{}", em.createQuery("update Last set running=:false where running=:true")
+				.setParameter("true", true).setParameter("false", false).executeUpdate());
 	}
 
 	@Override

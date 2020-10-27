@@ -1,5 +1,6 @@
 package org.sdjen.download.cache_sis.service;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -111,16 +112,21 @@ public class CopyEsToBck {
 			ESMap _source = hit.get("_source", ESMap.class);
 //			logger.info("{}	{}	{}", type, hit.get("_id"), _source);
 			Object _id = hit.get("_id");
-			String r = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_bck_md/_doc/" + _id,
-					JsonUtil.toJson(_source));
-			_source.put("key", _id);
-			r = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_md/_doc/" + _id,
-					JsonUtil.toJson(_source));
+			String url = (String) _source.get("url");
+			String path = (String) _source.get("path");
+			if (!url.equalsIgnoreCase(path)) {
+				String r = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_bck_md/_doc/" + _id,
+						JsonUtil.toJson(_source));
+				_source.put("key", _id);
+				r = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_md/_doc/" + _id,
+						JsonUtil.toJson(_source));
+			}
 			result = _source.get("path", String.class);
 		}
-		logger.info("查URL:	{}ms	共:{}ms	Last:{}	total:{}", l, (System.currentTimeMillis() - startTime), result,
-				hits.get("total"));
-		store_es.running("es_bck_url", result, hits.get("total").toString());
+		String msg = MessageFormat.format("查URL:	{0}ms	共:{1}ms	Last:{2}	total:{3}", l,
+				(System.currentTimeMillis() - startTime), result, hits.get("total"));
+		logger.info(msg);
+		store_es.running("es_bck_url", result, msg);
 //		int total = (Integer) hits.get("total");
 		return result;
 	}
@@ -133,10 +139,10 @@ public class CopyEsToBck {
 				ESMap.get().set("range", ESMap.get().set("id", ESMap.get().set("gt", from)))//
 		)))//
 		);
-		params.put("_source", ESMap.get()//
-				.set("includes", Arrays.asList("id"))//
-				.set("excludes", Arrays.asList())//
-		);
+//		params.put("_source", ESMap.get()//
+//				.set("includes", Arrays.asList("id"))//
+//				.set("excludes", Arrays.asList())//
+//		);
 		params.put("sort", Arrays.asList(//
 				ESMap.get().set("id", ESMap.get().set("order", "asc"))//
 		));
@@ -146,39 +152,42 @@ public class CopyEsToBck {
 				JsonUtil.toJson(params));
 		long l = System.currentTimeMillis() - startTime;
 		ESMap hits = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
-		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
+//		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
 		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);
 			Long id = Long.valueOf(_source.get("id").toString());
+			String r = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_bck_html/_doc/" + id + "_1",
+					JsonUtil.toJson(_source));
 			result = Math.max(id, result);
 //					id.compareTo(result) > 0 ? id : result;
-			resultList.add(executor.submit(new Callable<Long>() {
-				public Long call() throws Exception {
-					try {
-						single(id);
-					} catch (Throwable e) {
-						if (e instanceof Exception) {
-							throw (Exception) e;
-						} else
-							throw new Exception(e);
-					}
-					return null;
-				}
-			}));
+//			resultList.add(executor.submit(new Callable<Long>() {
+//				public Long call() throws Exception {
+//					try {
+//						single(id);
+//					} catch (Throwable e) {
+//						if (e instanceof Exception) {
+//							throw (Exception) e;
+//						} else
+//							throw new Exception(e);
+//					}
+//					return null;
+//				}
+//			}));
 		}
-		for (Future<Long> fs : resultList) {
-			try {
-				fs.get(30, TimeUnit.MINUTES);
-			} catch (java.util.concurrent.TimeoutException e) {
-				fs.cancel(false);
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-			}
-		}
-		store_es.running("es_bck_html", String.valueOf(result), hits.get("total").toString());
-		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", l, (System.currentTimeMillis() - startTime), from, result,
-				hits.get("total"));
+//		for (Future<Long> fs : resultList) {
+//			try {
+//				fs.get(30, TimeUnit.MINUTES);
+//			} catch (java.util.concurrent.TimeoutException e) {
+//				fs.cancel(false);
+//			} catch (Exception e) {
+//				e.printStackTrace();
+//			} finally {
+//			}
+//		}
+		String msg = MessageFormat.format("查html:	{0}ms	共:{1}ms	{2}~{3}	total:{4}", l,
+				(System.currentTimeMillis() - startTime), from, result, hits.get("total"));
+		logger.info(msg);
+		store_es.running("es_bck_html", String.valueOf(result), msg);
 		return result;
 	}
 

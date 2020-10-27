@@ -78,6 +78,13 @@ public class MainApp {
 		}
 		return template;
 	}
+	
+	@RequestMapping("/view/{url}")
+	@ResponseBody
+	private void inc(@PathVariable("url") String url) {
+		// TODO Auto-generated method stub
+
+	}
 
 	@RequestMapping("/view/{key}")
 	@ResponseBody

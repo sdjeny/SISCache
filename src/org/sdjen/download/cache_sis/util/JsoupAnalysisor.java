@@ -61,8 +61,13 @@ public class JsoupAnalysisor {
 			form.append("<div class='mainbox viewthread'>");
 			{
 				String title_tmp = (String) details.get("title");
-				title_tmp = title_tmp.substring(0, title_tmp.lastIndexOf(" - "));
-				String title = title_tmp.substring(0, title_tmp.lastIndexOf(" - "));
+				if (!StringUtils.isEmpty(title_tmp) && title_tmp.contains(" - ")) {
+					title_tmp = title_tmp.substring(0, title_tmp.lastIndexOf(" - "));
+					if (!StringUtils.isEmpty(title_tmp) && title_tmp.contains(" - ")) {
+						title_tmp = title_tmp.substring(0, title_tmp.lastIndexOf(" - "));
+					}
+				}
+				String title = title_tmp;
 				form.append(MessageFormat.format(
 						"<span class=\"headactions\">	<a href=\"viewthread.php?action=printable&amp;tid={0}\" target=\"_blank\" class=\"notabs\">{0}</a></span>",
 						details.get("id")));
@@ -122,6 +127,7 @@ public class JsoupAnalysisor {
 	public static void main(String[] args) throws Throwable {
 		File[] files = new File(new File("").getAbsolutePath()).listFiles((dir, name) -> name.startsWith("sisdemo"));
 //		files = new File[] { new File("sisdemo-8757822.html"), new File("sisdemo_8720516.html") };
+		files = new File[] { new File("sisdemo_8784871.html") };
 		for (File f : files) {
 			System.out.println(f);
 			StringBuffer stringBuffer = new StringBuffer();
@@ -136,7 +142,8 @@ public class JsoupAnalysisor {
 			temp = JsonUtil.toJson(details);
 			System.out.println(temp.getBytes().length + "	->	"
 					+ (content_txt.length() + ZipUtil.compress(temp).length) + "(" + content_txt.length() + ")");
-//			System.out.println(JsonUtil.toPrettyJson(details));
+			System.out.println(restoreToHtml(details));
+			System.out.println(JsonUtil.toPrettyJson(details));
 		}
 //		com.google.common.io.Files.write(details.get("template").getBytes("GBK"), new File("template.html"));
 	}

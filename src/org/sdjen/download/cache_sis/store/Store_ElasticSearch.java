@@ -1,6 +1,5 @@
 package org.sdjen.download.cache_sis.store;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -18,9 +17,11 @@ import javax.annotation.Resource;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
-import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.store.entity.Last;
+import org.sdjen.download.cache_sis.store.entity.Urls_failed;
+import org.sdjen.download.cache_sis.store.entity.Urls_proxy;
 import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
@@ -29,9 +30,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException.NotFound;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
@@ -50,11 +48,19 @@ public class Store_ElasticSearch implements IStore {
 	private int url_fail_retry_in_hours = 3;
 	private MessageDigest md5Digest;
 	private static Set<String> proxy_urls;
+	private Map<String, Object> checkConnectUrls;
+	@Autowired
+	private Dao dao;
 
 	@Override
 	public synchronized void init() throws Throwable {
 		if (inited)
 			return;
+		proxy_urls = new HashSet<>();
+		dao.getList("select url from Urls_proxy", new HashMap<>()).forEach(u -> proxy_urls.add((String) u));
+		logger.info("~~~~~~~~~clean running:{}", dao.executeUpdate("update Last set running=:false where running=:true",
+				new EntryData<String, Object>().put("true", true).put("false", false).getData()));
+		checkConnectUrls = new HashMap<>();
 		md5Digest = MessageDigest.getInstance("MD5");
 		{// html.context_zip字段不参与检索
 			StringBuilder postStr = new StringBuilder();
@@ -71,7 +77,7 @@ public class Store_ElasticSearch implements IStore {
 				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 			}
 			msg(rst);
-			msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_mapping/"//
+			msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/"//
 					, JsonUtil.toJson(//
 							ESMap.get()//
 									.set("properties", ESMap.get()//
@@ -92,19 +98,6 @@ public class Store_ElasticSearch implements IStore {
 			for (String index : new String[] { "last", "md", "urls_failed", "test" }) {
 				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(path_es_start + index + "/_doc/_init_", "{}"));
 			}
-			String js = httpUtil.doLocalGet(path_es_start + "last/_doc/_search", new HashMap<>());
-			ESMap r = JsonUtil.toObject(js, ESMap.class);
-			List<ESMap> hits = (List<ESMap>) r.get("hits", ESMap.class).get("hits");
-			if (null != hits)
-				for (ESMap hit : hits) {
-					ESMap _source = hit.get("_source", ESMap.class);
-					if (null != _source && _source.containsKey("running") && (Boolean) _source.get("running")) {
-						_source.put("running", false);
-						String s = httpUtil.doLocalPostUtf8Json(path_es_start + "last/_doc/" + _source.get("type"),
-								JsonUtil.toJson(_source));
-						logger.info("~~~~~~~~~clean running:{}", s);
-					}
-				}
 			inited = true;
 		}
 	}
@@ -140,6 +133,8 @@ public class Store_ElasticSearch implements IStore {
 					details.put("type", (String) _source.get("type"));
 					details.put("tid", id);
 					details.put("id", id);
+					if (StringUtils.isEmpty(details.get("title")))
+						details.put("id", (String) _source.get("title"));
 					result = JsoupAnalysisor.restoreToHtml(details);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -273,10 +268,8 @@ public class Store_ElasticSearch implements IStore {
 		List<ESMap> shoulds = new ArrayList<>();
 		List<ESMap> mustes = new ArrayList<>();
 		List<ESMap> mustNots = new ArrayList<>();
-		try {
-			mustes.add(ESMap.get().set("term", Collections.singletonMap("fid", Integer.valueOf(fid))));
-		} catch (NumberFormatException e1) {
-		}
+		if (!"ALL".equalsIgnoreCase(fid))
+			mustes.add(ESMap.get().set("term", Collections.singletonMap("fid", fid)));
 		if (query.isEmpty()) {
 			mustes.add(ESMap.get().set("term", Collections.singletonMap("page", 1)));
 			order = "id:desc";
@@ -380,6 +373,7 @@ public class Store_ElasticSearch implements IStore {
 			ls.add(new EntryData<String, Object>()//
 					.put("date", datestr)//
 					.put("time", timestr)//
+					.put("fid", _source.get("fid"))//
 					.put("id", _source.get("id"))//
 					.put("page", _source.get("page"))//
 					.put("type", _source.get("type"))//
@@ -389,148 +383,116 @@ public class Store_ElasticSearch implements IStore {
 		return result;
 	}
 
-	public synchronized Set<String> getProxyUrls() {
-		if (null == proxy_urls) {
-			proxy_urls = new HashSet<>();
+	public Set<String> getProxyUrls() {
+		synchronized (proxy_urls) {
+			return proxy_urls;
+		}
+	}
+
+	public void addProxyUrl(String url) {
+		synchronized (proxy_urls) {
 			try {
-				ConfUtil conf = ConfUtil.getDefaultConf();
-				for (String s : conf.getProperties().getProperty("proxy_urls").split(",")) {
-					proxy_urls.add(s.trim());
+				String proxy_url = cutForProxy(url);
+				if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
+					proxy_urls.add(proxy_url);
+					Urls_proxy urls_proxy = dao.find(Urls_proxy.class, proxy_url);
+					if (null == urls_proxy) {
+						urls_proxy = new Urls_proxy();
+						urls_proxy.setUrl(proxy_url);
+						dao.merge(urls_proxy);
+						msg(">>>>>>>>>ADD:	{0}", proxy_url);
+					}
 				}
-				proxy_urls.remove("");
 			} catch (Throwable e) {
 				e.printStackTrace();
 			}
 		}
-		return proxy_urls;
 	}
 
-	public synchronized void addProxyUrl(String url) {
-		try {
-			ConfUtil conf = ConfUtil.getDefaultConf();
-			String proxy_url = cutForProxy(url);
-			if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
-				proxy_urls.add(proxy_url);
-				conf.getProperties().setProperty("proxy_urls",
-						conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
-				conf.store();
-				msg(">>>>>>>>>ADD:	{0}", proxy_url);
+	@Override
+	public void removeProxyUrl(String url) {
+		synchronized (proxy_urls) {
+			try {
+				String proxy_url = cutForProxy(url);
+				if (!proxy_url.isEmpty() && proxy_urls.contains(proxy_url)) {
+					proxy_urls.remove(proxy_url);
+					int count = dao.executeUpdate("delete from Urls_proxy where url=:url",
+							Collections.singletonMap("url", proxy_url));
+					msg(">>>>>>>>>remove:	{0}	{1}", proxy_url, count);
+				}
+			} catch (Throwable e) {
+				e.printStackTrace();
 			}
-		} catch (Throwable e) {
-			e.printStackTrace();
 		}
 	}
 
-	public synchronized void removeProxyUrl(String url) {
-		try {
-			ConfUtil conf = ConfUtil.getDefaultConf();
-			String proxy_url = cutForProxy(url);
-			if (!proxy_url.isEmpty() && proxy_urls.contains(proxy_url)) {
-				proxy_urls.remove(proxy_url);
-				conf.getProperties().setProperty("proxy_urls",
-						conf.getProperties().getProperty("proxy_urls") + "," + proxy_url);
-				conf.store();
-				msg(">>>>>>>>>remove:	{0}", proxy_url);
+	@Override
+	public void logFailedUrl(String url, Throwable e) throws Throwable {
+		url = cutForProxy(url);
+		Object lock;
+		synchronized (checkConnectUrls) {
+			lock = checkConnectUrls.get(url);
+			if (null == lock)
+				checkConnectUrls.put(url, lock = new Object());
+		}
+		synchronized (lock) {
+			Urls_failed findOne = dao.find(Urls_failed.class, url);
+			if (null == findOne) {
+				findOne = new Urls_failed();
+				findOne.setCount(0);
+				findOne.setUrl(url);
+				findOne.setMsg(e.getMessage());
+				findOne.setTime(new Date());
 			}
-		} catch (Throwable e) {
-			e.printStackTrace();
+			findOne.setCount(findOne.getCount() + 1);
+			dao.merge(findOne);
+			msg(">>>>>>>>>logFailedUrl:	{0}	{1}", url, findOne.getCount());
 		}
 	}
 
 	@Override
-	public synchronized void logFailedUrl(String url, Throwable e) throws Throwable {
-		init();
-		url = cutForProxy(url);
-		ESMap _source;
-		try {
-			_source = JsonUtil.toObject(
-					httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
-							new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
-					ESMap.class).get("_source", ESMap.class);
-		} catch (NotFound notFound) {
-			_source = null;
-		}
-		if (null == _source) {
-			_source = ESMap.get();
-			_source.put("count", 0);
-		} else {
-			_source.put("count", Integer.valueOf(_source.get("count").toString()) + 1);
-		}
-		_source.put("url", url);
-		_source.put("msg", e.getMessage());
-		_source.put("time", dateFormat.format(new Date()));
-		httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-				JsonUtil.toJson(_source));
+	public void logSucceedUrl(String url) throws Throwable {
+		dao.executeUpdate("delete from Urls_failed where url=:url", Collections.singletonMap("url", url));
 	}
 
 	@Override
-	public synchronized void logSucceedUrl(String url) throws Throwable {
-		init();
-		url = cutForProxy(url);
-		Map<String, Object> json = new HashMap<>();
-		json.put("count", 0);
-		json.put("url", url);
-		json.put("time", dateFormat.format(new Date()));
-		httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-				JsonUtil.toJson(json));
-	}
-
-	@Override
-	public synchronized Map<String, Object> connectCheck(String url) throws Throwable {
+	public Map<String, Object> connectCheck(String url) throws Throwable {
 		init();
 		Map<String, Object> result = new HashMap<>();
 		result.put("found", false);
 		result.put("continue", true);
 		result.put("msg", "");
 		url = cutForProxy(url);
-		ESMap findOne;
-		try {
-			findOne = JsonUtil.toObject(
-					httpUtil.doLocalGet(path_es_start + "urls_failed/_doc/{key}",
-							new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
-					ESMap.class).get("_source", ESMap.class);
-		} catch (NotFound notFound) {
-			findOne = null;
-		}
+		Urls_failed findOne = dao.find(Urls_failed.class, url);
 		if (null != findOne) {
-			int count = Integer.valueOf(findOne.get("count").toString());
+			int count = findOne.getCount();
 			result.put("found", count > 0);
 			if (count > url_fail_stop) {
-				if (System.currentTimeMillis() - ((Date) findOne.get("time")).getTime() < 3600000
-						* url_fail_retry_in_hours) {
+				if (System.currentTimeMillis() - findOne.getTime().getTime() < 3600000 * url_fail_retry_in_hours) {
 					result.put("continue", false);
-					result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.get("msg"));
+					result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.getMsg());
 				} else {
-					Map<String, Object> json = new HashMap<>();
-					json.put("count", url_fail_retry_begin);
-					json.put("url", url);
-					json.put("time", dateFormat.format(new Date()));
-					httpUtil.doLocalPostUtf8Json(path_es_start + "urls_failed/_doc/" + getMD5(url.getBytes("utf8")),
-							JsonUtil.toJson(json));
+					findOne.setCount(url_fail_retry_begin);
+					findOne.setTime(new Date());
+					dao.merge(findOne);
+					msg(">>>>>>>>>connectCheck:	{0}	{1}", url, findOne.getCount());
 				}
 			}
 		}
+
 		return result;
 	}
 
 	@Override
 	public synchronized Map<String, Object> getLast(String type) throws Throwable {
-		ESMap _source;
-		try {
-			_source = JsonUtil
-					.toObject(httpUtil.doLocalGet(path_es_start + "last/_doc/{type}",
-							new EntryData<String, String>().put("type", type).getData()), ESMap.class)
-					.get("_source", ESMap.class);
-		} catch (NotFound notFound) {
-			_source = null;
-		}
-		if (null != _source) {
+		Last last = dao.find(Last.class, type);
+		if (null != last) {
 			Map<String, Object> json = new HashMap<>();
 			json.put("type", type);
-			json.put("keyword", _source.get("keyword"));
-			json.put("running", _source.get("running"));
-			json.put("msg", _source.get("msg"));
-			json.put("time", dateFormat.parse(_source.get("time", String.class)));
+			json.put("keyword", last.getKeyword());
+			json.put("running", last.isRunning());
+			json.put("msg", last.getMsg());
+			json.put("time", last.getTime());
 			return json;
 		}
 		return null;
@@ -538,26 +500,48 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public synchronized Object running(String type, String keyword, String msg) throws Throwable {
-		init();
-		Map<String, Object> json = new HashMap<>();
-		json.put("type", type);
-		json.put("keyword", keyword);
-		json.put("running", true);
-		json.put("msg", msg);
-		json.put("time", dateFormat.format(new Date()));
-		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "last/_doc/" + type, JsonUtil.toJson(json));
-		return s;
+		Last last = dao.find(Last.class, type);
+		if (null == last) {
+			last = new Last();
+			last.setType(type);
+		}
+		last.setKeyword(keyword);
+		last.setRunning(true);
+		last.setMsg(msg);
+		last.setTime(new Date());
+		dao.merge(last);
+		return last;
 	}
 
 	@Override
 	public synchronized Object finish(String type, String msg) throws Throwable {
-		init();
-		Map<String, Object> json = new HashMap<>();
-		json.put("type", type);
-		json.put("running", false);
-		json.put("msg", msg);
-		json.put("time", dateFormat.format(new Date()));
-		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "last/_doc/" + type, JsonUtil.toJson(json));
-		return s;
+		Last last = dao.find(Last.class, type);
+		if (null == last) {
+			last = new Last();
+			last.setType(type);
+		}
+		last.setRunning(false);
+		last.setMsg(msg);
+		last.setTime(new Date());
+		dao.merge(last);
+		return last;
+	}
+
+	@Override
+	public String logview(String query) {
+		try {
+			return JsonUtil.toPrettyJson(dao.getList(query, null));
+		} catch (Throwable e) {
+			return e.getMessage();
+		}
+	}
+
+	@Override
+	public String logexe(String query) {
+		try {
+			return JsonUtil.toPrettyJson(dao.executeUpdate(query, null));
+		} catch (Throwable e) {
+			return e.getMessage();
+		}
 	}
 }

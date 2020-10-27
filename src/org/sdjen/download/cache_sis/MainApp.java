@@ -1,12 +1,10 @@
 package org.sdjen.download.cache_sis;
 
 import java.io.FileInputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.annotation.Resource;
 
@@ -79,6 +77,13 @@ public class MainApp {
 							Charset.forName("GBK")));
 		}
 		return template;
+	}
+	
+	@RequestMapping("/view/{url}")
+	@ResponseBody
+	private void inc(@PathVariable("url") String url) {
+		// TODO Auto-generated method stub
+
 	}
 
 	@RequestMapping("/view/{key}")

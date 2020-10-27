@@ -1,13 +1,18 @@
 package org.sdjen.download.cache_sis.store;
 
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service("Store_Empty")
 public class EmptyStore implements IStore {
+	@Autowired
+	private Dao dao;
 
 	@Override
 	public String getLocalHtml(String id, String page) throws Throwable {
@@ -85,14 +90,17 @@ public class EmptyStore implements IStore {
 
 	@Override
 	public void init() {
-		// TODO Auto-generated method stub
-		
+		System.out.println(dao.getList("from Urls_failed", null));
+		System.out.println(dao.getList("select url from Urls_proxy", null));
 	}
 
 	@Override
 	public Map<String, Object> connectCheck(String url) throws Throwable {
-		// TODO Auto-generated method stub
-		return null;
+		Map<String, Object> result = new HashMap<>();
+		result.put("found", false);
+		result.put("continue", true);
+		result.put("msg", "");
+		return result;
 	}
 
 	@Override
@@ -111,6 +119,24 @@ public class EmptyStore implements IStore {
 	public Object finish(String type, String msg) throws Throwable {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public String logview(String query) {
+		try {
+			return JsonUtil.toPrettyJson(dao.getList(query, null));
+		} catch (Throwable e) {
+			return e.getMessage();
+		}
+	}
+
+	@Override
+	public String logexe(String query) {
+		try {
+			return JsonUtil.toPrettyJson(dao.executeUpdate(query, null));
+		} catch (Throwable e) {
+			return e.getMessage();
+		}
 	}
 
 }

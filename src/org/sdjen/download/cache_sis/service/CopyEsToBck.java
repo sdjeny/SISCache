@@ -125,10 +125,10 @@ public class CopyEsToBck {
 			}
 			result = _source.get("path", String.class);
 		}
-		String msg = MessageFormat.format("查URL	{4}:	{0}ms	共:{1}ms	Last:{2}	total:{3}", l,
-				(System.currentTimeMillis() - startTime), result, hits.get("total"), count);
-		logger.info(msg);
-		store_es.running("es_bck_url", result, msg);
+		logger.info(MessageFormat.format("查URL	{4}:	{0}ms	共:{1}ms	Last:{2}	total:{3}", l,
+				(System.currentTimeMillis() - startTime), result, hits.get("total"), count));
+		store_es.running("es_bck_url", result, MessageFormat.format("查URL	{3}:	{0}ms	共:{1}ms	total:{2}", l,
+				(System.currentTimeMillis() - startTime), hits.get("total"), count));
 //		int total = (Integer) hits.get("total");
 		return result;
 	}

@@ -479,6 +479,18 @@ public class Controller_siscache {
 		return "redirect:/siscache/detail/" + tid;
 	}
 
+	@RequestMapping("/logview/{query}")
+	@ResponseBody
+	private String logview(@PathVariable("query") String query) {
+		return store.logview(query);
+	}
+
+	@RequestMapping("/logexe/{query}")
+	@ResponseBody
+	private String logexe(@PathVariable("query") String query) {
+		return store.logexe(query);
+	}
+
 	@RequestMapping("/detail/{id}/{page}")
 	@ResponseBody
 	String detail(@PathVariable("id") String id, @PathVariable("page") String page) {

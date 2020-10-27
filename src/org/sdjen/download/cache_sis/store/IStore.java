@@ -11,6 +11,9 @@ import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 public interface IStore {
 	final static Map<String, String> FIDDESCES = new EntryData<String, String>()//
@@ -131,6 +134,10 @@ public interface IStore {
 	Object running(String type, String keyword, String msg) throws Throwable;
 
 	Object finish(String type, String msg) throws Throwable;
+
+	String logview(String query);
+
+	String logexe(String query);
 
 	default StringBuilder getMsgText(Object pattern, Object... args) {
 		StringBuilder builder = new StringBuilder(dateFormat.format(new Date()));

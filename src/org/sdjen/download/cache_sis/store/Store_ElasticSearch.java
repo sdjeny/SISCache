@@ -14,13 +14,9 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.annotation.Resource;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.transaction.Transactional;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
-import org.sdjen.download.cache_sis.conf.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.entity.Last;
@@ -529,5 +525,23 @@ public class Store_ElasticSearch implements IStore {
 		last.setTime(new Date());
 		dao.merge(last);
 		return last;
+	}
+
+	@Override
+	public String logview(String query) {
+		try {
+			return JsonUtil.toPrettyJson(dao.getList(query, null));
+		} catch (Throwable e) {
+			return e.getMessage();
+		}
+	}
+
+	@Override
+	public String logexe(String query) {
+		try {
+			return JsonUtil.toPrettyJson(dao.executeUpdate(query, null));
+		} catch (Throwable e) {
+			return e.getMessage();
+		}
 	}
 }

@@ -468,4 +468,16 @@ public class Store_Mongodb implements IStore {
 	public void logSucceedUrl(String url) {
 		mongoTemplate.findAllAndRemove(Query.query(Criteria.where("url").is(cutForProxy(url))), "urls_failed");
 	}
+
+	@Override
+	public String logview(String query) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String logexe(String query) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

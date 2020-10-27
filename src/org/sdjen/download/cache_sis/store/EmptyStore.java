@@ -5,17 +5,14 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import javax.transaction.Transactional;
-
-import org.sdjen.download.cache_sis.store.entity.Last;
+import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service("Store_Empty")
 public class EmptyStore implements IStore {
-	@PersistenceContext
-	private EntityManager em;
+	@Autowired
+	private Dao dao;
 
 	@Override
 	public String getLocalHtml(String id, String page) throws Throwable {
@@ -92,12 +89,9 @@ public class EmptyStore implements IStore {
 	}
 
 	@Override
-	@Transactional
 	public void init() {
-		System.out.println(em.createQuery("from Urls_failed").getResultList());
-		System.out.println(em.createQuery("select url from Urls_proxy", String.class).getResultList());
-		logger.info("~~~~~~~~~clean running:{}", em.createQuery("update Last set running=:false where running=:true")
-				.setParameter("true", true).setParameter("false", false).executeUpdate());
+		System.out.println(dao.getList("from Urls_failed", null));
+		System.out.println(dao.getList("select url from Urls_proxy", null));
 	}
 
 	@Override
@@ -125,6 +119,24 @@ public class EmptyStore implements IStore {
 	public Object finish(String type, String msg) throws Throwable {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public String logview(String query) {
+		try {
+			return JsonUtil.toPrettyJson(dao.getList(query, null));
+		} catch (Throwable e) {
+			return e.getMessage();
+		}
+	}
+
+	@Override
+	public String logexe(String query) {
+		try {
+			return JsonUtil.toPrettyJson(dao.executeUpdate(query, null));
+		} catch (Throwable e) {
+			return e.getMessage();
+		}
 	}
 
 }

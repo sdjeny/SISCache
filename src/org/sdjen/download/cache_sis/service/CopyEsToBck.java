@@ -108,6 +108,7 @@ public class CopyEsToBck {
 		json = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_md/_doc/_search", json);
 		long l = System.currentTimeMillis() - startTime;
 		ESMap hits = JsonUtil.toObject(json, ESMap.class).get("hits", ESMap.class);
+		int count = 0;
 		for (ESMap hit : (List<ESMap>) hits.get("hits")) {
 			ESMap _source = hit.get("_source", ESMap.class);
 //			logger.info("{}	{}	{}", type, hit.get("_id"), _source);
@@ -120,11 +121,12 @@ public class CopyEsToBck {
 				_source.put("key", _id);
 				r = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_md/_doc/" + _id,
 						JsonUtil.toJson(_source));
+				count++;
 			}
 			result = _source.get("path", String.class);
 		}
-		String msg = MessageFormat.format("查URL:	{0}ms	共:{1}ms	Last:{2}	total:{3}", l,
-				(System.currentTimeMillis() - startTime), result, hits.get("total"));
+		String msg = MessageFormat.format("查URL	{4}:	{0}ms	共:{1}ms	Last:{2}	total:{3}", l,
+				(System.currentTimeMillis() - startTime), result, hits.get("total"), count);
 		logger.info(msg);
 		store_es.running("es_bck_url", result, msg);
 //		int total = (Integer) hits.get("total");

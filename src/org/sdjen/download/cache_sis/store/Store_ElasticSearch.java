@@ -95,7 +95,9 @@ public class Store_ElasticSearch implements IStore {
 									)//
 					)//
 			));
-			for (String index : new String[] { "last", "md", "urls_failed", "test" }) {
+			for (String index : new String[] { "md"
+//					, "last", "urls_failed", "test"
+			}) {
 				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(path_es_start + index + "/_doc/_init_", "{}"));
 			}
 			inited = true;

@@ -10,7 +10,7 @@ import javax.persistence.Id;
 public class Urls_failed {
 	@Id
 	private String url;
-	@Column(length = 1024)
+	@Column(columnDefinition = "longvarchar")
 	private String msg;
 	private int count;
 	private Date time;

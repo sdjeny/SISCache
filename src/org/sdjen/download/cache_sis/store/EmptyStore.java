@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.sdjen.download.cache_sis.store.entity.Last;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -92,6 +93,47 @@ public class EmptyStore implements IStore {
 	public void init() {
 		System.out.println(dao.getList("from Urls_failed", null));
 		System.out.println(dao.getList("select url from Urls_proxy", null));
+		Last last = null;//dao.find(Last.class, "init");
+		if (null == last) {
+			last = new Last();
+			last.setType("init");
+		}
+		last.setKeyword(""//
+				+ "0123456789"// 0
+				+ "0123456789"// 1
+				+ "0123456789"// 2
+				+ "0123456789"// 3
+				+ "0123456789"// 4
+				+ "0123456789"// 5
+				+ "0123456789"// 6
+				+ "0123456789"// 7
+				+ "0123456789"// 8
+				+ "0123456789"// 9
+				// ~~~~~~~~~~~~~~~~~~
+				+ "0123456789"// 0
+				+ "0123456789"// 1
+				+ "0123456789"// 2
+				+ "0123456789"// 3
+				+ "0123456789"// 4
+				+ "0123456789"// 5
+				+ "0123456789"// 6
+				+ "0123456789"// 7
+				+ "0123456789"// 8
+				+ "0123456789"// 9
+				// ~~~~~~~~~~~~~~~~~~
+				+ "0123456789"// 0
+				+ "0123456789"// 1
+				+ "0123456789"// 2
+				+ "0123456789"// 3
+				+ "0123456789"// 4
+				+ "0123456789"// 5
+				+ "0123456789"// 6
+				+ "0123456789"// 7
+				+ "0123456789"// 8
+				+ "0123456789"// 9
+		);
+		dao.merge(last);
+		System.out.println(dao.getList("select type from Last", null));
 	}
 
 	@Override

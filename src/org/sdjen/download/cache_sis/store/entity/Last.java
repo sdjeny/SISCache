@@ -13,7 +13,7 @@ public class Last {
 	@Column(length = 512)
 	private String keyword;
 	private boolean running;
-	@Column(length = 1024)
+	@Column(columnDefinition = "longvarchar")
 	private String msg;
 	private Date time;
 

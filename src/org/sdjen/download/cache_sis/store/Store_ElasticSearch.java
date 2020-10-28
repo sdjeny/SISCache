@@ -452,7 +452,9 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public void logSucceedUrl(String url) throws Throwable {
-		dao.executeUpdate("delete from Urls_failed where url=:url", Collections.singletonMap("url", url));
+		url = cutForProxy(url);
+		int count = dao.executeUpdate("delete from Urls_failed where url=:url", Collections.singletonMap("url", url));
+		msg(">>>>>>>>>logSucceedUrl:	{0}	{1}", url, count);
 	}
 
 	@Override

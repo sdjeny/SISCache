@@ -1,7 +1,6 @@
 package org.sdjen.download.cache_sis.http;
 
 import java.io.ByteArrayOutputStream;
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.Resource;
@@ -186,9 +185,17 @@ public class HttpUtil {
 			if (rsp == null || !rsp.getStatusCode().is2xxSuccessful()) {
 				return;
 			}
-			executor.execute(rsp.getBody());
+			try {
+				executor.execute(rsp.getBody());
+			} catch (Throwable ue) {
+				store.err(ue.getMessage(), ue);
+			}
 		} catch (Throwable e) {
-			store.logFailedUrl(uri, e);
+			try {
+				store.logFailedUrl(uri, e);
+			} catch (Throwable ue) {
+				store.err(ue.getMessage(), ue);
+			}
 			throw e;
 		} finally {
 		}

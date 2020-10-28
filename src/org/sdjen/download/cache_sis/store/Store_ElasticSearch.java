@@ -491,8 +491,7 @@ public class Store_ElasticSearch implements IStore {
 		if (null != last) {
 			Map<String, Object> json = new HashMap<>();
 			json.put("type", type);
-			json.put("keyword",
-					null == last.getKeyword() ? null : new String(ZipUtil.stringToBytes(last.getKeyword()), "UTF8"));
+			json.put("keyword", last.getKeyword());
 			json.put("running", last.isRunning());
 			json.put("msg", last.getMsg());
 			json.put("time", last.getTime());
@@ -508,7 +507,7 @@ public class Store_ElasticSearch implements IStore {
 			last = new Last();
 			last.setType(type);
 		}
-		last.setKeyword(null == keyword ? null : ZipUtil.bytesToString(keyword.getBytes("UTF8")));
+		last.setKeyword(keyword);
 		last.setRunning(true);
 		last.setMsg(msg);
 		last.setTime(new Date());

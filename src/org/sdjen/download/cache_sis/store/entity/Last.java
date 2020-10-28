@@ -2,6 +2,7 @@ package org.sdjen.download.cache_sis.store.entity;
 
 import java.util.Date;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
@@ -9,8 +10,10 @@ import javax.persistence.Id;
 public class Last {
 	@Id
 	private String type;
+	@Column(length = 512)
 	private String keyword;
 	private boolean running;
+	@Column(columnDefinition = "longvarchar")
 	private String msg;
 	private Date time;
 

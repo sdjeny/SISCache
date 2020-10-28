@@ -2,6 +2,7 @@ package org.sdjen.download.cache_sis.store.entity;
 
 import java.util.Date;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 
@@ -9,6 +10,7 @@ import javax.persistence.Id;
 public class Urls_failed {
 	@Id
 	private String url;
+	@Column(columnDefinition = "longvarchar")
 	private String msg;
 	private int count;
 	private Date time;

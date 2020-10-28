@@ -115,7 +115,8 @@ public class CopyEsToBck {
 			Object _id = hit.get("_id");
 			String url = (String) _source.get("url");
 			String path = (String) _source.get("path");
-			if (!url.equalsIgnoreCase(path)) {
+			String key = (String) _source.get("key");
+			if (!url.equalsIgnoreCase(path) && !_id.equals(key)) {
 				String r = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_bck_md/_doc/" + _id,
 						JsonUtil.toJson(_source));
 				_source.put("key", _id);

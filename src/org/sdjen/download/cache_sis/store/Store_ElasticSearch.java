@@ -464,24 +464,27 @@ public class Store_ElasticSearch implements IStore {
 		result.put("found", false);
 		result.put("continue", true);
 		result.put("msg", "");
-		url = cutForProxy(url);
-		Urls_failed findOne = dao.find(Urls_failed.class, url);
-		if (null != findOne) {
-			int count = findOne.getCount();
-			result.put("found", count > 0);
-			if (count > url_fail_stop) {
-				if (System.currentTimeMillis() - findOne.getTime().getTime() < 3600000 * url_fail_retry_in_hours) {
-					result.put("continue", false);
-					result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.getMsg());
-				} else {
-					findOne.setCount(url_fail_retry_begin);
-					findOne.setTime(new Date());
-					dao.merge(findOne);
-					msg(">>>>>>>>>connectCheck:	{0}	{1}", url, findOne.getCount());
+		try {
+			url = cutForProxy(url);
+			Urls_failed findOne = dao.find(Urls_failed.class, url);
+			if (null != findOne) {
+				int count = findOne.getCount();
+				result.put("found", count > 0);
+				if (count > url_fail_stop) {
+					if (System.currentTimeMillis() - findOne.getTime().getTime() < 3600000 * url_fail_retry_in_hours) {
+						result.put("continue", false);
+						result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.getMsg());
+					} else {
+						findOne.setCount(url_fail_retry_begin);
+						findOne.setTime(new Date());
+						dao.merge(findOne);
+						msg(">>>>>>>>>connectCheck:	{0}	{1}", url, findOne.getCount());
+					}
 				}
 			}
+		} catch (Throwable ue) {
+			err(ue.getMessage(), ue);
 		}
-
 		return result;
 	}
 

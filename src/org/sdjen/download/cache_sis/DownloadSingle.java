@@ -439,7 +439,7 @@ public class DownloadSingle {
 						fd = System.currentTimeMillis() - fd;
 						long fs = System.currentTimeMillis();
 						store.saveMD5(md5, result);
-						fs = System.currentTimeMillis() - fd;
+						fs = System.currentTimeMillis() - fs;
 						logger.debug("	lookup:{}	download:{}	save:{}	+{}	->{}", fl, fd, fs, url, result);
 					}
 					setResult(result);

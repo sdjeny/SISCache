@@ -75,6 +75,26 @@ public class CopyEsToBck {
 	}
 
 	public void copyHtml(long from) throws Throwable {
+		logger.info(httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_bck_html/_doc/_init_", "{}"));
+		logger.info("html:	{}",
+				httpUtil.doLocalPutUtf8Json("http://192.168.0.237:9200/siscache_bck_html/_doc/_mapping/"//
+						, JsonUtil.toJson(//
+								ESMap.get()//
+										.set("properties", ESMap.get()//
+												.set("context_zip", ESMap.get()//
+														.set("type", "text")//
+														.set("index", false)//
+														.set("norms", false)//
+														.set("fields", ESMap.get()//
+																.set("keyword", ESMap.get()//
+																		.set("type", "keyword")//
+																		.set("ignore_above", 256)//
+																)//
+														)//
+												)//
+										)//
+						)//
+				));
 		Long listResult = from;
 		do {
 			listResult = listHtml(from = listResult);

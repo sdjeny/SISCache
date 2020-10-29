@@ -7,6 +7,8 @@ import java.util.Set;
 
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.entity.Last;
+import org.sdjen.download.cache_sis.store.entity.Urls_failed;
+import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -91,9 +93,8 @@ public class EmptyStore implements IStore {
 
 	@Override
 	public void init() {
-		System.out.println(dao.getList("from Urls_failed", null));
 		System.out.println(dao.getList("select url from Urls_proxy", null));
-		Last last = null;//dao.find(Last.class, "init");
+		Last last = null;// dao.find(Last.class, "init");
 		if (null == last) {
 			last = new Last();
 			last.setType("init");
@@ -134,6 +135,16 @@ public class EmptyStore implements IStore {
 		);
 		dao.merge(last);
 		System.out.println(dao.getList("select type from Last", null));
+//		Urls_failed failed = new Urls_failed();
+//		failed.setCount(0);
+//		failed.setUrl("init");
+//		dao.merge(failed);
+		System.out.println(dao.getList("select f.count from Urls_failed f", null));
+		System.out.println(dao.executeUpdate("update Urls_failed f set f.count=f.count+:count where f.url=:url",
+				new EntryData().put("count", 1).put("url", "init").getData()));
+		System.out.println(dao.executeUpdate("update Urls_failed f set f.count=f.count+:count where f.url=:url",
+				new EntryData().put("count", 1).put("url", "_iit_").getData()));
+		System.out.println(dao.getList("select f.count from Urls_failed f", null));
 	}
 
 	@Override

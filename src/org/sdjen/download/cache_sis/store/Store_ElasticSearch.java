@@ -392,18 +392,16 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	public void addProxyUrl(String url) {
+		long l = System.currentTimeMillis();
 		synchronized (proxy_urls) {
 			try {
 				String proxy_url = cutForProxy(url);
 				if (!proxy_url.isEmpty() && !proxy_urls.contains(proxy_url)) {
 					proxy_urls.add(proxy_url);
-					Urls_proxy urls_proxy = dao.find(Urls_proxy.class, proxy_url);
-					if (null == urls_proxy) {
-						urls_proxy = new Urls_proxy();
-						urls_proxy.setUrl(proxy_url);
-						dao.merge(urls_proxy);
-						msg(">>>>>>>>>ADD:	{0}", proxy_url);
-					}
+					Urls_proxy urls_proxy = new Urls_proxy();
+					urls_proxy.setUrl(proxy_url);
+					dao.merge(urls_proxy);
+					msg(">>>>>>>>>Proxy add:	{0}	Takes:{1}", proxy_url, (System.currentTimeMillis() - l));
 				}
 			} catch (Throwable e) {
 				e.printStackTrace();
@@ -413,6 +411,7 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public void removeProxyUrl(String url) {
+		long l = System.currentTimeMillis();
 		synchronized (proxy_urls) {
 			try {
 				String proxy_url = cutForProxy(url);
@@ -420,7 +419,7 @@ public class Store_ElasticSearch implements IStore {
 					proxy_urls.remove(proxy_url);
 					int count = dao.executeUpdate("delete from Urls_proxy where url=:url",
 							Collections.singletonMap("url", proxy_url));
-					msg(">>>>>>>>>remove:	{0}	{1}", proxy_url, count);
+					msg(">>>>>>>>>Proxy remove:	{0}	{1}	Takes:{2}", proxy_url, count, (System.currentTimeMillis() - l));
 				}
 			} catch (Throwable e) {
 				e.printStackTrace();
@@ -428,16 +427,21 @@ public class Store_ElasticSearch implements IStore {
 		}
 	}
 
+	private Object getLockObject(String url) {
+		Object result;
+		synchronized (checkConnectUrls) {
+			result = checkConnectUrls.get(url);
+			if (null == result)
+				checkConnectUrls.put(url, result = new Object());
+		}
+		return result;
+	}
+
 	@Override
 	public void logFailedUrl(String url, Throwable e) throws Throwable {
+		long l = System.currentTimeMillis();
 		url = cutForProxy(url);
-		Object lock;
-		synchronized (checkConnectUrls) {
-			lock = checkConnectUrls.get(url);
-			if (null == lock)
-				checkConnectUrls.put(url, lock = new Object());
-		}
-		synchronized (lock) {
+		synchronized (getLockObject(url)) {
 			Urls_failed findOne = dao.find(Urls_failed.class, url);
 			if (null == findOne) {
 				findOne = new Urls_failed();
@@ -448,15 +452,19 @@ public class Store_ElasticSearch implements IStore {
 			}
 			findOne.setCount(findOne.getCount() + 1);
 			dao.merge(findOne);
-			msg(">>>>>>>>>logFailedUrl:	{0}	{1}", url, findOne.getCount());
+			msg(">>>>>>>>>logFailedUrl:	{0}	{1}	Takes:{2}", url, findOne.getCount(), (System.currentTimeMillis() - l));
 		}
 	}
 
 	@Override
 	public void logSucceedUrl(String url) throws Throwable {
+		long l = System.currentTimeMillis();
 		url = cutForProxy(url);
-		int count = dao.executeUpdate("delete from Urls_failed where url=:url", Collections.singletonMap("url", url));
-		msg(">>>>>>>>>logSucceedUrl:	{0}	{1}", url, count);
+		synchronized (getLockObject(url)) {
+			int count = dao.executeUpdate("delete from Urls_failed where url=:url",
+					Collections.singletonMap("url", url));
+			msg(">>>>>>>>>logSucceedUrl:	{0}	{1}	Takes:{2}", url, count, (System.currentTimeMillis() - l));
+		}
 	}
 
 	@Override
@@ -477,10 +485,12 @@ public class Store_ElasticSearch implements IStore {
 						result.put("continue", false);
 						result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.getMsg());
 					} else {
-						findOne.setCount(url_fail_retry_begin);
-						findOne.setTime(new Date());
-						dao.merge(findOne);
-						msg(">>>>>>>>>connectCheck:	{0}	{1}", url, findOne.getCount());
+						synchronized (getLockObject(url)) {
+							findOne.setCount(url_fail_retry_begin);
+							findOne.setTime(new Date());
+							dao.merge(findOne);
+							msg(">>>>>>>>>connectCheck:	{0}	{1}", url, findOne.getCount());
+						}
 					}
 				}
 			}

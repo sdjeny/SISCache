@@ -157,15 +157,18 @@ public class DownloadSingle {
 		long startTime = System.currentTimeMillis();
 		title = getFileName(title);
 //		String key = store.getKey(id, page, url, title, dateStr);
+		long l = System.currentTimeMillis();
 		String tmp_html = type.contains("cover")// 覆盖模式
 				? null // 不管是否存在，都重新读取
 				: store.getLocalHtml(id, page);// 否则获取本地文件
+		l = System.currentTimeMillis() - l;
 		if ((type.isEmpty() || Integer.valueOf(page) > 1) && null != tmp_html)// 不是特殊模式且文件已存在!
 			return null;// 跳过
 		// File newFile = new File(save_path + "/" + sub_html + "/" + title);
 		// if (newFile.exists()) {
 		// return false;
 		// }
+		long d = System.currentTimeMillis();
 		if (null == tmp_html && null != url && !url.isEmpty()) {
 			try {
 				lock_w_html.lock();
@@ -174,6 +177,7 @@ public class DownloadSingle {
 				lock_w_html.unlock();
 			}
 		}
+		d = System.currentTimeMillis() - d;
 		if (null == tmp_html)
 			return null;
 		String html = tmp_html;
@@ -314,6 +318,7 @@ public class DownloadSingle {
 		) {
 			return null;
 		}
+		long s = System.currentTimeMillis();
 		try {
 			html = tmp_html;
 			int cssLen = 0;
@@ -346,7 +351,9 @@ public class DownloadSingle {
 			// store.msg("本次下载 {0} byte", length_download);
 			try {
 				lock_w_html.lock();
-				store.msg("{0}	耗时:{1}	{2}", (++count), (System.currentTimeMillis() - startTime), msg);
+				s = System.currentTimeMillis() - s;
+				store.msg("检索:{3}	下载:{4}	保存:{5}	{0}	耗时:{1}	{2}", (++count),
+						(System.currentTimeMillis() - startTime), msg, l, d, s);
 			} finally {
 				lock_w_html.unlock();
 			}
@@ -394,10 +401,13 @@ public class DownloadSingle {
 		if (null == result || !checkFile(reload, result)) {
 			HttpUtil.Executor<String> executor = new HttpUtil.Executor<String>() {
 				public void execute(byte[] bytes) throws Throwable {
+					long fl = System.currentTimeMillis();
 					setResult(null);
 					String md5 = getMD5(bytes);
 					String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
+					fl = System.currentTimeMillis() - fl;
 					if (null == result || !checkFile(reload, result)) {
+						long fd = System.currentTimeMillis();
 						result = path;
 						if (bytes.length < length_flag_min_byte)
 							result += "/min";
@@ -426,8 +436,11 @@ public class DownloadSingle {
 						// MapDBFactory.getFileDB().put(md5, result);
 						// mapDBUtil.commit();
 						// lock_w_mapdb.unlock();
+						fd = System.currentTimeMillis() - fd;
+						long fs = System.currentTimeMillis();
 						store.saveMD5(md5, result);
-						logger.debug("	+{}	->{}", url, result);
+						fs = System.currentTimeMillis() - fd;
+						logger.debug("	lookup:{}	download:{}	save:{}	+{}	->{}", fl, fd, fs, url, result);
 					}
 					setResult(result);
 				}

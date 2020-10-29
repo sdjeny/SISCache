@@ -47,8 +47,8 @@ public class DownloadSingle {
 	private long length_flag_min_byte = 20000;
 	private long length_flag_max_byte = 70000;
 	// private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
-	private Lock lock_w_db = new ReentrantReadWriteLock().writeLock();
-	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
+//rmlck	private Lock lock_w_db = new ReentrantReadWriteLock().writeLock();
+//rmlck	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
 	private long count = 0;
 	// private org.sdjen.download.cache_sis.log.CassandraFactory
 	// cassandraFactory;
@@ -171,10 +171,10 @@ public class DownloadSingle {
 		long d = System.currentTimeMillis();
 		if (null == tmp_html && null != url && !url.isEmpty()) {
 			try {
-				lock_w_html.lock();
+				//rmlck				lock_w_html.lock();
 				tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
 			} finally {
-				lock_w_html.unlock();
+				//rmlck				lock_w_html.unlock();
 			}
 		}
 		d = System.currentTimeMillis() - d;
@@ -220,7 +220,7 @@ public class DownloadSingle {
 		// String sub_html = "html/" + subKey;
 		final String sub_torrent = "torrent/" + subKey;
 		try {
-			lock_w_html.lock();
+			//rmlck			lock_w_html.lock();
 			File savePath = new File(save_path);
 			if (!savePath.exists())
 				savePath.mkdirs();
@@ -236,7 +236,7 @@ public class DownloadSingle {
 				}
 			}
 		} finally {
-			lock_w_html.unlock();
+			//rmlck			lock_w_html.unlock();
 		}
 		Long length_download = 0l;
 		StringBuilder msg = new StringBuilder(MessageFormat.format("{0} {1}	{2}", dateStr, title, url));
@@ -330,10 +330,10 @@ public class DownloadSingle {
 			if (true// 先忽略长度，存了再说
 					|| (html.length() - cssLen) > (55000 - DefaultCss.getLength())) {
 				try {
-					lock_w_db.lock();
+					//rmlck					lock_w_db.lock();
 					store.saveHtml(id, page, url, title, dateStr, html);
 				} finally {
-					lock_w_db.unlock();
+					//rmlck					lock_w_db.unlock();
 				}
 				// newFile.createNewFile();
 			} else {
@@ -350,12 +350,12 @@ public class DownloadSingle {
 		} finally {
 			// store.msg("本次下载 {0} byte", length_download);
 			try {
-				lock_w_html.lock();
+				//rmlck				lock_w_html.lock();
 				s = System.currentTimeMillis() - s;
 				store.msg("检索:{3}	下载:{4}	保存:{5}	{0}	耗时:{1}	{2}", (++count),
 						(System.currentTimeMillis() - startTime), msg, l, d, s);
 			} finally {
-				lock_w_html.unlock();
+				//rmlck				lock_w_html.unlock();
 			}
 			// lock_w_html.unlock();
 		}
@@ -450,7 +450,7 @@ public class DownloadSingle {
 				result = null;
 				if (path.startsWith("torrent")) {
 					try {
-						lock_w_html.lock();
+						//rmlck						lock_w_html.lock();
 						httpUtil.retry(new HttpUtil.Retry<Void>() {
 							public Void execute() throws Throwable {
 								httpUtil.execute(url, executor);
@@ -458,7 +458,7 @@ public class DownloadSingle {
 							}
 						});
 					} finally {
-						lock_w_html.unlock();
+						//rmlck						lock_w_html.unlock();
 					}
 				} else
 					httpUtil.execute(url, executor);

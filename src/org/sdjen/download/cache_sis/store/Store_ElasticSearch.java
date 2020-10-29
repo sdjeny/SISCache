@@ -48,6 +48,7 @@ public class Store_ElasticSearch implements IStore {
 	private int url_fail_retry_in_hours = 3;
 	private MessageDigest md5Digest;
 	private static Set<String> proxy_urls;
+	private Map<String, Object> checkConnectUrls;
 	@Autowired
 	private Dao dao;
 
@@ -59,6 +60,7 @@ public class Store_ElasticSearch implements IStore {
 		dao.getList("select url from Urls_proxy", new HashMap<>()).forEach(u -> proxy_urls.add((String) u));
 		logger.info("~~~~~~~~~clean running:{}", dao.executeUpdate("update Last set running=:false where running=:true",
 				new EntryData<String, Object>().put("true", true).put("false", false).getData()));
+		checkConnectUrls = new HashMap<>();
 		md5Digest = MessageDigest.getInstance("MD5");
 		{// html.context_zip字段不参与检索
 			StringBuilder postStr = new StringBuilder();
@@ -425,34 +427,44 @@ public class Store_ElasticSearch implements IStore {
 		}
 	}
 
+	private Object getLockObject(String url) {
+		Object result;
+		synchronized (checkConnectUrls) {
+			result = checkConnectUrls.get(url);
+			if (null == result)
+				checkConnectUrls.put(url, result = new Object());
+		}
+		return result;
+	}
+
 	@Override
 	public void logFailedUrl(String url, Throwable e) throws Throwable {
 		long l = System.currentTimeMillis();
 		url = cutForProxy(url);
-		if (dao.executeUpdate("update Urls_failed f set f.count=f.count+1 where f.url=:url",
-				Collections.singletonMap("url", url)) < 1) {
-			Urls_failed findOne = new Urls_failed();
-			findOne.setCount(1);
-			findOne.setUrl(url);
-			findOne.setMsg(e.getMessage());
-			findOne.setTime(new Date());
+		synchronized (getLockObject(url)) {
+			Urls_failed findOne = dao.find(Urls_failed.class, url);
+			if (null == findOne) {
+				findOne = new Urls_failed();
+				findOne.setCount(0);
+				findOne.setUrl(url);
+				findOne.setMsg(e.getMessage());
+				findOne.setTime(new Date());
+			}
+			findOne.setCount(findOne.getCount() + 1);
 			dao.merge(findOne);
 			msg(">>>>>>>>>logFailedUrl:	{0}	{1}	Takes:{2}", url, findOne.getCount(), (System.currentTimeMillis() - l));
-		} else {
-			msg(">>>>>>>>>logFailedUrl:	{0}	{1}	Takes:{2}", url,
-					dao.getList("select f.count from Urls_failed f where f.url=:url",
-							Collections.singletonMap("url", url)),
-					(System.currentTimeMillis() - l));
 		}
-
 	}
 
 	@Override
 	public void logSucceedUrl(String url) throws Throwable {
 		long l = System.currentTimeMillis();
 		url = cutForProxy(url);
-		int count = dao.executeUpdate("delete from Urls_failed where url=:url", Collections.singletonMap("url", url));
-		msg(">>>>>>>>>logSucceedUrl:	{0}	{1}	Takes:{2}", url, count, (System.currentTimeMillis() - l));
+		synchronized (getLockObject(url)) {
+			int count = dao.executeUpdate("delete from Urls_failed where url=:url",
+					Collections.singletonMap("url", url));
+			msg(">>>>>>>>>logSucceedUrl:	{0}	{1}	Takes:{2}", url, count, (System.currentTimeMillis() - l));
+		}
 	}
 
 	@Override
@@ -473,10 +485,12 @@ public class Store_ElasticSearch implements IStore {
 						result.put("continue", false);
 						result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.getMsg());
 					} else {
-						findOne.setCount(url_fail_retry_begin);
-						findOne.setTime(new Date());
-						dao.merge(findOne);
-						msg(">>>>>>>>>connectCheck:	{0}	{1}", url, findOne.getCount());
+						synchronized (getLockObject(url)) {
+							findOne.setCount(url_fail_retry_begin);
+							findOne.setTime(new Date());
+							dao.merge(findOne);
+							msg(">>>>>>>>>connectCheck:	{0}	{1}", url, findOne.getCount());
+						}
 					}
 				}
 			}

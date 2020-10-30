@@ -31,6 +31,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException.NotFound;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
 	boolean inited = false;
@@ -77,6 +79,12 @@ public class Store_ElasticSearch implements IStore {
 				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 			}
 			msg(rst);
+			try {
+				msg("number_of_replicas:	" + httpUtil.doLocalPutUtf8Json("http://192.168.0.237:9200/_settings",
+						JsonUtil.toJson(Collections.singletonMap("number_of_replicas", 0))));
+			} catch (Throwable e) {
+				e.printStackTrace();
+			}
 			for (String index : new String[] { "md", "html"
 //					, "last", "urls_failed", "test"
 			}) {
@@ -114,6 +122,7 @@ public class Store_ElasticSearch implements IStore {
 
 	@Override
 	public String getLocalHtml(final String id, final String page) throws Throwable {
+		long l = System.currentTimeMillis();
 		String key = getKey(id, page);
 		ESMap _source;
 		try {
@@ -124,6 +133,8 @@ public class Store_ElasticSearch implements IStore {
 		} catch (NotFound notFound) {
 			_source = null;
 		}
+		l = System.currentTimeMillis() - l;
+		long z = System.currentTimeMillis();
 		String result = null;
 		if (null != _source) {
 			String zip = _source.get("context_zip", String.class);
@@ -136,7 +147,7 @@ public class Store_ElasticSearch implements IStore {
 					details.put("tid", id);
 					details.put("id", id);
 					if (StringUtils.isEmpty(details.get("title")))
-						details.put("id", (String) _source.get("title"));
+						details.put("title", (String) _source.get("title"));
 					result = JsoupAnalysisor.restoreToHtml(details);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -146,9 +157,14 @@ public class Store_ElasticSearch implements IStore {
 				result = _source.get("context", String.class);
 			}
 		}
+		z = System.currentTimeMillis() - z;
+		long r = System.currentTimeMillis();
 		if (null != result) {
 			result = replaceLocalHtmlUrl(result).html();
 		}
+		r = System.currentTimeMillis() - r;
+		msg("getLocalHtml lookup:{0}	zip:{1}	replace:{2}	({3}_{4}){5}", l, z, r, id, page,
+				null == _source ? "" : _source.get("title"));
 		return result;
 	}
 

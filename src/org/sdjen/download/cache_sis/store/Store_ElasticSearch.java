@@ -234,10 +234,9 @@ public class Store_ElasticSearch implements IStore {
 	public String getMD5_Path(String key) throws Throwable {
 		ESMap _source;
 		try {
-			_source = JsonUtil
-					.toObject(httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
-							new EntryData<String, String>().put("key", key).getData()), ESMap.class)
-					.get("_source", ESMap.class);
+			_source = JsonUtil.toObject(
+					httpUtil.doLocalGet(path_es_start + "md/_doc/{key}", Collections.singletonMap("key", key)),
+					ESMap.class).get("_source", ESMap.class);
 		} catch (NotFound notFound) {
 			_source = null;
 		}

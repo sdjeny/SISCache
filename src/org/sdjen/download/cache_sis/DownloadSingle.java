@@ -376,14 +376,16 @@ public class DownloadSingle {
 	// lock_w_replace.unlock();
 	// }
 
-	private synchronized void replace(org.jsoup.nodes.Element element, String attributeKey, String newAttribute) {
-		String s = element.attr(attributeKey);
-		if (!newAttribute.equals(s)) {
-			if (!newAttribute.startsWith("http"))
-				newAttribute = "../../../" + newAttribute;
-			// System.out.println(attributeKey + " " + s + " -> " +
-			// newAttribute);
-			element.attr(attributeKey, newAttribute);
+	private void replace(org.jsoup.nodes.Element element, String attributeKey, String newAttribute) {
+		synchronized (element) {
+			String s = element.attr(attributeKey);
+			if (!newAttribute.equals(s)) {
+				if (!newAttribute.startsWith("http"))
+					newAttribute = "../../../" + newAttribute;
+				// System.out.println(attributeKey + " " + s + " -> " +
+				// newAttribute);
+				element.attr(attributeKey, newAttribute);
+			}
 		}
 	}
 
@@ -442,7 +444,7 @@ public class DownloadSingle {
 						long fs = System.currentTimeMillis();
 						store.saveMD5(md5, result);
 						fs = System.currentTimeMillis() - fs;
-						logger.debug("	md5{}	lookup:{}	download:{}	save:{}	+{}	->{}", fmd, fl, fd, fs, url,
+						logger.debug("	md5:{}	lookup:{}	download:{}	save:{}	+{}	->{}", fmd, fl, fd, fs, url,
 								result);
 					}
 					setResult(result);

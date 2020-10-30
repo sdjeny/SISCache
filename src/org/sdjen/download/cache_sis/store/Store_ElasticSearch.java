@@ -82,7 +82,7 @@ public class Store_ElasticSearch implements IStore {
 			}) {
 				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(path_es_start + index + "/_doc/_init_", "{}"));
 			}
-			msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/"//
+			msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/?include_type_name=true"//
 					, JsonUtil.toJson(//
 							ESMap.get()//
 									.set("properties", ESMap.get()//

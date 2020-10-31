@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Resource;
 
 import org.jsoup.Jsoup;
-import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;

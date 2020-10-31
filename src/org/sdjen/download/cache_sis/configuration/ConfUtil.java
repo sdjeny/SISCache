@@ -1,4 +1,4 @@
-package org.sdjen.download.cache_sis.conf;
+package org.sdjen.download.cache_sis.configuration;
 
 import java.io.File;
 import java.io.FileReader;

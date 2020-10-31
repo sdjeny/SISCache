@@ -8,7 +8,7 @@ import java.util.Map;
 
 import org.sdjen.download.cache_sis.DownloadSingle;
 import org.sdjen.download.cache_sis.ESMap;
-import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.log.LogUtil;

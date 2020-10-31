@@ -12,6 +12,7 @@ import java.util.zip.DataFormatException;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.ESMap;
+import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.http.DefaultCss;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
@@ -34,10 +35,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class CopyESOToESN {
 	final static Logger logger = LoggerFactory.getLogger(CopyESOToESN.class);
-	@Value("${siscache.conf.copy_es_mongo_unit_limit}")
-	private int size = 300;
-	@Value("${siscache.conf.path_es_start}")
-	private String path_es_start;
+	@Autowired
+	private ConfigMain configMain;
 	@Autowired
 	private HttpUtil httpUtil;
 	@Resource(name = "Store_Mongodb")
@@ -157,7 +156,7 @@ public class CopyESOToESN {
 		query.addCriteria(Criteria.where("key").gt(from));
 		Object total = mongoTemplate.count(query, "md");
 //		query.skip(0);
-		query.limit(size);
+		query.limit(configMain.getCopy_unit_limit());
 		query.with(Sort.by(Order.asc("key")));
 		List<Map> hits = mongoTemplate.find(query, Map.class, "md");
 		long l = System.currentTimeMillis() - startTime;
@@ -180,7 +179,7 @@ public class CopyESOToESN {
 		query.addCriteria(Criteria.where("id").gt(from));
 		Object total = mongoTemplate.count(query, "htmldoc");
 //		query.skip(0);
-		query.limit(size);
+		query.limit(configMain.getCopy_unit_limit());
 		query.with(Sort.by(Order.asc("id")));
 		query.fields().include("id");
 		List<Map> ms = mongoTemplate.find(query, Map.class, "htmldoc");

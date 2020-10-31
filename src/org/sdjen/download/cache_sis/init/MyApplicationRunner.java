@@ -2,7 +2,7 @@ package org.sdjen.download.cache_sis.init;
 
 import javax.annotation.Resource;
 
-import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.InitStartTimer;
 import org.slf4j.Logger;

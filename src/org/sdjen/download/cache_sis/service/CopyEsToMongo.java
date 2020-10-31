@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.ESMap;
+import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
@@ -26,10 +27,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class CopyEsToMongo {
 	final static Logger logger = LoggerFactory.getLogger(CopyEsToMongo.class);
-	@Value("${siscache.conf.copy_es_mongo_unit_limit}")
-	private int size = 300;
-	@Value("${siscache.conf.path_es_start}")
-	private String path_es_start;
+	@Autowired
+	private ConfigMain configMain;
 	@Autowired
 	private HttpUtil httpUtil;
 	@Resource(name = "Store_Mongodb")
@@ -107,11 +106,11 @@ public class CopyEsToMongo {
 		params.put("sort", Arrays.asList(//
 				ESMap.get().set("path.keyword", ESMap.get().set("order", "asc"))//
 		));
-		params.put("size", size);
+		params.put("size", configMain.getCopy_unit_limit());
 		params.put("from", 0);
 		String json = JsonUtil.toJson(params);
 //		logger.info("{}	{}", type, json);
-		json = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search", json);
+		json = httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "md/_doc/_search", json);
 //		logger.info("{}	{}", type, json);
 		long l = System.currentTimeMillis() - startTime;
 		ESMap hits = JsonUtil.toObject(json, ESMap.class).get("hits", ESMap.class);
@@ -146,9 +145,9 @@ public class CopyEsToMongo {
 		params.put("sort", Arrays.asList(//
 				ESMap.get().set("id", ESMap.get().set("order", "asc"))//
 		));
-		params.put("size", size);
+		params.put("size", configMain.getCopy_unit_limit());
 		params.put("from", 0);
-		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params));
+		String js = httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "html/_doc/_search", JsonUtil.toJson(params));
 		long l = System.currentTimeMillis() - startTime;
 		ESMap hits = JsonUtil.toObject(js, ESMap.class).get("hits", ESMap.class);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();

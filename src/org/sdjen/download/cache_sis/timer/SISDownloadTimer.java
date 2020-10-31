@@ -10,7 +10,7 @@ import java.util.TimerTask;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.DownloadList;
-import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

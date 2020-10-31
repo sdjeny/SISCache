@@ -7,7 +7,7 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfUtil;
 
 public class LogUtil {
 	public static LogUtil errLog;

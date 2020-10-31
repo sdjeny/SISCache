@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.ESMap;
+import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
@@ -27,8 +28,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class CopyEsToBck {
 	final static Logger logger = LoggerFactory.getLogger(CopyEsToBck.class);
-	@Value("${siscache.conf.copy_es_mongo_unit_limit}")
-	private int size = 300;
+	@Autowired
+	private ConfigMain configMain;
 	@Autowired
 	private HttpUtil httpUtil;
 	@Resource(name = "Store_ElasticSearch")
@@ -122,7 +123,7 @@ public class CopyEsToBck {
 		params.put("sort", Arrays.asList(//
 				ESMap.get().set("path.keyword", ESMap.get().set("order", "asc"))//
 		));
-		params.put("size", size);
+		params.put("size", configMain.getCopy_unit_limit());
 		params.put("from", 0);
 		String json = JsonUtil.toJson(params);
 		json = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_md/_doc/_search", json);
@@ -169,7 +170,7 @@ public class CopyEsToBck {
 		params.put("sort", Arrays.asList(//
 				ESMap.get().set("id", ESMap.get().set("order", "asc"))//
 		));
-		params.put("size", size);
+		params.put("size", configMain.getCopy_unit_limit());
 		params.put("from", 0);
 		String js = httpUtil.doLocalPostUtf8Json("http://192.168.0.237:9200/siscache_html/_doc/_search",
 				JsonUtil.toJson(params));

@@ -1,13 +1,17 @@
-package org.sdjen.download.cache_sis.conf;
+package org.sdjen.download.cache_sis.configuration;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import org.sdjen.download.cache_sis.json.JsonUtil;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 @Configuration
 @EnableAsync
@@ -25,15 +29,18 @@ public class TaskPoolConfig {
 	private int queue_capacity = 5;
 	@Value("${siscache.conf.async.seconds_alive}")
 	private int seconds_alive = 6;
+	@Autowired
+	private ConfigMain configMain;
 
 	@Bean("taskExecutor")
 	public Executor taskExecutro() {
+		System.out.println("taskExecutro:	" + configMain);
 		ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-		taskExecutor.setCorePoolSize(10);//配置核心线程数
-		taskExecutor.setMaxPoolSize(50);//配置最大线程数
-		taskExecutor.setQueueCapacity(200);//配置队列大小
+		taskExecutor.setCorePoolSize(10);// 配置核心线程数
+		taskExecutor.setMaxPoolSize(50);// 配置最大线程数
+		taskExecutor.setQueueCapacity(200);// 配置队列大小
 		taskExecutor.setKeepAliveSeconds(60);
-		taskExecutor.setThreadNamePrefix("async-");//配置线程池中的线程的名称前缀
+		taskExecutor.setThreadNamePrefix("async-");// 配置线程池中的线程的名称前缀
 		taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
 		taskExecutor.setAwaitTerminationSeconds(60);
 		return taskExecutor;

@@ -18,6 +18,7 @@ import javax.annotation.Resource;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.ESMap;
+import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.entity.Last;
@@ -27,13 +28,11 @@ import org.sdjen.download.cache_sis.tool.ZipUtil;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.sdjen.download.cache_sis.util.JsoupAnalysisor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException.NotFound;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
@@ -42,14 +41,8 @@ public class Store_ElasticSearch implements IStore {
 	private HttpUtil httpUtil;
 	@Resource(name = "Store_Mongodb")
 	private IStore store;
-	@Value("${siscache.conf.path_es_start}")
-	private String path_es_start;
-	@Value("${siscache.conf.url_fail_stop}")
-	private int url_fail_stop = 10;
-	@Value("${siscache.conf.url_fail_retry_begin}")
-	private int url_fail_retry_begin = 5;
-	@Value("${siscache.conf.url_fail_retry_in_hours}")
-	private int url_fail_retry_in_hours = 3;
+	@Autowired
+	private ConfigMain configMain;
 	private MessageDigest md5Digest;
 	private static Set<String> proxy_urls;
 	private Map<String, Object> checkConnectUrls;
@@ -74,17 +67,17 @@ public class Store_ElasticSearch implements IStore {
 			postStr.append("\n");
 			String rst;
 			try {
-				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
+				rst = httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "html/_doc/_bulk/", postStr.toString());
 			} catch (Throwable e) {
 				msg("ES未启动，10分钟后重试1次");
 				Thread.sleep(600000);// 300000
-				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
+				rst = httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "html/_doc/_bulk/", postStr.toString());
 			}
 			msg(rst);
 			for (String index : new String[] { "md", "html"
 //					, "last", "urls_failed", "test"
 			}) {
-				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(path_es_start + index + "/_doc/_init_", "{}"));
+				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + index + "/_doc/_init_", "{}"));
 			}
 			try {
 				msg("number_of_replicas:	" + httpUtil.doLocalPutUtf8Json("http://192.168.0.237:9200/_settings",
@@ -93,7 +86,7 @@ public class Store_ElasticSearch implements IStore {
 				e.printStackTrace();
 			}
 			try {
-				msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/"//
+				msg("html:	" + httpUtil.doLocalPutUtf8Json(configMain.getPath_es_start() + "html/_doc/_mapping/"//
 						, JsonUtil.toJson(//
 								ESMap.get()//
 										.set("properties", ESMap.get()//
@@ -112,7 +105,7 @@ public class Store_ElasticSearch implements IStore {
 						)//
 				));
 			} catch (Throwable e) {
-				msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/?include_type_name=true"//
+				msg("html:	" + httpUtil.doLocalPutUtf8Json(configMain.getPath_es_start() + "html/_doc/_mapping/?include_type_name=true"//
 						, JsonUtil.toJson(//
 								ESMap.get()//
 										.set("properties", ESMap.get()//
@@ -180,7 +173,7 @@ public class Store_ElasticSearch implements IStore {
 		ESMap _source;
 		try {
 			_source = JsonUtil
-					.toObject(httpUtil.doLocalGet(path_es_start + "html/_doc/{key}",
+					.toObject(httpUtil.doLocalGet(configMain.getPath_es_start() + "html/_doc/{key}",
 							new EntryData<String, String>().put("key", key).getData()), ESMap.class)
 					.get("_source", ESMap.class);
 		} catch (NotFound notFound) {
@@ -231,7 +224,7 @@ public class Store_ElasticSearch implements IStore {
 			}
 		}
 		data.put("context_zip", ZipUtil.bytesToString(ZipUtil.compress(JsonUtil.toJson(details))));
-		String r = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/" + key, JsonUtil.toJson(data));
+		String r = httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "html/_doc/" + key, JsonUtil.toJson(data));
 		return data;
 	}
 
@@ -244,7 +237,7 @@ public class Store_ElasticSearch implements IStore {
 		json.put("url", url);
 		json.put("path", path);
 		json.put("type", "url");
-		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/" + md5, JsonUtil.toJson(json));
+		String s = httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "md/_doc/" + md5, JsonUtil.toJson(json));
 	}
 
 	@Override
@@ -254,7 +247,7 @@ public class Store_ElasticSearch implements IStore {
 		json.put("key", md5);
 		json.put("path", path);
 		json.put("type", "path");
-		String s = httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/" + md5, JsonUtil.toJson(json));
+		String s = httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "md/_doc/" + md5, JsonUtil.toJson(json));
 	}
 
 	@Override
@@ -262,7 +255,7 @@ public class Store_ElasticSearch implements IStore {
 		ESMap _source;
 		try {
 			_source = JsonUtil.toObject(
-					httpUtil.doLocalGet(path_es_start + "md/_doc/{key}", Collections.singletonMap("key", key)),
+					httpUtil.doLocalGet(configMain.getPath_es_start() + "md/_doc/{key}", Collections.singletonMap("key", key)),
 					ESMap.class).get("_source", ESMap.class);
 		} catch (NotFound notFound) {
 			_source = null;
@@ -282,7 +275,7 @@ public class Store_ElasticSearch implements IStore {
 		ESMap _source;
 		try {
 			_source = JsonUtil.toObject(
-					httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
+					httpUtil.doLocalGet(configMain.getPath_es_start() + "md/_doc/{key}",
 							new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
 					ESMap.class).get("_source", ESMap.class);
 		} catch (NotFound notFound) {
@@ -396,7 +389,7 @@ public class Store_ElasticSearch implements IStore {
 			params.put("sort", orders);
 		String jsonParams = JsonUtil.toJson(params);
 		result.put("json_params", jsonParams);
-		String js = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", jsonParams);
+		String js = httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "html/_doc/_search", jsonParams);
 		ESMap r = JsonUtil.toObject(js, ESMap.class);
 		result.put("total", r.get("hits", ESMap.class).get("total"));
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm");
@@ -522,13 +515,13 @@ public class Store_ElasticSearch implements IStore {
 			if (null != findOne) {
 				int count = findOne.getCount();
 				result.put("found", count > 0);
-				if (count > url_fail_stop) {
-					if (System.currentTimeMillis() - findOne.getTime().getTime() < 3600000 * url_fail_retry_in_hours) {
+				if (count > configMain.getUrl_fail_stop()) {
+					if (System.currentTimeMillis() - findOne.getTime().getTime() < 3600000 * configMain.getUrl_fail_retry_in_hours()) {
 						result.put("continue", false);
-						result.put("msg", url_fail_retry_in_hours + "小时内禁止连接：" + findOne.getMsg());
+						result.put("msg", configMain.getUrl_fail_retry_in_hours() + "小时内禁止连接：" + findOne.getMsg());
 					} else {
 						synchronized (getLockObject(url)) {
-							findOne.setCount(url_fail_retry_begin);
+							findOne.setCount(configMain.getUrl_fail_retry_begin());
 							findOne.setTime(new Date());
 							dao.merge(findOne);
 							msg(">>>>>>>>>connectCheck:	{0}	{1}", url, findOne.getCount());
@@ -628,7 +621,7 @@ public class Store_ElasticSearch implements IStore {
 			);
 //			params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
 			_source = getSource(
-					httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params)));
+					httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "html/_doc/_search", JsonUtil.toJson(params)));
 		} catch (NotFound notFound) {
 			_source = null;
 		}
@@ -657,7 +650,7 @@ public class Store_ElasticSearch implements IStore {
 			);
 			params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
 			_source = getSource(
-					httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search", JsonUtil.toJson(params)));
+					httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "md/_doc/_search", JsonUtil.toJson(params)));
 		} catch (NotFound notFound) {
 			_source = null;
 		}
@@ -685,7 +678,7 @@ public class Store_ElasticSearch implements IStore {
 			);
 			params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
 			_source = getSource(
-					httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search", JsonUtil.toJson(params)));
+					httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "md/_doc/_search", JsonUtil.toJson(params)));
 		} catch (NotFound notFound) {
 			_source = null;
 		}

@@ -19,14 +19,14 @@ import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfUtil;
 
 public class DownloadSingle_jre {
-	private String html = "";// ´æ·ÅÍøÒ³HTMLÔ´´úÂë
-	private int cssCount = 0;// ÏÂÔØ³É¹¦µÄÑùÊ½±íÎÄ¼ş¸öÊı
-	private int jsCount = 0;// ÏÂÔØ³É¹¦µÄJavaScriptÎÄ¼ş¸öÊı
-	private int normalImageCount = 0;// ÆÕÍ¨Í¼Æ¬ÊıÁ¿
-	private int backgroundImageCount = 0;// ±³¾°Í¼Æ¬ÊıÁ¿
+	private String html = "";// ï¿½ï¿½ï¿½ï¿½ï¿½Ò³HTMLÔ´ï¿½ï¿½ï¿½ï¿½
+	private int cssCount = 0;// ï¿½ï¿½ï¿½Ø³É¹ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
+	private int jsCount = 0;// ï¿½ï¿½ï¿½Ø³É¹ï¿½ï¿½ï¿½JavaScriptï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
+	private int normalImageCount = 0;// ï¿½ï¿½Í¨Í¼Æ¬ï¿½ï¿½ï¿½ï¿½
+	private int backgroundImageCount = 0;// ï¿½ï¿½ï¿½ï¿½Í¼Æ¬ï¿½ï¿½ï¿½ï¿½
 	private boolean need_css = true;
 	private boolean need_js = true;
 	private boolean need_images = true;
@@ -49,7 +49,7 @@ public class DownloadSingle_jre {
 		need_images = Boolean.valueOf(iniUtil.getProperties().getProperty("need_images"));
 		// String proxy = iniUtil.getProperties().getProperty("proxy");
 		// if(null != proxy) {
-		// showMsg("´úÀí£º{0}", proxy);
+		// showMsg("ï¿½ï¿½ï¿½ï¿½{0}", proxy);
 		// System.setProperty("http.nonProxyHosts", "127.0.0.1:9666 | 127.0.0.1:8580");
 		// String[] s = iniUtil.getProperties().getProperty("proxy").split(":");
 		// System.setProperty("http.proxyHost", "127.0.0.1");
@@ -57,8 +57,8 @@ public class DownloadSingle_jre {
 		// }
 		try {
 			String[] s = iniUtil.getProperties().getProperty("proxy").split(":");
-			proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(s[0], Integer.valueOf(s[1]))); // http ´úÀí
-			showMsg("´úÀí£º{0}", proxy);
+			proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(s[0], Integer.valueOf(s[1]))); // http ï¿½ï¿½ï¿½ï¿½
+			showMsg("ï¿½ï¿½ï¿½ï¿½{0}", proxy);
 		} catch (Exception e) {
 		}
 		return this;
@@ -75,7 +75,7 @@ public class DownloadSingle_jre {
 	}
 
 	/**
-	 * ¿ªÊ¼ÏÂÔØ
+	 * ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
 	 * 
 	 * @throws IOException
 	 */
@@ -83,49 +83,49 @@ public class DownloadSingle_jre {
 		File savePath = new File(save_path);
 		File newFile = new File(savePath.toString() + "/" + save_name);
 		if (newFile.exists()) {
-			showMsg("ÒÑ´æÔÚ	{0}", newFile);
+			showMsg("ï¿½Ñ´ï¿½ï¿½ï¿½	{0}", newFile);
 			return;
 		}
-		// ¼ÆÊıÇåÁã
-		cssCount = 0;// ÏÂÔØ³É¹¦µÄÑùÊ½±íÎÄ¼ş¸öÊı
-		jsCount = 0;// ÏÂÔØ³É¹¦µÄJavaScriptÎÄ¼ş¸öÊı
-		normalImageCount = 0;// ÆÕÍ¨Í¼Æ¬ÊıÁ¿
-		backgroundImageCount = 0;// ±³¾°Í¼Æ¬ÊıÁ¿
-		// ´´½¨±ØÒªµÄÒ»Ğ©ÎÄ¼ş¼Ğ
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		cssCount = 0;// ï¿½ï¿½ï¿½Ø³É¹ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
+		jsCount = 0;// ï¿½ï¿½ï¿½Ø³É¹ï¿½ï¿½ï¿½JavaScriptï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½
+		normalImageCount = 0;// ï¿½ï¿½Í¨Í¼Æ¬ï¿½ï¿½ï¿½ï¿½
+		backgroundImageCount = 0;// ï¿½ï¿½ï¿½ï¿½Í¼Æ¬ï¿½ï¿½ï¿½ï¿½
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Ò»Ğ©ï¿½Ä¼ï¿½ï¿½ï¿½
 		if (!savePath.exists())
-			savePath.mkdir();// Èç¹ûÎÄ¼ş¼Ğ²»´æÔÚ£¬Ôò´´½¨
+			savePath.mkdir();// ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½Ğ²ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ò´´½ï¿½
 		File css = new File(savePath + "/" + sub_css);
 		File js = new File(savePath + "/" + sub_js);
 		File images = new File(savePath + "/" + sub_images);
 		if (!css.exists()) {
 			css.mkdir();
-			showMsg("cssÎÄ¼ş¼Ğ²»´æÔÚ£¬ÒÑ´´½¨£¡");
+			showMsg("cssï¿½Ä¼ï¿½ï¿½Ğ²ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½");
 		}
 		if (!js.exists()) {
 			js.mkdir();
-			showMsg("jsÎÄ¼ş¼Ğ²»´æÔÚ£¬ÒÑ´´½¨£¡");
+			showMsg("jsï¿½Ä¼ï¿½ï¿½Ğ²ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½");
 		}
 		if (!images.exists()) {
 			images.mkdir();
-			showMsg("imagesÎÄ¼ş¼Ğ²»´æÔÚ£¬ÒÑ´´½¨£¡");
+			showMsg("imagesï¿½Ä¼ï¿½ï¿½Ğ²ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½ï¿½ï¿½");
 		}
-		// ÏÂÔØÍøÒ³html´úÂë
-		showMsg("¿ªÊ¼ÏÂÔØÍøÒ³HTMLÔ´´úÂë£¡{0}", url);
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³htmlï¿½ï¿½ï¿½ï¿½
+		showMsg("ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³HTMLÔ´ï¿½ï¿½ï¿½ë£¡{0}", url);
 		html = getHTML(url, chatset);
-		// showMsg("ÍøÒ³HTMLÏÂÔØ³É¹¦£¡");
+		// showMsg("ï¿½ï¿½Ò³HTMLï¿½ï¿½ï¿½Ø³É¹ï¿½ï¿½ï¿½");
 		if (need_css) {
-			// showMsg("¿ªÊ¼ÏÂÔØÑùÊ½±íÎÄ¼ş£¡");
+			// showMsg("ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½");
 			regx("<link.*type=\"text/css\".*>", "href=\"", url, sub_css);
 		}
 		if (need_js) {
-			// showMsg("¿ªÊ¼ÏÂÔØJavaScriptÎÄ¼ş£¡");
+			// showMsg("ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½JavaScriptï¿½Ä¼ï¿½ï¿½ï¿½");
 			regx("<script.*javascript.*>", "src=\"", url, sub_js);
 		}
 		if (need_images) {
-			// showMsg("¿ªÊ¼ÏÂÔØÍøÒ³Ç°¾°Í¼Æ¬ÎÄ¼ş£¡");
+			// showMsg("ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³Ç°ï¿½ï¿½Í¼Æ¬ï¿½Ä¼ï¿½ï¿½ï¿½");
 			regx("<img.*src.*>", "src=\"", url, sub_images);
 		}
-		// ±£´æÍøÒ³HTMLµ½ÎÄ¼ş
+		// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³HTMLï¿½ï¿½ï¿½Ä¼ï¿½
 		try {
 			newFile.createNewFile();
 			OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(newFile), chatset);
@@ -137,73 +137,73 @@ public class DownloadSingle_jre {
 			e.printStackTrace();
 		}
 		if (cssCount > 0)
-			showMsg("ÀÛ¼ÆÏÂÔØcssÎÄ¼ş	{0}", cssCount);
+			showMsg("ï¿½Û¼ï¿½ï¿½ï¿½ï¿½ï¿½cssï¿½Ä¼ï¿½	{0}", cssCount);
 		if (jsCount > 0)
-			showMsg("ÀÛ¼ÆÏÂÔØJavaScriptÎÄ¼ş	{0}", jsCount);
+			showMsg("ï¿½Û¼ï¿½ï¿½ï¿½ï¿½ï¿½JavaScriptï¿½Ä¼ï¿½	{0}", jsCount);
 		if (normalImageCount > 0)
-			showMsg("ÀÛ¼ÆÏÂÔØÇ°¾°Í¼Æ¬	{0}", normalImageCount);
+			showMsg("ï¿½Û¼ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½Í¼Æ¬	{0}", normalImageCount);
 		if (backgroundImageCount > 0)
-			showMsg("ÀÛ¼ÆÏÂÔØ±³¾°Í¼Æ¬	{0}", backgroundImageCount);
+			showMsg("ï¿½Û¼ï¿½ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½Í¼Æ¬	{0}", backgroundImageCount);
 	}
 
 	/**
-	 * ×îºËĞÄµÄ´úÂë£¬´ÓÍøÒ³htmlÖĞ²éÕÒ·ûºÏÌõ¼şµÄÍ¼Æ¬¡¢css¡¢jsµÈÎÄ¼ş²¢ÅúÁ¿ÏÂÔØ
+	 * ï¿½ï¿½ï¿½ï¿½ÄµÄ´ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½Ò³htmlï¿½Ğ²ï¿½ï¿½Ò·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼Æ¬ï¿½ï¿½cssï¿½ï¿½jsï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 * 
 	 * @param regx
-	 *            ¼ìË÷ÄÚÈİµÄÒ»¼¶ÕıÔò±í´ïÊ½£¬½á¹ûÊÇº¬¿ªÊ¼¡¢½áÊø±êÇ©µÄÕû¸ö×Ö·û´®£¬ÀıÈç£º<script.*javascript.*>
+	 *            ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İµï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Çºï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ç£º<script.*javascript.*>
 	 * @param head
-	 *            ÒÑ¾­¼ìË÷³öµÄ±êÇ©¿éÖĞÒªÌáÈ¡µÄ×Ö·ûµÄÍ·²¿£¬°üº¬Ç°ÃæµÄË«ÒıºÅ£¬Èç£ºsrc="
+	 *            ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½Ç©ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½È¡ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ë«ï¿½ï¿½ï¿½Å£ï¿½ï¿½ç£ºsrc="
 	 * @param url
-	 *            ÒªÏÂÔØµÄÍøÒ³ÍêÕûµØÖ·£¬Èç£ºhttp://www.hua.com
+	 *            Òªï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½Ò³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ç£ºhttp://www.hua.com
 	 * @param folderName
-	 *            ÎÄ¼ş¼ĞÃû£¬Èç£ºcss
+	 *            ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ç£ºcss
 	 */
 	private void regx(String regx, String head, String url, String folderName) {
-		// ÏÂÔØÄ³ÖÖ×ÊÔ´ÎÄ¼ş
-		Pattern pattern = Pattern.compile(regx);// ĞÂ½¨Ò»¸öÕıÔò±í´ïÊ½
-		Matcher matcher = pattern.matcher(html);// ¶ÔÍøÒ³Ô´´úÂë½øĞĞ²éÕÒÆ¥Åä
-		while (matcher.find()) {// ¶Ô·ûºÏÌõ¼şµÄ½á¹ûÖğÌõ×ö´¦Àí
+		// ï¿½ï¿½ï¿½ï¿½Ä³ï¿½ï¿½ï¿½ï¿½Ô´ï¿½Ä¼ï¿½
+		Pattern pattern = Pattern.compile(regx);// ï¿½Â½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½
+		Matcher matcher = pattern.matcher(html);// ï¿½ï¿½ï¿½ï¿½Ò³Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ²ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½
+		while (matcher.find()) {// ï¿½Ô·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 			Matcher matcherNew = Pattern.compile(head + ".*\"").matcher(matcher.group());
 			if (matcherNew.find()) {
-				// ¶ÔÓÚCSSÆ¥Åä£¬²éÕÒ³öµÄ½á¹ûĞÎÈç£ºhref="skins/default/css/base.css" rel="stylesheet"
+				// ï¿½ï¿½ï¿½ï¿½CSSÆ¥ï¿½ä£¬ï¿½ï¿½ï¿½Ò³ï¿½ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½ç£ºhref="skins/default/css/base.css" rel="stylesheet"
 				// type="text/css"
 				String myUrl = matcherNew.group();
-				myUrl = myUrl.replaceAll(head, "");// È¥µôÇ°ÃæµÄÍ·²¿£¬Èç£ºhref:"
-				myUrl = myUrl.substring(0, myUrl.indexOf("\""));// ´ÓµÚÒ»¸öÒıºÅ¿ªÊ¼½ØÈ¡ÕæÕıµÄÄÚÈİ£¬Èç£ºskins/default/css/base.css
-				String myName = getUrlFileName(myUrl);// »ñÈ¡ÑùÊ½±íÎÄ¼şµÄÎÄ¼şÃû£¬Èç£ºbase.css
-				html = html.replaceAll(myUrl, folderName + "/" + myName);// Ìæ»»htmlÎÄ¼şÖĞµÄ×ÊÔ´ÎÄ¼ş
-				myUrl = joinUrlPath(url, myUrl);// µÃµ½×îÖÕµÄ×ÊÔ´ÎÄ¼şURL£¬Èç£ºhttp://www.hua.com/skins/default/css/base.css
-				// showMsg("·¢ÉúµØ½¡¿µ£º"+myUrl);
-				// È¥µôÎÄ¼şÃû²»ºÏ·¨µÄÇé¿ö£¬²»ºÏ·¨µÄÎÄ¼şÃû×Ö·û»¹ÓĞºÃ¼¸¸ö£¬ÕâÀïÖ»Ëæ±ã¾ÙÀı¼¸¸ö
+				myUrl = myUrl.replaceAll(head, "");// È¥ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½ï¿½ï¿½ç£ºhref:"
+				myUrl = myUrl.substring(0, myUrl.indexOf("\""));// ï¿½Óµï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Å¿ï¿½Ê¼ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½ï¿½ç£ºskins/default/css/base.css
+				String myName = getUrlFileName(myUrl);// ï¿½ï¿½È¡ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ç£ºbase.css
+				html = html.replaceAll(myUrl, folderName + "/" + myName);// ï¿½æ»»htmlï¿½Ä¼ï¿½ï¿½Ğµï¿½ï¿½ï¿½Ô´ï¿½Ä¼ï¿½
+				myUrl = joinUrlPath(url, myUrl);// ï¿½Ãµï¿½ï¿½ï¿½ï¿½Õµï¿½ï¿½ï¿½Ô´ï¿½Ä¼ï¿½URLï¿½ï¿½ï¿½ç£ºhttp://www.hua.com/skins/default/css/base.css
+				// showMsg("ï¿½ï¿½ï¿½ï¿½ï¿½Ø½ï¿½ï¿½ï¿½ï¿½ï¿½"+myUrl);
+				// È¥ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ĞºÃ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 				if (!myName.contains("?") && !myName.contains("\"") && !myName.contains("/")) {
-					if (downloadFile(myUrl, save_path + "/" + folderName + "/" + myName)) {// ¿ªÊ¼ÏÂÔØÎÄ¼ş
-						if (regx.startsWith("<img"))// Èç¹ûÊÇÏÂÔØÇ°¾°Í¼Æ¬ÎÄ¼ş
+					if (downloadFile(myUrl, save_path + "/" + folderName + "/" + myName)) {// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½
+						if (regx.startsWith("<img"))// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½Í¼Æ¬ï¿½Ä¼ï¿½
 							normalImageCount++;
-						if (regx.startsWith("<script"))// Èç¹ûÊÇÏÂÔØJSÎÄ¼ş
+						if (regx.startsWith("<script"))// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½JSï¿½Ä¼ï¿½
 							jsCount++;
-						if (regx.startsWith("<link")) {// Èç¹ûÊÇÏÂÔØcssÎÄ¼ş
+						if (regx.startsWith("<link")) {// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½cssï¿½Ä¼ï¿½
 							cssCount++;
-							// ½«¸Õ¸ÕÏÂÔØµÄCSSÎÄ¼şÊµÀı»¯
+							// ï¿½ï¿½ï¿½Õ¸ï¿½ï¿½ï¿½ï¿½Øµï¿½CSSï¿½Ä¼ï¿½Êµï¿½ï¿½ï¿½ï¿½
 							File cssFile = new File(save_path + "/" + folderName + "/" + myName);
-							String txt = readFile(cssFile, chatset);// ¶ÁÈ¡CSSÎÄ¼şµÄÄÚÈİ£¬ÕâÀïÓÃÄ¬ÈÏµÄgb2312±àÂë XXX
-							// ¿ªÊ¼Æ¥Åä±³¾°Í¼Æ¬
+							String txt = readFile(cssFile, chatset);// ï¿½ï¿½È¡CSSï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½Ïµï¿½gb2312ï¿½ï¿½ï¿½ï¿½ XXX
+							// ï¿½ï¿½Ê¼Æ¥ï¿½ä±³ï¿½ï¿½Í¼Æ¬
 							Matcher matcherUrl = Pattern.compile("background:url\\(.*\\)").matcher(txt);
 							while (matcherUrl.find()) {
-								// È¥µôÇ°ÃæºÍºóÃæµÄ±ê¼Ç,µÃµ½µÄ½á¹ûÈç£º../images/ico_4.gif
+								// È¥ï¿½ï¿½Ç°ï¿½ï¿½Íºï¿½ï¿½ï¿½Ä±ï¿½ï¿½,ï¿½Ãµï¿½ï¿½Ä½ï¿½ï¿½ï¿½ç£º../images/ico_4.gif
 								String temp = matcherUrl.group().replaceAll("background:url\\(", "").replaceAll("\\)", "");
-								// Æ´½Ó³öÕæÕıµÄÍ¼Æ¬Â·¾¶£¬Èç£ºhttp://www.hua.com/skins/default/images/ico_4.gif
+								// Æ´ï¿½Ó³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼Æ¬Â·ï¿½ï¿½ï¿½ï¿½ï¿½ç£ºhttp://www.hua.com/skins/default/images/ico_4.gif
 								String backgroundUrl = joinUrlPath(myUrl, temp);
-								// »ñÈ¡±³¾°Í¼Æ¬µÄÎÄ¼şÃû£¬Èç£ºico_4.gif
+								// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Í¼Æ¬ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ç£ºico_4.gif
 								String backgroundFileName = getUrlFileName(backgroundUrl);
-								// ±³¾°Í¼Æ¬Òª±£´æµÄÂ·¾¶£¬Èç£ºc:/users\lxa\desktop\ÍøÒ³\images\ico_4.gif
+								// ï¿½ï¿½ï¿½ï¿½Í¼Æ¬Òªï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ç£ºc:/users\lxa\desktop\ï¿½ï¿½Ò³\images\ico_4.gif
 								String backgroundFilePath = save_path + "/" + sub_images + "/" + backgroundFileName;
-								if (!new File(backgroundFilePath).exists()) {// Èç¹û²»´æÔÚÍ¬ÃûÎÄ¼ş
-									if (downloadFile(backgroundUrl, backgroundFilePath)) {// ¿ªÊ¼ÏÂÔØ±³¾°Í¼Æ¬
-										backgroundImageCount++;// ¼ÆÊı¼Ó1
-										showMsg("³É¹¦ÏÂÔØ±³¾°Í¼Æ¬£º{0}", backgroundFileName);
+								if (!new File(backgroundFilePath).exists()) {// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½Ä¼ï¿½
+									if (downloadFile(backgroundUrl, backgroundFilePath)) {// ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½Í¼Æ¬
+										backgroundImageCount++;// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½1
+										showMsg("ï¿½É¹ï¿½ï¿½ï¿½ï¿½Ø±ï¿½ï¿½ï¿½Í¼Æ¬ï¿½ï¿½{0}", backgroundFileName);
 									}
 								} else {
-									showMsg("Ö¸¶¨ÎÄ¼ş¼ĞÒÑ´æÔÚÍ¬ÃûÎÄ¼ş£¬ÒÑÎªÄú×Ô¶¯Ìø¹ı£º{0}", backgroundFilePath);
+									showMsg("Ö¸ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½{0}", backgroundFilePath);
 								}
 							}
 						}
@@ -217,22 +217,22 @@ public class DownloadSingle_jre {
 		HttpURLConnection result;
 		if (null != proxy) {
 			result = (HttpURLConnection) new URL(spec).openConnection(proxy);
-			result.setRequestProperty("Content-Type", "text/html; charset=UTF-8"); // ÉèÖÃ´«µİµÄ±àÂë·½Ê½
+			result.setRequestProperty("Content-Type", "text/html; charset=UTF-8"); // ï¿½ï¿½ï¿½Ã´ï¿½ï¿½İµÄ±ï¿½ï¿½ë·½Ê½
 			result.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
 		} else
 			result = (HttpURLConnection) new URL(spec).openConnection();
-		// result.setRequestProperty("User-Agent", "MSIE 9.0");// ÉèÖÃ¿Í»§µÄä¯ÀÀÆ÷ÎªIE9
+		// result.setRequestProperty("User-Agent", "MSIE 9.0");// ï¿½ï¿½ï¿½Ã¿Í»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªIE9
 		return result;
 	}
 
 	/**
-	 * ¸ù¾İÖ¸¶¨µÄURLÏÂÔØhtml´úÂë
+	 * ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½URLï¿½ï¿½ï¿½ï¿½htmlï¿½ï¿½ï¿½ï¿½
 	 * 
 	 * @param pageURL
-	 *            ÍøÒ³µÄµØÖ·
+	 *            ï¿½ï¿½Ò³ï¿½Äµï¿½Ö·
 	 * @param encoding
-	 *            ±àÂë·½Ê½
-	 * @return ·µ»ØÍøÒ³µÄhtmlÄÚÈİ
+	 *            ï¿½ï¿½ï¿½ë·½Ê½
+	 * @return ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò³ï¿½ï¿½htmlï¿½ï¿½ï¿½ï¿½
 	 * @throws IOException
 	 */
 	private String getHTML(String pageURL, String encoding) throws IOException {
@@ -249,18 +249,18 @@ public class DownloadSingle_jre {
 	}
 
 	/**
-	 * ¸ù¾İURLÏÂÔØÄ³¸öÎÄ¼ş
+	 * ï¿½ï¿½ï¿½ï¿½URLï¿½ï¿½ï¿½ï¿½Ä³ï¿½ï¿½ï¿½Ä¼ï¿½
 	 * 
 	 * @param fileURL
-	 *            ÏÂÔØµØÖ·
+	 *            ï¿½ï¿½ï¿½Øµï¿½Ö·
 	 * @param filePath
-	 *            ´æ·ÅµÄÂ·¾¶
+	 *            ï¿½ï¿½Åµï¿½Â·ï¿½ï¿½
 	 */
 	private boolean downloadFile(String fileURL, String filePath) {
 		try {
 			File file = new File(filePath);
 			if (file.exists()) {
-				// showMsg("ÎÄ¼şÒÑ´æÔÚ£º {0}", filePath);
+				// showMsg("ï¿½Ä¼ï¿½ï¿½Ñ´ï¿½ï¿½Ú£ï¿½ {0}", filePath);
 				return false;
 			} else {
 				file.createNewFile();
@@ -275,23 +275,23 @@ public class DownloadSingle_jre {
 				fos.close();
 				is.close();
 				connection.disconnect();
-				showMsg("³É¹¦ÏÂÔØÎÄ¼ş£º	{0}", filePath);
+				showMsg("ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½	{0}", filePath);
 				return true;
 			}
 		} catch (IOException e) {
-			showMsg("¸ÃÎÄ¼ş²»´æÔÚ£º	{0}	{1}", fileURL, e);
+			showMsg("ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½	{0}	{1}", fileURL, e);
 			return false;
 		}
 	}
 
 	/**
-	 * ¶ÁÈ¡Ä³¸öÎÄ±¾ÎÄ¼şµÄÄÚÈİ
+	 * ï¿½ï¿½È¡Ä³ï¿½ï¿½ï¿½Ä±ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 * 
 	 * @param file
-	 *            Òª¶ÁÈ¡µÄÎÄ¼ş
+	 *            Òªï¿½ï¿½È¡ï¿½ï¿½ï¿½Ä¼ï¿½
 	 * @param encode
-	 *            ¶ÁÈ¡ÎÄ¼şµÄ±àÂë·½Ê½
-	 * @return ·µ»Ø¶ÁÈ¡µ½µÄÄÚÈİ
+	 *            ï¿½ï¿½È¡ï¿½Ä¼ï¿½ï¿½Ä±ï¿½ï¿½ë·½Ê½
+	 * @return ï¿½ï¿½ï¿½Ø¶ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 	 */
 	private String readFile(File file, String encode) {
 		try {
@@ -310,34 +310,34 @@ public class DownloadSingle_jre {
 	}
 
 	/**
-	 * »ñÈ¡URLÖĞ×îºóÃæµÄÕæÊµÎÄ¼şÃû
+	 * ï¿½ï¿½È¡URLï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½Ä¼ï¿½ï¿½ï¿½
 	 * 
 	 * @param url
-	 *            Èç£ºhttp://www.hua.com/bg.jpg
-	 * @return ·µ»Øbg.jpg
+	 *            ï¿½ç£ºhttp://www.hua.com/bg.jpg
+	 * @return ï¿½ï¿½ï¿½ï¿½bg.jpg
 	 */
 	private String getUrlFileName(String url) {
 		return url.split("/")[url.split("/").length - 1];
 	}
 
 	/**
-	 * »ñÈ¡URL²»´øÎÄ¼şÃûµÄÂ·¾¶
+	 * ï¿½ï¿½È¡URLï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½
 	 * 
 	 * @param url
-	 *            Èç£ºhttp://www.hua.com/bg.jpg
-	 * @return ·µ»Ø http://www.hua.com
+	 *            ï¿½ç£ºhttp://www.hua.com/bg.jpg
+	 * @return ï¿½ï¿½ï¿½ï¿½ http://www.hua.com
 	 */
 	private String getUrlPath(String url) {
 		return url.replaceAll("/" + getUrlFileName(url), "");
 	}
 
 	/**
-	 * Æ´½ÓURLÂ·¾¶ºÍÎÄ¼şÃû£¬×¢Òâ£ºÒÔ../»òÕß/¿ªÍ·µÄfileName¶¼ÒªÍËÒ»²ãÄ¿Â¼
+	 * Æ´ï¿½ï¿½URLÂ·ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½â£ºï¿½ï¿½../ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½Í·ï¿½ï¿½fileNameï¿½ï¿½Òªï¿½ï¿½Ò»ï¿½ï¿½Ä¿Â¼
 	 * 
 	 * @param url
-	 *            Èç£ºhttp://www.hua.com/product/9010753.html
+	 *            ï¿½ç£ºhttp://www.hua.com/product/9010753.html
 	 * @param fileName
-	 *            Èç£º../skins/default/css/base.css
+	 *            ï¿½ç£º../skins/default/css/base.css
 	 * @return http://www.hua.com/skins/default/css/base.css
 	 */
 	private String joinUrlPath(String url, String fileName) {
@@ -345,11 +345,11 @@ public class DownloadSingle_jre {
 		// showMsg("fileName:"+fileName);
 		if (fileName.startsWith("http://") || fileName.startsWith("https://"))
 			return fileName;
-		// Èç¹ûÈ¥µô¡°http://¡±Ç°×ººó»¹°üº¬¡°/¡±·û£¬ËµÃ÷ÒªÍËÒ»²ãÄ¿Â¼£¬¼´È¥µôµ±Ç°ÎÄ¼şÃû
+		// ï¿½ï¿½ï¿½È¥ï¿½ï¿½ï¿½ï¿½http://ï¿½ï¿½Ç°×ºï¿½ó»¹°ï¿½ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½Òªï¿½ï¿½Ò»ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Ä¼ï¿½ï¿½ï¿½
 		if (url.replaceAll("http://", "").replaceAll("https://", "").contains("/"))
 			url = getUrlPath(url);
 		if (fileName.startsWith("../") || fileName.startsWith("/")) {
-			// Ö»ÓĞµ±Ç°URL°üº¬¶à²ãÄ¿Â¼²ÅÄÜºóÍË£¬Èç¹ûÖ»ÊÇhttp://www.hua.com£¬ÏëºóÍË¶¼²»ĞĞ
+			// Ö»ï¿½Ğµï¿½Ç°URLï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¿Â¼ï¿½ï¿½ï¿½Üºï¿½ï¿½Ë£ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½http://www.hua.comï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¶ï¿½ï¿½ï¿½ï¿½ï¿½
 			if (url.replaceAll("http://", "").replaceAll("https://", "").contains("/"))
 				url = getUrlPath(url);
 			fileName = fileName.substring(fileName.indexOf("/") + 1);

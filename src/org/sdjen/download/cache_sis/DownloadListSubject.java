@@ -4,7 +4,7 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 
 import org.jsoup.Jsoup;
-import org.sdjen.download.cache_sis.conf.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfUtil;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.log.LogUtil;
 
@@ -34,7 +34,7 @@ public class DownloadListSubject {
 		} finally {
 			logUtil.finish();
 			LogUtil.finishAll();
-			System.out.println("Íê³É£¡");
+			System.out.println("ï¿½ï¿½É£ï¿½");
 		}
 	}
 

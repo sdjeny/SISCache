@@ -168,7 +168,7 @@ public class Store_ElasticSearch implements IStore {
 		long r = System.currentTimeMillis();
 		String result = returnToHtml(id, _source);
 		r = System.currentTimeMillis() - r;
-		msg("getLocalHtml lookup:{0}	return:{1}	(2}_{3}){4}", l, r, id, page,
+		msg("getLocalHtml lookup:{0}	return:{1}	({2}_{3}){4}", l, r, id, page,
 				null == _source ? "Find nothing" : _source.get("title"));
 		return result;
 	}
@@ -614,7 +614,7 @@ public class Store_ElasticSearch implements IStore {
 		long r = System.currentTimeMillis();
 		String result = returnToHtml(id, _source);
 		r = System.currentTimeMillis() - r;
-		msg("lookupLocalHtml lookup:{0}	return:{1}	(2}_{3}){4}", l, r, id, page,
+		msg("lookupLocalHtml lookup:{0}	return:{1}	({2}_{3}){4}", l, r, id, page,
 				null == _source ? "Find nothing" : _source.get("title"));
 		return result;
 	}

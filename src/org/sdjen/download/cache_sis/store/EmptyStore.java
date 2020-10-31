@@ -192,4 +192,22 @@ public class EmptyStore implements IStore {
 		}
 	}
 
+	@Override
+	public String lookupLocalHtml(String id, String page) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String lookupMD5_Path(String key) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public String lookupURL_Path(String key) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

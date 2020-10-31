@@ -235,9 +235,9 @@ public class Store_Mongodb implements IStore {
 	}
 
 	@Override
-	public String getURL_Path(String key) throws IOException {
+	public String getURL_Path(String url) throws IOException {
 		Query query = new Query();
-		query.addCriteria(Criteria.where("key").is(getMD5(key.getBytes("utf8"))));
+		query.addCriteria(Criteria.where("key").is(getMD5(url.getBytes("utf8"))));
 		query.addCriteria(Criteria.where("type").is("url"));
 //		query.skip(skipNumber);
 //		query.limit(pageSize);
@@ -479,5 +479,20 @@ public class Store_Mongodb implements IStore {
 	public String logexe(String query) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public String lookupLocalHtml(String id, String page) throws Throwable {
+		return getLocalHtml(id, page);
+	}
+
+	@Override
+	public String lookupMD5_Path(String key) throws Throwable {
+		return getMD5_Path(key);
+	}
+
+	@Override
+	public String lookupURL_Path(String url) throws Throwable {
+		return getURL_Path(url);
 	}
 }

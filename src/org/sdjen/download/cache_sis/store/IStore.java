@@ -56,18 +56,24 @@ public interface IStore {
 
 	void init() throws Throwable;
 
+	String lookupLocalHtml(final String id, final String page) throws Throwable;
+
+	String lookupMD5_Path(String key) throws Throwable;
+
+	String lookupURL_Path(String url) throws Throwable;
+
 	String getLocalHtml(final String id, final String page) throws Throwable;
+
+	String getMD5_Path(String key) throws Throwable;
+
+	String getURL_Path(String url) throws Throwable;
+
+	Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
+			String html) throws Throwable;
 
 	void saveURL(String url, String path) throws Throwable;
 
 	void saveMD5(String md5, String path) throws Throwable;
-
-	String getMD5_Path(String key) throws Throwable;
-
-	String getURL_Path(String key) throws Throwable;
-
-	Map<String, Object> saveHtml(final String id, final String page, final String url, String title, String dateStr,
-			String html) throws Throwable;
 
 	Map<String, Object> getTitleList(String fid, int page, int size, String query, String order) throws Throwable;
 

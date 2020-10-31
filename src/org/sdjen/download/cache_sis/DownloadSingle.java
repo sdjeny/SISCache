@@ -160,7 +160,7 @@ public class DownloadSingle {
 		long l = System.currentTimeMillis();
 		String tmp_html = type.contains("cover")// 覆盖模式
 				? null // 不管是否存在，都重新读取
-				: store.getLocalHtml(id, page);// 否则获取本地文件
+				: store.lookupLocalHtml(id, page);// 否则获取本地文件
 		l = System.currentTimeMillis() - l;
 		if ((type.isEmpty() || Integer.valueOf(page) > 1) && null != tmp_html)// 不是特殊模式且文件已存在!
 			return null;// 跳过
@@ -397,7 +397,7 @@ public class DownloadSingle {
 
 	private String downloadFile(final String url, final String path, final String name, boolean reload)
 			throws Throwable {
-		String result = store.getURL_Path(url);// MapDBFactory.getUrlDB().get(url);
+		String result = store.lookupURL_Path(url);// MapDBFactory.getUrlDB().get(url);
 		if (null != result && reload && result.equals(url))
 			result = null;
 		if (null == result || !checkFile(reload, result)) {
@@ -408,7 +408,7 @@ public class DownloadSingle {
 					String md5 = getMD5(bytes);
 					fmd = System.currentTimeMillis() - fmd;
 					long fl = System.currentTimeMillis();
-					String result = store.getMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
+					String result = store.lookupMD5_Path(md5);// MapDBFactory.getFileDB().get(md5);
 					fl = System.currentTimeMillis() - fl;
 					if (null == result || !checkFile(reload, result)) {
 						long fd = System.currentTimeMillis();

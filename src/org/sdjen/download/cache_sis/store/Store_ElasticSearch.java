@@ -1,5 +1,6 @@
 package org.sdjen.download.cache_sis.store;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
@@ -32,6 +33,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.client.HttpClientErrorException.NotFound;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 @Service("Store_ElasticSearch")
 public class Store_ElasticSearch implements IStore {
@@ -79,16 +81,16 @@ public class Store_ElasticSearch implements IStore {
 				rst = httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_bulk/", postStr.toString());
 			}
 			msg(rst);
+			for (String index : new String[] { "md", "html"
+//					, "last", "urls_failed", "test"
+			}) {
+				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(path_es_start + index + "/_doc/_init_", "{}"));
+			}
 			try {
 				msg("number_of_replicas:	" + httpUtil.doLocalPutUtf8Json("http://192.168.0.237:9200/_settings",
 						JsonUtil.toJson(Collections.singletonMap("number_of_replicas", 0))));
 			} catch (Throwable e) {
 				e.printStackTrace();
-			}
-			for (String index : new String[] { "md", "html"
-//					, "last", "urls_failed", "test"
-			}) {
-				msg(index + ":	" + httpUtil.doLocalPostUtf8Json(path_es_start + index + "/_doc/_init_", "{}"));
 			}
 			msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/?include_type_name=true"//
 					, JsonUtil.toJson(//
@@ -120,21 +122,7 @@ public class Store_ElasticSearch implements IStore {
 		return id + "_" + page;
 	}
 
-	@Override
-	public String getLocalHtml(final String id, final String page) throws Throwable {
-		long l = System.currentTimeMillis();
-		String key = getKey(id, page);
-		ESMap _source;
-		try {
-			_source = JsonUtil
-					.toObject(httpUtil.doLocalGet(path_es_start + "html/_doc/{key}",
-							new EntryData<String, String>().put("key", key).getData()), ESMap.class)
-					.get("_source", ESMap.class);
-		} catch (NotFound notFound) {
-			_source = null;
-		}
-		l = System.currentTimeMillis() - l;
-		long z = System.currentTimeMillis();
+	private String returnToHtml(String id, ESMap _source) throws IOException {
 		String result = null;
 		if (null != _source) {
 			String zip = _source.get("context_zip", String.class);
@@ -157,13 +145,30 @@ public class Store_ElasticSearch implements IStore {
 				result = _source.get("context", String.class);
 			}
 		}
-		z = System.currentTimeMillis() - z;
-		long r = System.currentTimeMillis();
 		if (null != result) {
 			result = replaceLocalHtmlUrl(result).html();
 		}
+		return result;
+	}
+
+	@Override
+	public String getLocalHtml(final String id, final String page) throws Throwable {
+		long l = System.currentTimeMillis();
+		String key = getKey(id, page);
+		ESMap _source;
+		try {
+			_source = JsonUtil
+					.toObject(httpUtil.doLocalGet(path_es_start + "html/_doc/{key}",
+							new EntryData<String, String>().put("key", key).getData()), ESMap.class)
+					.get("_source", ESMap.class);
+		} catch (NotFound notFound) {
+			_source = null;
+		}
+		l = System.currentTimeMillis() - l;
+		long r = System.currentTimeMillis();
+		String result = returnToHtml(id, _source);
 		r = System.currentTimeMillis() - r;
-		msg("getLocalHtml lookup:{0}	zip:{1}	replace:{2}	({3}_{4}){5}", l, z, r, id, page,
+		msg("getLocalHtml lookup:{0}	return:{2}	({3}_{4}){5}", l, r, id, page,
 				null == _source ? "" : _source.get("title"));
 		return result;
 	}
@@ -251,12 +256,12 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	@Override
-	public String getURL_Path(String key) throws Throwable {
+	public String getURL_Path(String url) throws Throwable {
 		ESMap _source;
 		try {
 			_source = JsonUtil.toObject(
 					httpUtil.doLocalGet(path_es_start + "md/_doc/{key}",
-							new EntryData<String, String>().put("key", getMD5(key.getBytes("utf8"))).getData()),
+							new EntryData<String, String>().put("key", getMD5(url.getBytes("utf8"))).getData()),
 					ESMap.class).get("_source", ESMap.class);
 		} catch (NotFound notFound) {
 			_source = null;
@@ -575,5 +580,97 @@ public class Store_ElasticSearch implements IStore {
 		} catch (Throwable e) {
 			return e.getMessage();
 		}
+	}
+
+	public static ESMap getSource(String text) throws JsonProcessingException {
+		List<ESMap> hits = (List<ESMap>) JsonUtil.toObject(text, ESMap.class).get("hits", ESMap.class).get("hits");
+		for (ESMap hit : hits)
+			return hit.get("_source", ESMap.class);
+		return null;
+	}
+
+	@Override
+	public String lookupLocalHtml(String id, String page) throws Throwable {
+		long l = System.currentTimeMillis();
+		ESMap _source;
+		try {
+			Map<Object, Object> params = ESMap.get();
+			params.put("size", 1);
+			params.put("from", 0);
+			params.put("query"//
+					, ESMap.get().set("bool", ESMap.get()//
+							.set("must", Arrays.asList(
+									ESMap.get().set("term", Collections.singletonMap("id", Long.valueOf(id))),
+									ESMap.get().set("term", Collections.singletonMap("page", Long.valueOf(page)))))//
+					)//
+			);
+//			params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
+			_source = getSource(
+					httpUtil.doLocalPostUtf8Json(path_es_start + "html/_doc/_search", JsonUtil.toJson(params)));
+		} catch (NotFound notFound) {
+			_source = null;
+		}
+		l = System.currentTimeMillis() - l;
+		long r = System.currentTimeMillis();
+		String result = returnToHtml(id, _source);
+		r = System.currentTimeMillis() - r;
+		msg("getLocalHtml lookup:{0}	return:{2}	({3}_{4}){5}", l, r, id, page,
+				null == _source ? "" : _source.get("title"));
+		return result;
+	}
+
+	@Override
+	public String lookupMD5_Path(String key) throws Throwable {
+		ESMap _source;
+		try {
+			Map<Object, Object> params = ESMap.get();
+			params.put("size", 1);
+			params.put("from", 0);
+			params.put("query"//
+					, ESMap.get().set("bool", ESMap.get()//
+							.set("must",
+									Arrays.asList(ESMap.get().set("term", Collections.singletonMap("type", "path")),
+											ESMap.get().set("term", Collections.singletonMap("key", key))))//
+					)//
+			);
+			params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
+			_source = getSource(
+					httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search", JsonUtil.toJson(params)));
+		} catch (NotFound notFound) {
+			_source = null;
+		}
+		if (null != _source) {
+			return _source.get("path", String.class);
+		}
+		return null;
+
+	}
+
+	@Override
+	public String lookupURL_Path(String url) throws Throwable {
+		ESMap _source;
+		try {
+			Map<Object, Object> params = ESMap.get();
+			params.put("size", 1);
+			params.put("from", 0);
+			params.put("query"//
+					, ESMap.get().set("bool", ESMap.get()//
+							.set("must",
+									Arrays.asList(ESMap.get().set("term", Collections.singletonMap("type", "url")),
+											ESMap.get().set("term",
+													Collections.singletonMap("key", getMD5(url.getBytes("utf8"))))))//
+					)//
+			);
+			params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
+			_source = getSource(
+					httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search", JsonUtil.toJson(params)));
+		} catch (NotFound notFound) {
+			_source = null;
+		}
+		if (null != _source) {
+			return _source.get("path", String.class);
+		}
+		return null;
+
 	}
 }

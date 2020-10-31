@@ -1,12 +1,19 @@
 package org.sdjen.download.cache_sis.timer;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.annotation.Resource;
 
+import org.sdjen.download.cache_sis.ESMap;
 import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
+import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 import org.sdjen.download.cache_sis.test.WithoutInterfaceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +39,8 @@ public class TestTimer implements InitStartTimer {
 	private Collection<String> fids;
 	@Autowired
 	WithoutInterfaceService service;
+	@Value("${siscache.conf.path_es_start}")
+	private String path_es_start;
 
 	public TestTimer() {
 		System.out.println(">>>>>>>>>>>>TestTimer");
@@ -39,6 +48,75 @@ public class TestTimer implements InitStartTimer {
 
 	public void restart(double hours) throws Throwable {
 		System.out.println(">>>>>>>>>>>>TestTimer:" + fids);
+		long l = System.currentTimeMillis();
+		try {
+			System.out.println(httpUtil.doLocalGet(path_es_start + "md/_doc/{key}?pretty",
+					Collections.singletonMap("key", "bikmgypnxawhtx7dw91hd1isp")) + "/n	"
+					+ (System.currentTimeMillis() - l));
+		} catch (Throwable e) {
+			System.out.println(e.getMessage() + "/n	" + (System.currentTimeMillis() - l));
+		}
+		l = System.currentTimeMillis();
+		try {
+			System.out.println(httpUtil.doLocalGet(path_es_start + "md/_doc/9lbvdbogxasp403ljfo97dyay?pretty",
+					new HashMap<String, String>()) + "\n	" + (System.currentTimeMillis() - l));
+		} catch (Throwable e) {
+			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+		}
+		l = System.currentTimeMillis();
+		Map<Object, Object> params = ESMap.get();
+		params.put("size", 1);
+		params.put("from", 0);
+		params.put("query"//
+				, ESMap.get().set("bool", ESMap.get()//
+						.set("must", Arrays.asList(ESMap.get().set("term", Collections.singletonMap("type", "path")),
+								ESMap.get().set("term", Collections.singletonMap("key", "81n39xdaub7ua3tee7ws7jmxl"))))//
+				)//
+		);
+		params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
+		System.out.println(JsonUtil.toJson(params) + "\n	" + (System.currentTimeMillis() - l));
+		l = System.currentTimeMillis();
+		try {
+			System.out.println(Store_ElasticSearch.getSource(
+					httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search?pretty", JsonUtil.toJson(params)))
+					+ "\n	" + (System.currentTimeMillis() - l));
+		} catch (Throwable e) {
+			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+		}
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~l = System.currentTimeMillis();
+		try {
+			System.out.println(httpUtil.doLocalGet(path_es_start + "md/_doc/{key}?pretty",
+					Collections.singletonMap("key", "bikmgypnxawhtx7dw91hd1ispQ")) + "/n	"
+					+ (System.currentTimeMillis() - l));
+		} catch (Throwable e) {
+			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+		}
+		l = System.currentTimeMillis();
+		try {
+			System.out.println(httpUtil.doLocalGet(path_es_start + "md/_doc/9lbvdbogxasp403ljfo97dyayQ?pretty",
+					new HashMap<String, String>()) + "\n	" + (System.currentTimeMillis() - l));
+		} catch (Throwable e) {
+			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+		}
+		params = ESMap.get();
+		params.put("size", 1);
+		params.put("from", 0);
+		params.put("query"//
+				, ESMap.get().set("bool", ESMap.get()//
+						.set("must", Arrays.asList(ESMap.get().set("term", Collections.singletonMap("type", "path")),
+								ESMap.get().set("term", Collections.singletonMap("key", "81n39xdaub7ua3tee7ws7jmxlQ"))))//
+				)//
+		);
+		params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
+		System.out.println(JsonUtil.toJson(params) + "\n	" + (System.currentTimeMillis() - l));
+		l = System.currentTimeMillis();
+		try {
+			System.out.println(Store_ElasticSearch.getSource(
+					httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search?pretty", JsonUtil.toJson(params)))
+					+ "\n	" + (System.currentTimeMillis() - l));
+		} catch (Throwable e) {
+			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+		}
 //		String s = "http://www.sexinsex.net/bbs/thread-8694622-1-1.html";
 //		s = "http://www.sexinsex.net/bbs/thread-8784871-1-1.html";
 //		s = httpUtil.getHTML(s);

@@ -92,13 +92,14 @@ public class Store_ElasticSearch implements IStore {
 			} catch (Throwable e) {
 				e.printStackTrace();
 			}
-			msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/?include_type_name=true"//
-					, JsonUtil.toJson(//
-							ESMap.get()//
-									.set("properties", ESMap.get()//
-											.set("context_zip", ESMap.get()//
-													.set("type", "binary")// text
-													.set("index", false)//
+			try {
+				msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/"//
+						, JsonUtil.toJson(//
+								ESMap.get()//
+										.set("properties", ESMap.get()//
+												.set("context_zip", ESMap.get()//
+														.set("type", "binary")// text
+														.set("index", false)//
 //													.set("norms", false)//
 //													.set("fields", ESMap.get()//
 //															.set("keyword", ESMap.get()//
@@ -106,10 +107,31 @@ public class Store_ElasticSearch implements IStore {
 //																	.set("ignore_above", 256)//
 //															)//
 //													)//
-											)//
-									)//
-					)//
-			));
+												)//
+										)//
+						)//
+				));
+			} catch (Throwable e) {
+				msg("html:	" + httpUtil.doLocalPutUtf8Json(path_es_start + "html/_doc/_mapping/?include_type_name=true"//
+						, JsonUtil.toJson(//
+								ESMap.get()//
+										.set("properties", ESMap.get()//
+												.set("context_zip", ESMap.get()//
+														.set("type", "binary")// text
+														.set("index", false)//
+//													.set("norms", false)//
+//													.set("fields", ESMap.get()//
+//															.set("keyword", ESMap.get()//
+//																	.set("type", "keyword")//
+//																	.set("ignore_above", 256)//
+//															)//
+//													)//
+												)//
+										)//
+						)//
+				));
+			
+			}
 			inited = true;
 		}
 	}

@@ -51,7 +51,7 @@ public class TestTimer implements InitStartTimer {
 		long l = System.currentTimeMillis();
 		try {
 			System.out.println(httpUtil.doLocalGet(path_es_start + "md/_doc/{key}?pretty",
-					Collections.singletonMap("key", "bikmgypnxawhtx7dw91hd1isp")) + "/n	"
+					Collections.singletonMap("key", "bikmgypnxawhtx7dw91hd1isp")) + "	takes:"
 					+ (System.currentTimeMillis() - l));
 		} catch (Throwable e) {
 			System.out.println(e.getMessage() + "/n	" + (System.currentTimeMillis() - l));
@@ -59,9 +59,9 @@ public class TestTimer implements InitStartTimer {
 		l = System.currentTimeMillis();
 		try {
 			System.out.println(httpUtil.doLocalGet(path_es_start + "md/_doc/9lbvdbogxasp403ljfo97dyay?pretty",
-					new HashMap<String, String>()) + "\n	" + (System.currentTimeMillis() - l));
+					new HashMap<String, String>()) + "	takes:" + (System.currentTimeMillis() - l));
 		} catch (Throwable e) {
-			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+			System.out.println(e.getMessage() + "	takes:" + (System.currentTimeMillis() - l));
 		}
 		l = System.currentTimeMillis();
 		Map<Object, Object> params = ESMap.get();
@@ -74,29 +74,29 @@ public class TestTimer implements InitStartTimer {
 				)//
 		);
 		params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
-		System.out.println(JsonUtil.toJson(params) + "\n	" + (System.currentTimeMillis() - l));
+		System.out.println(JsonUtil.toJson(params) + "	takes:" + (System.currentTimeMillis() - l));
 		l = System.currentTimeMillis();
 		try {
 			System.out.println(Store_ElasticSearch.getSource(
 					httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search?pretty", JsonUtil.toJson(params)))
 					+ "\n	" + (System.currentTimeMillis() - l));
 		} catch (Throwable e) {
-			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+			System.out.println(e.getMessage() + "	takes:" + (System.currentTimeMillis() - l));
 		}
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~l = System.currentTimeMillis();
 		try {
 			System.out.println(httpUtil.doLocalGet(path_es_start + "md/_doc/{key}?pretty",
-					Collections.singletonMap("key", "bikmgypnxawhtx7dw91hd1ispQ")) + "/n	"
+					Collections.singletonMap("key", "bikmgypnxawhtx7dw91hd1ispQ")) + ""
 					+ (System.currentTimeMillis() - l));
 		} catch (Throwable e) {
-			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+			System.out.println(e.getMessage() + "	takes:" + (System.currentTimeMillis() - l));
 		}
 		l = System.currentTimeMillis();
 		try {
 			System.out.println(httpUtil.doLocalGet(path_es_start + "md/_doc/9lbvdbogxasp403ljfo97dyayQ?pretty",
-					new HashMap<String, String>()) + "\n	" + (System.currentTimeMillis() - l));
+					new HashMap<String, String>()) + "	takes:" + (System.currentTimeMillis() - l));
 		} catch (Throwable e) {
-			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+			System.out.println(e.getMessage() + "	takes:" + (System.currentTimeMillis() - l));
 		}
 		params = ESMap.get();
 		params.put("size", 1);
@@ -108,14 +108,14 @@ public class TestTimer implements InitStartTimer {
 				)//
 		);
 		params.put("_source", ESMap.get().set("includes", Arrays.asList("path")));
-		System.out.println(JsonUtil.toJson(params) + "\n	" + (System.currentTimeMillis() - l));
+		System.out.println(JsonUtil.toJson(params) + "	takes:" + (System.currentTimeMillis() - l));
 		l = System.currentTimeMillis();
 		try {
 			System.out.println(Store_ElasticSearch.getSource(
 					httpUtil.doLocalPostUtf8Json(path_es_start + "md/_doc/_search?pretty", JsonUtil.toJson(params)))
-					+ "\n	" + (System.currentTimeMillis() - l));
+					+ "	takes:" + (System.currentTimeMillis() - l));
 		} catch (Throwable e) {
-			System.out.println(e.getMessage() + "\n	" + (System.currentTimeMillis() - l));
+			System.out.println(e.getMessage() + "	takes:" + (System.currentTimeMillis() - l));
 		}
 //		String s = "http://www.sexinsex.net/bbs/thread-8694622-1-1.html";
 //		s = "http://www.sexinsex.net/bbs/thread-8784871-1-1.html";

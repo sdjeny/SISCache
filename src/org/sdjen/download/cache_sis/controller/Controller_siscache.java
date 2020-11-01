@@ -20,6 +20,7 @@ import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.CopyEsToBck;
 import org.sdjen.download.cache_sis.service.CopyEsToMongo;
+import org.sdjen.download.cache_sis.service.CopyMongoToES;
 import org.sdjen.download.cache_sis.service.CopyESOToESN;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
@@ -55,7 +56,7 @@ public class Controller_siscache {
 	@Autowired
 	private CopyEsToMongo copyEsToMongo;
 	@Autowired
-	private CopyESOToESN copyMongoToES;
+	private CopyMongoToES copyMongoToES;
 	@Autowired
 	private CopyEsToBck copyEsToBck;
 	@Autowired
@@ -158,7 +159,7 @@ public class Controller_siscache {
 			});
 		}
 		if (can_copy_mongo_es) {
-			Arrays.asList("html", "url").forEach(k -> {
+			Arrays.asList("html", "md").forEach(k -> {
 				rst.append("<tbody><tr>");
 				rst.append(String.format(
 						"\"<td><a href='/siscache/copy/mongo/es/%s' title='新窗口打开' target='_blank'>copy %s</a></td>\"",
@@ -220,7 +221,7 @@ public class Controller_siscache {
 	@ResponseBody
 	private String copyMongoToEs(@PathVariable("type") String type) {
 		try {
-			copyEsToBck.copy(type);
+			copyMongoToES.copy(type);
 		} catch (Throwable e) {
 			logger.error(e.getMessage(), e);
 		}

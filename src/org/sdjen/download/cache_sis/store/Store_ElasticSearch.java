@@ -576,7 +576,7 @@ public class Store_ElasticSearch implements IStore {
 		last.setMsg(msg);
 		last.setTime(new Date());
 		dao.merge(last);
-		return last;
+		return JsonUtil.toJson(last);
 	}
 
 	@Override

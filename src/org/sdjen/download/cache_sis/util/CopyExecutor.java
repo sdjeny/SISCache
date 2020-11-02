@@ -15,17 +15,13 @@ public abstract class CopyExecutor<T> {
 	private List<Future<T>> futures;
 	private ThreadPoolTaskExecutor executor;
 
-	public void copy(T from, ThreadPoolTaskExecutor executor) {
+	public void copy(T from, ThreadPoolTaskExecutor executor) throws Throwable {
 		logMsg = new HashMap<Object, Object>();
 		this.executor = executor;
 		T listResult = from;
-		try {
-			do {
-				listResult = list(from = listResult);
-			} while (!isEnd(listResult, from));
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		do {
+			listResult = list(from = listResult);
+		} while (!isEnd(listResult, from));
 		exeFutures();
 	}
 
@@ -33,19 +29,19 @@ public abstract class CopyExecutor<T> {
 		return null == futures ? futures = new ArrayList<>() : futures;
 	}
 
-	public abstract void log();
+	public abstract void log() throws Throwable;
 
 	public abstract boolean isEnd(T rst, T from);
 
 	public abstract Map<String, Object> getListDetail(T from) throws Exception;
 
-	public abstract T getKey(Map<?, ?> map);
+	public abstract T getKey(Map<?, ?> detail);
 
 	public abstract T getMaxKey(T t1, T t2);
 
-	public abstract T single(Map<?, ?> detail) throws Exception;
+	public abstract T single(Map<?, ?> detail) throws Exception, Throwable;
 
-	private T list(T from) throws Exception {
+	private T list(T from) throws Throwable {
 		T result = from;
 		long tl = System.currentTimeMillis();
 		Map<String, Object> detail = getListDetail(from);
@@ -67,6 +63,8 @@ public abstract class CopyExecutor<T> {
 						return single(_source);
 					} catch (Exception e) {
 						throw e;
+					} catch (Throwable e) {
+						throw new Exception(e);
 					}
 				}
 			}));

@@ -1,21 +1,21 @@
 package org.sdjen.download.cache_sis.service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.text.MessageFormat;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 
+import org.bson.types.Binary;
 import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.http.HttpUtil;
+import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
+import org.sdjen.download.cache_sis.tool.ZipUtil;
+import org.sdjen.download.cache_sis.util.CopyExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -68,11 +68,144 @@ public class CopyMongoToES {
 			logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
 			switch (type) {
 			case "html": {
-				copyHtml(null == from ? 0l : Long.valueOf(from));
+				new CopyExecutor<Long>() {
+
+					@Override
+					public void log() throws Throwable {
+						String msg = MessageFormat.format("Html	查:	{0}ms	存:{1}ms	自:{2}	余:{3}",
+								logMsg.get("time_lookup"), logMsg.get("time_exe"), logMsg.get("from"),
+								logMsg.get("total"));
+						logger.info(msg);
+						store_es.running("copy_m_e_html",
+								null == logMsg.get("from") ? null : logMsg.get("from").toString(), msg);
+					}
+
+					@Override
+					public boolean isEnd(Long rst, Long from) {
+						return rst.compareTo(from) <= 0;
+					}
+
+					@Override
+					public Map<String, Object> getListDetail(Long from) throws Exception {
+						Map<String, Object> result = new HashMap<String, Object>();
+						Query query = new Query();
+						query.addCriteria(Criteria.where("id").gt(from));
+						query.addCriteria(Criteria.where("page").is(1l));
+						result.put("total", mongoTemplate.count(query, "htmldoc"));
+//						query.skip(0);
+						query.limit(configMain.getCopy_unit_limit());
+						query.with(Sort.by(Order.asc("id")));
+//						query.fields().include("id");
+						result.put("list", mongoTemplate.find(query, Map.class, "htmldoc"));
+						return null;
+					}
+
+					@Override
+					public Long getKey(Map<?, ?> detail) {
+						return (Long) detail.get("id");
+					}
+
+					@Override
+					public Long getMaxKey(Long t1, Long t2) {
+						if (null == t1 && null != t2)
+							return t2;
+						else if (null != t1 && null == t2)
+							return t1;
+						else if (null == t1 && null == t2)
+							return null;
+						else
+							return Math.max(t1, t2);
+					}
+
+					@Override
+					public Long single(Map<?, ?> detail) throws Throwable {
+						Map<String, Object> data = new HashMap<>();
+						Map<String, Throwable> errs = new HashMap<String, Throwable>();
+						detail.forEach((k, v) -> {
+							if ("context_zip".equals(k)) {
+								try {
+									String context = ZipUtil.uncompress(((Binary) v).getData());
+									Map<String, Object> details = JsonUtil.toObject(context, Map.class);
+									context = ZipUtil.bytesToString(ZipUtil.compress(JsonUtil.toJson(details)));
+									data.put("context_zip", context);
+								} catch (Exception e) {
+									errs.put("zip", e);
+								}
+							} else if (!k.equals("_id")) {
+								data.put((String) k, v);
+							}
+						});
+						if (!errs.isEmpty())
+							throw errs.get("zip");
+						String r = httpUtil.doLocalPostUtf8Json(
+								configMain.getPath_es_start() + "html/_doc/" + data.get("id") + "_" + data.get("page"),
+								JsonUtil.toJson(data));
+						return getKey(detail);
+					}
+				}.copy(null == from ? 0l : Long.valueOf(from), executor);
 				break;
 			}
 			case "md": {
-				copyMd(null == from ? " " : from);
+				new CopyExecutor<String>() {
+
+					@Override
+					public void log() throws Throwable {
+						String msg = MessageFormat.format("MD	查:	{0}ms	存:{1}ms	自:{2}	余:{3}",
+								logMsg.get("time_lookup"), logMsg.get("time_exe"), logMsg.get("from"),
+								logMsg.get("total"));
+						logger.info(msg);
+						store_es.running("copy_m_e_md",
+								null == logMsg.get("from") ? null : logMsg.get("from").toString(), msg);
+					}
+
+					@Override
+					public boolean isEnd(String rst, String from) {
+						return rst.compareTo(from) <= 0;
+					}
+
+					@Override
+					public Map<String, Object> getListDetail(String from) throws Exception {
+						Map<String, Object> result = new HashMap<String, Object>();
+						Query query = new Query();
+						query.addCriteria(Criteria.where("key").gt(from));
+//						query.addCriteria(Criteria.where("type").is("url"));
+						result.put("total", mongoTemplate.count(query, "md"));
+//						query.skip(0);
+						query.limit(configMain.getCopy_unit_limit());
+						query.with(Sort.by(Order.asc("key")));
+						result.put("list", mongoTemplate.find(query, Map.class, "md"));
+						return null;
+					}
+
+					@Override
+					public String getKey(Map<?, ?> detail) {
+						return (String) detail.get("key");
+					}
+
+					@Override
+					public String getMaxKey(String t1, String t2) {
+						if (null == t1 && null != t2)
+							return t2;
+						else if (null != t1 && null == t2)
+							return t1;
+						else if (null == t1 && null == t2)
+							return null;
+						else
+							return t1.compareTo(t2) > 0 ? t1 : t2;
+					}
+
+					@Override
+					public String single(Map<?, ?> detail) throws Throwable {
+						Map<String, Object> json = new HashMap<>();
+						json.put("key", detail.get("key"));
+						json.put("url", detail.get("url"));
+						json.put("path", detail.get("path"));
+						json.put("type", detail.get("type"));
+						httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "md/_doc/" + detail.get("key"),
+								JsonUtil.toJson(json));
+						return getKey(detail);
+					}
+				}.copy(null == from ? " " : from, executor);
 				break;
 			}
 			default:
@@ -83,95 +216,5 @@ public class CopyMongoToES {
 			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, store_es.finish("copy_m_e_" + type, e.getMessage()));
 			throw e;
 		}
-	}
-
-	public void copyHtml(long from) throws Throwable {
-		Long listResult = from;
-		do {
-			listResult = listHtml(from = listResult);
-		} while (listResult.compareTo(from) > 0);
-
-	}
-
-	void copyMd(String from) throws Throwable {
-		String listResult = from;
-		do {
-			listResult = listMd(from = listResult);
-//			logger.info("{}	{}={}", listResult, from, listResult.equals(from));
-		} while (!listResult.equals(from));
-	}
-
-	private String listMd(String from) throws Throwable {
-		String result = from;
-		long startTime = System.currentTimeMillis();
-		Query query = new Query();
-		query.addCriteria(Criteria.where("key").gt(from));
-		query.addCriteria(Criteria.where("type").is("url"));
-		Object total = mongoTemplate.count(query, "md");
-//		query.skip(0);
-		query.limit(configMain.getCopy_unit_limit());
-		query.with(Sort.by(Order.asc("key")));
-		List<Map> hits = mongoTemplate.find(query, Map.class, "md");
-		long l = System.currentTimeMillis() - startTime;
-		for (Map<?, ?> _source : hits) {
-			String type = (String) _source.get("type");
-//			if ("url".equals(type))
-//				store_es.saveURL((String) _source.get("url"), (String) _source.get("path"));
-//			if ("path".equals(type))
-//				store_es.saveMD5((String) _source.get("key"), (String) _source.get("path"));
-			result = (String) _source.get("key");
-		}
-		store_es.running("copy_m_e__md", result, total.toString());
-		logger.info("查:	{}ms	共:{}ms	Last:{}	total:{}", l, (System.currentTimeMillis() - startTime), result, total);
-		return result;
-	}
-
-	private Long listHtml(Long from) throws Throwable {
-		Long result = from, startTime = System.currentTimeMillis();
-		Query query = new Query();
-		query.addCriteria(Criteria.where("id").gt(from));
-		Object total = mongoTemplate.count(query, "htmldoc");
-//		query.skip(0);
-		query.limit(configMain.getCopy_unit_limit());
-		query.with(Sort.by(Order.asc("id")));
-		query.fields().include("id");
-		List<Map> ms = mongoTemplate.find(query, Map.class, "htmldoc");
-		long l = System.currentTimeMillis() - startTime;
-		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
-		for (Map<?, ?> _source : ms) {
-			Long id = Long.valueOf(_source.get("id").toString());
-			result = Math.max(id, result);
-			resultList.add(executor.submit(new Callable<Long>() {
-				public Long call() throws Exception {
-					try {
-						single(id);
-					} catch (Throwable e) {
-						if (e instanceof Exception) {
-							throw (Exception) e;
-						} else
-							throw new Exception(e);
-					}
-					return null;
-				}
-			}));
-		}
-		for (Future<Long> fs : resultList) {
-			try {
-				fs.get(30, TimeUnit.MINUTES);
-			} catch (java.util.concurrent.TimeoutException e) {
-				fs.cancel(false);
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
-			}
-		}
-		store_es.running("copy_m_e__html", String.valueOf(result), total.toString());
-		logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", l, (System.currentTimeMillis() - startTime), from, result,
-				total);
-		return result;
-	}
-
-	private void single(Long id) throws Throwable {
-//		store_es.saveHtml(String.valueOf(id), "1", "url", "", "dateStr", store_mongo.getLocalHtml(id.toString(), "1"));
 	}
 }

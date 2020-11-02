@@ -97,7 +97,7 @@ public class CopyMongoToES {
 						query.with(Sort.by(Order.asc("id")));
 //						query.fields().include("id");
 						result.put("list", mongoTemplate.find(query, Map.class, "htmldoc"));
-						return null;
+						return result;
 					}
 
 					@Override
@@ -174,7 +174,7 @@ public class CopyMongoToES {
 						query.limit(configMain.getCopy_unit_limit());
 						query.with(Sort.by(Order.asc("key")));
 						result.put("list", mongoTemplate.find(query, Map.class, "md"));
-						return null;
+						return result;
 					}
 
 					@Override

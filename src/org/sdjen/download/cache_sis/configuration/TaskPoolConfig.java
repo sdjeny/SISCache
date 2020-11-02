@@ -17,18 +17,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 @EnableAsync
 //@ConfigurationProperties(prefix = "siscache.conf.async")// 需要pojo类
 public class TaskPoolConfig {
-	@Value("${siscache.conf.async.num_list_core}")
-	private int num_list_core = 1;
-	@Value("${siscache.conf.async.num_list_max}")
-	private int num_list_max = 2;
-	@Value("${siscache.conf.async.num_single_core}")
-	private int num_single_core = 3;
-	@Value("${siscache.conf.async.num_single_max}")
-	private int num_single_max = 4;
-	@Value("${siscache.conf.async.queue_capacity}")
-	private int queue_capacity = 5;
-	@Value("${siscache.conf.async.seconds_alive}")
-	private int seconds_alive = 6;
+	@Autowired
+	private ConfigAsync configAsync;
 	@Autowired
 	private ConfigMain configMain;
 
@@ -49,9 +39,9 @@ public class TaskPoolConfig {
 	@Bean("downloadSingleExecutor")
 	public ThreadPoolTaskExecutor downloadSingleExecutor() {
 		ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-		taskExecutor.setCorePoolSize(num_single_core);
-		taskExecutor.setMaxPoolSize(num_single_max);
-		taskExecutor.setQueueCapacity(queue_capacity);
+		taskExecutor.setCorePoolSize(configAsync.getNum_single_core());
+		taskExecutor.setMaxPoolSize(configAsync.getNum_single_max());
+		taskExecutor.setQueueCapacity(configAsync.getQueue_capacity());
 //		taskExecutor.setKeepAliveSeconds(seconds_alive);
 		taskExecutor.setThreadNamePrefix("DS-");
 		taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
@@ -63,9 +53,9 @@ public class TaskPoolConfig {
 	@Bean("downloadListExecutor")
 	public ThreadPoolTaskExecutor downloadListExecutor() {
 		ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-		taskExecutor.setCorePoolSize(num_list_core);
-		taskExecutor.setMaxPoolSize(num_list_max);
-		taskExecutor.setQueueCapacity(queue_capacity);
+		taskExecutor.setCorePoolSize(configAsync.getNum_list_core());
+		taskExecutor.setMaxPoolSize(configAsync.getNum_list_max());
+		taskExecutor.setQueueCapacity(configAsync.getQueue_capacity());
 //		taskExecutor.setKeepAliveSeconds(seconds_alive);
 		taskExecutor.setThreadNamePrefix("DL-");
 		taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
@@ -74,14 +64,15 @@ public class TaskPoolConfig {
 		return taskExecutor;
 	}
 
-	@Bean("cpES2MGExecutor")
-	public ThreadPoolTaskExecutor cpES2MGExecutor() {
+	@Bean("cpExecutor")
+	public ThreadPoolTaskExecutor cpExecutor() {
+		System.out.println("cpExecutor:	" + configAsync);
 		ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
-		taskExecutor.setCorePoolSize(3);
-		taskExecutor.setMaxPoolSize(5);
+		taskExecutor.setCorePoolSize(configAsync.getCp_core());
+		taskExecutor.setMaxPoolSize(configAsync.getCp_max());
 		taskExecutor.setQueueCapacity(9999);
 //		taskExecutor.setKeepAliveSeconds(seconds_alive);
-		taskExecutor.setThreadNamePrefix("CPE2M-");
+		taskExecutor.setThreadNamePrefix("CP-");
 		taskExecutor.setWaitForTasksToCompleteOnShutdown(true);
 //		taskExecutor.setAwaitTerminationSeconds(seconds_alive);
 		taskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());

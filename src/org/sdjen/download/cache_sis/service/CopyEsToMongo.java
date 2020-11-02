@@ -35,7 +35,7 @@ public class CopyEsToMongo {
 	private IStore store_mongo;
 	@Resource(name = "Store_ElasticSearch")
 	private IStore store_es;
-	@Resource(name = "cpES2MGExecutor")
+	@Resource(name = "cpExecutor")
 	private ThreadPoolTaskExecutor executor;
 
 	public CopyEsToMongo() {

@@ -7,7 +7,6 @@ import java.util.Set;
 
 import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.entity.Last;
-import org.sdjen.download.cache_sis.store.entity.Urls_failed;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -191,23 +190,4 @@ public class EmptyStore implements IStore {
 			return e.getMessage();
 		}
 	}
-
-	@Override
-	public String lookupLocalHtml(String id, String page) throws Throwable {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String lookupMD5_Path(String key) throws Throwable {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public String lookupURL_Path(String key) throws Throwable {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
 }

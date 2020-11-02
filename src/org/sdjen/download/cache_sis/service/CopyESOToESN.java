@@ -43,7 +43,7 @@ public class CopyESOToESN {
 	private IStore store_mongo;
 	@Resource(name = "Store_ElasticSearch")
 	private IStore store_es;
-	@Resource(name = "cpES2MGExecutor")
+	@Resource(name = "cpExecutor")
 	private ThreadPoolTaskExecutor executor;
 	@Autowired
 	private MongoTemplate mongoTemplate;

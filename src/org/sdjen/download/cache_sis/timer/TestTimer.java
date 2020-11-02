@@ -1,10 +1,13 @@
 package org.sdjen.download.cache_sis.timer;
 
 import java.io.File;
+import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Resource;
@@ -16,6 +19,7 @@ import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.store.Store_ElasticSearch;
 import org.sdjen.download.cache_sis.test.WithoutInterfaceService;
+import org.sdjen.download.cache_sis.util.CopyExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +49,8 @@ public class TestTimer implements InitStartTimer {
 	private String path_es_start;
 	@Autowired
 	private ConfigMain configMain;
+	@Resource(name = "cpExecutor")
+	private ThreadPoolTaskExecutor cpExecutor;
 
 	public TestTimer() {
 		System.out.println(">>>>>>>>>>>>TestTimer");
@@ -53,6 +59,62 @@ public class TestTimer implements InitStartTimer {
 	public void restart(double hours) throws Throwable {
 		System.out.println(">>>>>>>>>>>>TestTimer:" + fids);
 		System.out.println("TestTimer:	" + configMain);
+		new CopyExecutor<Integer>() {
+
+			@Override
+			public Map<String, Object> getListDetail(Integer from) throws Exception {
+				Thread.sleep(1000);
+				List<Map<?, ?>> list = new ArrayList<>();
+				if (from < 100)
+					for (int i = 1; i <= 30; i++) {
+						list.add(Collections.singletonMap("id", from + i));
+					}
+				Map<String, Object> result = new HashMap<String, Object>();
+				result.put("total", from);
+				result.put("list", list);
+				logger.info(result.toString());
+				return result;
+			}
+
+			@Override
+			public Integer getKey(Map<?, ?> map) {
+				return (Integer) map.get("id");
+			}
+
+			@Override
+			public Integer getMaxKey(Integer t1, Integer t2) {
+				if (null == t1 && null != t2)
+					return t2;
+				else if (null != t1 && null == t2)
+					return t1;
+				else if (null == t1 && null == t2)
+					return null;
+				else
+					return Math.max(t1, t2);
+			}
+
+			@Override
+			public Integer single(Map<?, ?> detail) throws Exception {
+				Thread.sleep(300);
+				logger.info(detail.toString());
+				return getKey(detail);
+			}
+
+			@Override
+			public boolean isEnd(Integer rst, Integer from) {
+				return rst.compareTo(from) <= 0;
+			}
+
+			@Override
+			public void log() {
+				String msg = MessageFormat.format("查:	{0}ms	存:{1}ms	自:{2}	余:{3}", logMsg.get("time_lookup"),
+						logMsg.get("time_exe"), logMsg.get("from"), logMsg.get("total"));
+				logger.info(msg);
+//				store_mongo.running("es_mongo_html", String.valueOf(from), left);
+//				logger.info("查:	{}ms	共:{}ms	{}~{}	total:{}", l, (System.currentTimeMillis() - startTime), from, result,
+//						hits.get("total"));
+			}
+		}.copy(0, cpExecutor);
 //		String s = "http://www.sexinsex.net/bbs/thread-8694622-1-1.html";
 //		s = "http://www.sexinsex.net/bbs/thread-8784871-1-1.html";
 //		s = httpUtil.getHTML(s);

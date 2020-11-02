@@ -480,19 +480,4 @@ public class Store_Mongodb implements IStore {
 		// TODO Auto-generated method stub
 		return null;
 	}
-
-	@Override
-	public String lookupLocalHtml(String id, String page) throws Throwable {
-		return getLocalHtml(id, page);
-	}
-
-	@Override
-	public String lookupMD5_Path(String key) throws Throwable {
-		return getMD5_Path(key);
-	}
-
-	@Override
-	public String lookupURL_Path(String url) throws Throwable {
-		return getURL_Path(url);
-	}
 }

@@ -34,7 +34,7 @@ public class CopyEsToBck {
 	private HttpUtil httpUtil;
 	@Resource(name = "Store_ElasticSearch")
 	private IStore store_es;
-	@Resource(name = "cpES2MGExecutor")
+	@Resource(name = "cpExecutor")
 	private ThreadPoolTaskExecutor executor;
 
 	public CopyEsToBck() {

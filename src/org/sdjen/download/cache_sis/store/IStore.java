@@ -11,9 +11,6 @@ import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 public interface IStore {
 	final static Map<String, String> FIDDESCES = new EntryData<String, String>()//
@@ -56,11 +53,17 @@ public interface IStore {
 
 	void init() throws Throwable;
 
-	String lookupLocalHtml(final String id, final String page) throws Throwable;
+	default String lookupLocalHtml(String id, String page) throws Throwable {
+		return getLocalHtml(id, page);
+	}
 
-	String lookupMD5_Path(String key) throws Throwable;
+	default String lookupMD5_Path(String key) throws Throwable {
+		return getMD5_Path(key);
+	}
 
-	String lookupURL_Path(String url) throws Throwable;
+	default String lookupURL_Path(String url) throws Throwable {
+		return getURL_Path(url);
+	}
 
 	String getLocalHtml(final String id, final String page) throws Throwable;
 

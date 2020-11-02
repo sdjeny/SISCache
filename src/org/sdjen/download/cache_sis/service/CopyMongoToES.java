@@ -59,13 +59,13 @@ public class CopyMongoToES {
 			String from = null;
 			if (null != last) {
 				if (last.containsKey("running") && (Boolean) last.get("running")) {
-					logger.info(">>>>>>>>>>>>Copy {} is Running", type);
+					store_es.msg(">>>>>>>>>>>>Copy {0} is Running", type);
 					return;
 				}
 				from = (String) last.get("keyword");
 			}
 			store_es.running("copy_m_e_" + type, from, " init");
-			logger.info(">>>>>>>>>>>>Copy {} from {}", type, last);
+			store_es.msg(">>>>>>>>>>>>Copy {0} from {1}", type, last);
 			switch (type) {
 			case "html": {
 				new CopyExecutor<Long>() {
@@ -75,7 +75,7 @@ public class CopyMongoToES {
 						String msg = MessageFormat.format("Html	查:	{0}ms	存:{1}ms	自:{2}	余:{3}",
 								logMsg.get("time_lookup"), logMsg.get("time_exe"), logMsg.get("from"),
 								logMsg.get("total"));
-						logger.info(msg);
+						store_es.msg(msg);
 						store_es.running("copy_m_e_html",
 								null == logMsg.get("from") ? null : logMsg.get("from").toString(), msg);
 					}
@@ -153,7 +153,7 @@ public class CopyMongoToES {
 						String msg = MessageFormat.format("MD	查:	{0}ms	存:{1}ms	自:{2}	余:{3}",
 								logMsg.get("time_lookup"), logMsg.get("time_exe"), logMsg.get("from"),
 								logMsg.get("total"));
-						logger.info(msg);
+						store_es.msg(msg);
 						store_es.running("copy_m_e_md",
 								null == logMsg.get("from") ? null : logMsg.get("from").toString(), msg);
 					}
@@ -211,9 +211,9 @@ public class CopyMongoToES {
 			default:
 				break;
 			}
-			logger.info(">>>>>>>>>>>>Copy {} finished! {}", type, store_es.finish("copy_m_e_" + type, "finsh"));
+			store_es.msg(">>>>>>>>>>>>Copy {0} finished! {1}", type, store_es.finish("copy_m_e_" + type, "finsh"));
 		} catch (Throwable e) {
-			logger.info(">>>>>>>>>>>>Copy {} error! {}", type, store_es.finish("copy_m_e_" + type, e.getMessage()));
+			store_es.msg(">>>>>>>>>>>>Copy {0} error! {1}", type, store_es.finish("copy_m_e_" + type, e.getMessage()));
 			throw e;
 		}
 	}

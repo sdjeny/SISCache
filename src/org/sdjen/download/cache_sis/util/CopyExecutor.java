@@ -84,7 +84,7 @@ public abstract class CopyExecutor<T> {
 			} finally {
 			}
 		}
-		System.out.println("F:	" + result);
+//		System.out.println("F:	" + result);
 		futures = null;
 		return result;
 	}

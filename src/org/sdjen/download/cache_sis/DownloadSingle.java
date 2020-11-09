@@ -19,6 +19,7 @@ import javax.annotation.Resource;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.configuration.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.http.DefaultCss;
 //import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.http.HttpUtil;
@@ -58,8 +59,8 @@ public class DownloadSingle {
 	private IStore store;
 	@Autowired
 	private HttpUtil httpUtil;
-	@Value("${siscache.conf.fids_unreplace_img}")
-	private Collection<String> fids_unreplace_img;
+	@Autowired
+	private ConfigMain configMain;
 	@Resource(name = "downloadSingleExecutor")
 	private ThreadPoolTaskExecutor executor;
 
@@ -268,7 +269,7 @@ public class DownloadSingle {
 				}));
 			}
 		}
-		if (!fids_unreplace_img.contains(fid)) {
+		if (!configMain.getFids_unreplace_img().contains(fid)) {
 			for (org.jsoup.nodes.Element e : doument.select("img[src]")) {
 				final String src = e.attr("src");
 				if (src.contains("../images/20") //

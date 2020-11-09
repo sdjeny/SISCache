@@ -5,10 +5,11 @@ import java.util.Map;
 
 import javax.annotation.Resource;
 
+import org.sdjen.download.cache_sis.configuration.ConfigHttputil;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -27,12 +28,8 @@ public class HttpUtil {
 	private RestTemplate proxyRestTemplate;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
-	@Value("${siscache.conf.httputil.retry_times}")
-	private int retry_times = 5;
-	@Value("${siscache.conf.httputil.retry_time_second}")
-	private int retry_time_second = 30;
-	@Value("${siscache.conf.httputil.chatset}")
-	private String chatset = "gbk";
+	@Autowired
+	private ConfigHttputil config;
 
 	public static abstract class Executor<R> {
 		private R result;
@@ -105,7 +102,7 @@ public class HttpUtil {
 	}
 
 	public String getHTML(final String uri) throws Throwable {
-		return getHTML(uri, chatset);
+		return getHTML(uri, config.getChatset());
 	}
 
 	public String getHTML(final String uri, final String chatset) throws Throwable {
@@ -138,8 +135,8 @@ public class HttpUtil {
 			} catch (Throwable e) {
 				// closeClient();
 				count++;
-				Thread.sleep(1000l * retry_time_second * count);
-				if (stop = count >= retry_times)
+				Thread.sleep(1000l * config.getRetry_time_second() * count);
+				if (stop = count >= config.getRetry_times())
 					throw e;
 				logger.debug("Retry	{}	{}", count, e);
 			}

@@ -10,6 +10,7 @@ import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpHost;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.HttpRequestRetryHandler;
+import org.apache.http.client.config.CookieSpecs;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
@@ -19,6 +20,7 @@ import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.cookie.CookieSpec;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpContext;
@@ -138,6 +140,7 @@ public class RestTemplateConfig {
 				.setConnectTimeout(connectTimeout)// 连接上服务器(握手成功)的时间，超出抛出connect timeout
 				.setConnectionRequestTimeout(connectionRequestTimeout)// 从连接池中获取连接的超时时间//超时间未拿到可用连接，会抛出org.apache.http.conn.ConnectionPoolTimeoutException:Timeout
 																		// waiting for connection from pool
+				.setCookieSpec(CookieSpecs.IGNORE_COOKIES)// Cookie rejected警告所有的cookie都被忽略
 				.build();
 		return HttpClientBuilder//
 				.create()//
@@ -157,6 +160,7 @@ public class RestTemplateConfig {
 				.setConnectTimeout(connectTimeout)// 连接上服务器(握手成功)的时间，超出抛出connect timeout
 				.setConnectionRequestTimeout(connectionRequestTimeout)// 从连接池中获取连接的超时时间//超时间未拿到可用连接，会抛出org.apache.http.conn.ConnectionPoolTimeoutException:Timeout
 																		// waiting for connection from pool
+				.setCookieSpec(CookieSpecs.IGNORE_COOKIES)// Cookie rejected警告所有的cookie都被忽略
 				.setProxy(new HttpHost(proxy[0], Integer.valueOf(proxy[1]), host[0]))//
 				.build();
 		return HttpClientBuilder//

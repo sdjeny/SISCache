@@ -14,7 +14,7 @@ public class ConfigMain implements Serializable {
 	private int url_fail_stop = 0;
 	private int url_fail_retry_begin = 0;
 	private int url_fail_retry_in_hours = 0;
-	private List<String> fids = Arrays.asList("1430".split(","));
+	private List<String> fids = Arrays.asList("143".split(","));
 	private List<String> fids_unreplace_img = Arrays.asList("".split(","));
 	private String path_es_start = "http://192.168.0.237:9200/siscache_";
 	private boolean can_restart = false;
@@ -22,6 +22,8 @@ public class ConfigMain implements Serializable {
 	private boolean can_copy_es_mongo = false;
 	private boolean can_copy_mongo_es = false;
 	private int copy_unit_limit = 500;
+	private List<String> connect_uncheck = Arrays.asList("sexinsex".split(","));
+	private String list_url = "http://www.sexinsex.net/bbs/forum-{0}-{1}.html";
 
 	@Override
 	public String toString() {
@@ -39,6 +41,8 @@ public class ConfigMain implements Serializable {
 							.put("can_copy_es_mongo", can_copy_es_mongo)//
 							.put("can_copy_mongo_es", can_copy_mongo_es)//
 							.put("copy_unit_limit", copy_unit_limit)//
+							.put("connect_uncheck", connect_uncheck)//
+							.put("list_url", list_url)//
 							.getData());
 		} catch (java.lang.Throwable e) {
 			return super.toString();
@@ -131,5 +135,21 @@ public class ConfigMain implements Serializable {
 
 	public void setCopy_unit_limit(int copy_unit_limit) {
 		this.copy_unit_limit = copy_unit_limit;
+	}
+
+	public List<String> getConnect_uncheck() {
+		return connect_uncheck;
+	}
+
+	public void setConnect_uncheck(List<String> connect_uncheck) {
+		this.connect_uncheck = connect_uncheck;
+	}
+
+	public String getList_url() {
+		return list_url;
+	}
+
+	public void setList_url(String list_url) {
+		this.list_url = list_url;
 	}
 }

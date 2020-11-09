@@ -517,7 +517,14 @@ public class Store_ElasticSearch implements IStore {
 		result.put("msg", "");
 		try {
 			url = cutForProxy(url);
-			Urls_failed findOne = dao.find(Urls_failed.class, url);
+			boolean connect_uncheck = false;
+			for (String key : configMain.getConnect_uncheck()) {
+				if (url.contains(key)) {
+					connect_uncheck = true;
+					break;
+				}
+			}
+			Urls_failed findOne = connect_uncheck ? null : dao.find(Urls_failed.class, url);
 			if (null != findOne) {
 				int count = findOne.getCount();
 				result.put("found", count > 0);

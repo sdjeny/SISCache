@@ -14,6 +14,7 @@ import javax.annotation.Resource;
 
 import org.jsoup.Jsoup;
 import org.sdjen.download.cache_sis.configuration.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.http.HttpFactory;
 import org.sdjen.download.cache_sis.http.HttpUtil;
 import org.sdjen.download.cache_sis.json.JsonUtil;
@@ -35,15 +36,14 @@ public class DownloadList {
 	private DownloadSingle downloadSingle;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
-	@Value("${siscache.conf.fids}")
-	private Collection<String> fids;
+	@Autowired
+	private ConfigMain configMain;
 	@Resource(name = "downloadListExecutor")
 	private ThreadPoolTaskExecutor executor;
 	@Autowired
 	private HttpUtil httpUtil;
 
 	boolean autoFirst;
-	String list_url = "http://www.sexinsex.net/bbs/forum-{0}-{1}.html";;
 	ConfUtil conf;
 
 	public static void main(String[] args) throws Throwable {
@@ -125,7 +125,7 @@ public class DownloadList {
 	}
 
 	protected void list(final int i, String type, String logMsg) throws Throwable {
-		for (String fid : fids) {
+		for (String fid : configMain.getFids()) {
 			if (IStore.FIDDESCES.containsKey(fid)) {
 				list(fid, i, type);
 				store.running("download_list", logMsg, fid);
@@ -135,7 +135,7 @@ public class DownloadList {
 
 	protected void list(String fid, final int i, String type) throws Throwable {
 		long t = System.currentTimeMillis();
-		String uri = MessageFormat.format(list_url, fid, String.valueOf(i));
+		String uri = MessageFormat.format(configMain.getList_url(), fid, String.valueOf(i));
 		String html = getHTML(uri);
 		org.jsoup.nodes.Document doument = Jsoup.parse(html);
 		List<Future<Long>> resultList = new ArrayList<Future<Long>>();

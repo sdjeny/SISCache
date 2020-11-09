@@ -482,6 +482,8 @@ public class Store_ElasticSearch implements IStore {
 	public void logFailedUrl(String url, Throwable e) throws Throwable {
 		long l = System.currentTimeMillis();
 		url = cutForProxy(url);
+		if (isUncheck(url))
+			return;
 		synchronized (getLockObject(url)) {
 			Urls_failed findOne = dao.find(Urls_failed.class, url);
 			if (null == findOne) {
@@ -508,6 +510,15 @@ public class Store_ElasticSearch implements IStore {
 		}
 	}
 
+	private boolean isUncheck(String url) {
+		for (String key : configMain.getConnect_uncheck()) {
+			if (url.contains(key)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@Override
 	public Map<String, Object> connectCheck(String url) throws Throwable {
 		init();
@@ -517,14 +528,7 @@ public class Store_ElasticSearch implements IStore {
 		result.put("msg", "");
 		try {
 			url = cutForProxy(url);
-			boolean connect_uncheck = false;
-			for (String key : configMain.getConnect_uncheck()) {
-				if (url.contains(key)) {
-					connect_uncheck = true;
-					break;
-				}
-			}
-			Urls_failed findOne = connect_uncheck ? null : dao.find(Urls_failed.class, url);
+			Urls_failed findOne = isUncheck(url) ? null : dao.find(Urls_failed.class, url);
 			if (null != findOne) {
 				int count = findOne.getCount();
 				result.put("found", count > 0);

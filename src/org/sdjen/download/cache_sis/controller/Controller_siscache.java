@@ -385,9 +385,9 @@ public class Controller_siscache {
 //					rst.append(String
 //							.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
 //					, _source.get("id"), _source.get("page"), _source.get("title")));
-					rst.append(String
-							.format("<td><a href='/siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-					, _source.get("id"),  _source.get("title")));
+					rst.append(
+							String.format("<td><a href='/siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+					, _source.get("id"), _source.get("title")));
 				}
 				rst.append("</tr></tbody>");
 				// rst.append("</br>");
@@ -453,6 +453,48 @@ public class Controller_siscache {
 //		return rst.toString();
 	}
 
+	@RequestMapping("/detail/redirect.php")
+	String detail_redirect() {
+		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
+				.getRequestAttributes();
+		HttpServletRequest request = requestAttributes.getRequest();
+		String fid = request.getParameter("fid");
+		String tid = request.getParameter("tid");
+		String gto = request.getParameter("goto");// nextnewset/nextoldset
+		return "redirect:/siscache/detail/" + tid;
+	}
+
+	@RequestMapping("/detail/{id}/redirect.php")
+	String detail_redirect(@PathVariable("id") String id) {
+		return detail_redirect();
+	}
+
+	@RequestMapping("/detail/viewthread.php")
+	String detail_viewthread() {
+		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
+				.getRequestAttributes();
+		HttpServletRequest request = requestAttributes.getRequest();
+		String tid = request.getParameter("tid");
+		return "redirect:/siscache/detail/" + tid;
+	}
+
+	@RequestMapping("/detail/{id}/viewthread.php")
+	String detail_viewthread(@PathVariable("id") String id) {
+		return detail_viewthread();
+	}
+
+	@RequestMapping("/logview/{query}")
+	@ResponseBody
+	private String logview(@PathVariable("query") String query) {
+		return store.logview(query);
+	}
+
+	@RequestMapping("/logexe/{query}")
+	@ResponseBody
+	private String logexe(@PathVariable("query") String query) {
+		return store.logexe(query);
+	}
+
 	@RequestMapping("/detail/{id}")
 	@ResponseBody
 	String detail(@PathVariable("id") String id) {
@@ -472,38 +514,6 @@ public class Controller_siscache {
 				return rst.toString();
 			}
 		}
-	}
-
-	@RequestMapping("/detail/{id}/redirect.php")
-	String detail_redirect(@PathVariable("id") String id) {
-		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
-				.getRequestAttributes();
-		HttpServletRequest request = requestAttributes.getRequest();
-		String fid = request.getParameter("fid");
-		String tid = request.getParameter("tid");
-		String gto = request.getParameter("goto");// nextnewset/nextoldset
-		return "redirect:/siscache/detail/" + tid;
-	}
-
-	@RequestMapping("/detail/{id}/viewthread.php")
-	String detail_viewthread(@PathVariable("id") String id) {
-		ServletRequestAttributes requestAttributes = (ServletRequestAttributes) RequestContextHolder
-				.getRequestAttributes();
-		HttpServletRequest request = requestAttributes.getRequest();
-		String tid = request.getParameter("tid");
-		return "redirect:/siscache/detail/" + tid;
-	}
-
-	@RequestMapping("/logview/{query}")
-	@ResponseBody
-	private String logview(@PathVariable("query") String query) {
-		return store.logview(query);
-	}
-
-	@RequestMapping("/logexe/{query}")
-	@ResponseBody
-	private String logexe(@PathVariable("query") String query) {
-		return store.logexe(query);
 	}
 
 	@RequestMapping("/detail/{id}/{page}")
@@ -527,7 +537,13 @@ public class Controller_siscache {
 //		)//
 //		);
 		try {
-			return store.getLocalHtml(id, page);
+			try {
+				Long.valueOf(id);
+				Long.valueOf(page);
+				return store.getLocalHtml(id, page);
+			} catch (NumberFormatException e) {
+				return null;
+			}
 		} catch (Throwable e) {
 			StringBuffer rst = new StringBuffer();
 			e.printStackTrace();

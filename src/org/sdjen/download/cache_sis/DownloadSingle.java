@@ -366,7 +366,7 @@ public class DownloadSingle {
 			try {
 				// rmlck lock_w_html.lock();
 				s = System.currentTimeMillis() - s;
-				store.msg("{0}	检索:{3}	下载:{4}({5})	保存:{5}	耗时:{1}	{2}", (++count),
+				store.msg("{0}	检索:{3}	下载:{4}({6})	保存:{5}	耗时:{1}	{2}", (++count),
 						(System.currentTimeMillis() - startTime), msg, l, d, s, fc);
 			} finally {
 				// rmlck lock_w_html.unlock();

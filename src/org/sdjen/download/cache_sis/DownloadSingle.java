@@ -8,6 +8,7 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
@@ -25,6 +26,7 @@ import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.tool.Comparor;
+import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +48,9 @@ public class DownloadSingle {
 	private long length_flag_max_byte = 70000;
 	// private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
 //rmlck	private Lock lock_w_db = new ReentrantReadWriteLock().writeLock();
-	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
+//	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
+//	private Object sisLock = new Object();
+	private EntryData<String, Object> locks = new EntryData<>(new ConcurrentHashMap<>());
 	private long count = 0;
 	// private org.sdjen.download.cache_sis.log.CassandraFactory
 	// cassandraFactory;
@@ -61,8 +65,9 @@ public class DownloadSingle {
 	@Resource(name = "downloadSingleExecutor")
 	private ThreadPoolTaskExecutor executor;
 
-	public void setCount(long count) {
-		this.count = count;
+	public void init() {
+		this.count = 0;
+		locks.getData().clear();
 	}
 
 	public DownloadSingle() throws Exception {
@@ -171,13 +176,18 @@ public class DownloadSingle {
 		// return false;
 		// }
 		long d = System.currentTimeMillis();
+		long d1 = System.currentTimeMillis();
 		if (null == tmp_html && null != url && !url.isEmpty()) {
-			try {
-				lock_w_html.lock();
+			synchronized (locks.get("sis", k -> new Object())) {
+				d1 = System.currentTimeMillis();
 				tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
-			} finally {
-				lock_w_html.unlock();
+				d1 = System.currentTimeMillis() - d1;
 			}
+//			try {
+//				lock_w_html.lock();
+//			} finally {
+//				lock_w_html.unlock();
+//			}
 		}
 		d = System.currentTimeMillis() - d;
 		if (null == tmp_html)
@@ -221,25 +231,31 @@ public class DownloadSingle {
 		final String sub_images = "images/" + subKey;
 		// String sub_html = "html/" + subKey;
 		final String sub_torrent = "torrent/" + subKey;
-		try {
-			lock_w_html.lock();
-			File savePath = new File(save_path);
+		long fc = System.currentTimeMillis();
+		File savePath = new File(save_path);
+		synchronized (locks.get(savePath.getPath(), k -> new Object())) {
 			if (!savePath.exists())
 				savePath.mkdirs();
-			for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
-					, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
-					// , sub_bttrack//
-					// , sub_html //
-			}) {
-				File f = new File(savePath + "/" + sub);
+		}
+		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
+				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+				// , sub_bttrack//
+				// , sub_html //
+		}) {
+			File f = new File(savePath + "/" + sub);
+			synchronized (locks.get(f.getPath(), k -> new Object())) {
 				if (!f.exists()) {
 					f.mkdirs();
 					store.msg("{0}创建文件夹", f);
 				}
 			}
-		} finally {
-			lock_w_html.unlock();
 		}
+		fc = System.currentTimeMillis() - fc;
+//		try {
+//			lock_w_html.lock();
+//		} finally {
+//			lock_w_html.unlock();
+//		}
 		Long length_download = 0l;
 		StringBuilder msg = new StringBuilder(MessageFormat.format("{0} {1}	{2}", dateStr, title, url));
 		List<Future<String[]>> resultList = new ArrayList<Future<String[]>>();
@@ -354,8 +370,8 @@ public class DownloadSingle {
 			try {
 				// rmlck lock_w_html.lock();
 				s = System.currentTimeMillis() - s;
-				store.msg("{0}	检索:{3}	下载:{4}	保存:{5}	耗时:{1}	{2}", (++count),
-						(System.currentTimeMillis() - startTime), msg, l, d, s);
+				store.msg("{0}	检索:{3}	下载:{4}({5}+{6})	保存:{5}	耗时:{1}	{2}", (++count),
+						(System.currentTimeMillis() - startTime), msg, l, d, s, d1, fc);
 			} finally {
 				// rmlck lock_w_html.unlock();
 			}
@@ -456,17 +472,19 @@ public class DownloadSingle {
 			try {
 				result = null;
 				if (path.startsWith("torrent")) {
-					try {
-						lock_w_html.lock();
+					synchronized (locks.get("sis", k -> new Object())) {
 						httpUtil.retry(new HttpUtil.Retry<Void>() {
 							public Void execute() throws Throwable {
 								httpUtil.execute(url, executor);
 								return null;
 							}
 						});
-					} finally {
-						lock_w_html.unlock();
 					}
+//					try {
+//						lock_w_html.lock();
+//					} finally {
+//						lock_w_html.unlock();
+//					}
 				} else
 					httpUtil.execute(url, executor);
 				result = executor.getResult();

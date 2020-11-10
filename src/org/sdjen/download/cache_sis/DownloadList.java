@@ -78,7 +78,7 @@ public class DownloadList {
 			store.running("download_list",
 					JsonUtil.toJson(new EntryData<>().put("type", type).put("from", from).put("to", to).getData()),
 					"init");
-			downloadSingle.setCount(0);
+			downloadSingle.init();
 		}
 		try {
 			autoFirst = true;

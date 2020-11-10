@@ -12,7 +12,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.annotation.Resource;
 
@@ -171,6 +173,57 @@ public class Store_ElasticSearch implements IStore {
 		if (null != result) {
 			result = replaceLocalHtmlUrl(result).html();
 		}
+		return result;
+	}
+
+	@Override
+	public String getLocalHtml(String id) throws Throwable {
+		long l = System.currentTimeMillis();
+		long c = 0;
+		ESMap _source = null;
+		try {
+			Map<Object, Object> params = ESMap.get();
+			params.put("size", 300);
+			params.put("from", 0);
+			params.put("query"//
+					, ESMap.get().set("bool", ESMap.get()//
+							.set("must", Arrays
+									.asList(ESMap.get().set("term", Collections.singletonMap("id", Long.valueOf(id)))))//
+					)//
+			);
+			List<ESMap> hits = (List<ESMap>) JsonUtil
+					.toObject(httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + "html/_doc/_search",
+							JsonUtil.toJson(params)), ESMap.class)
+					.get("hits", ESMap.class).get("hits");
+			l = System.currentTimeMillis() - l;
+			c = System.currentTimeMillis();
+			Map<Long, ESMap> sources = new TreeMap<>();
+			for (ESMap hit : hits) {
+				_source = hit.get("_source", ESMap.class);
+				sources.put(Long.valueOf(_source.get("page").toString()), _source);
+			}
+			List<Map<String, String>> contents = new ArrayList<>();
+			for (Entry<Long, ESMap> entry : sources.entrySet()) {
+				if (1l == entry.getKey())
+					_source = entry.getValue();
+				Map<String, Object> details = JsonUtil.toObject(
+						ZipUtil.uncompress(ZipUtil.stringToBytes(entry.getValue().get("context_zip", String.class))),
+						Map.class);
+				contents.addAll((List<Map<String, String>>) details.get("contents"));
+			}
+			Map<String, Object> details = JsonUtil.toObject(
+					ZipUtil.uncompress(ZipUtil.stringToBytes(_source.get("context_zip", String.class))), Map.class);
+			details.put("contents", contents);
+			_source.put("context_zip", ZipUtil.bytesToString(ZipUtil.compress(JsonUtil.toJson(details))));
+			c = System.currentTimeMillis() - c;
+		} catch (NotFound notFound) {
+			_source = null;
+		}
+		long r = System.currentTimeMillis();
+		String result = returnToHtml(id, _source);
+		r = System.currentTimeMillis() - r;
+		msg("getLocalHtml lookup:{0} concat:{1}	return:{2}	({3}){4}", l, c, r, id,
+				null == _source ? "Find nothing" : _source.get("title"));
 		return result;
 	}
 
@@ -710,4 +763,5 @@ public class Store_ElasticSearch implements IStore {
 		return null;
 
 	}
+
 }

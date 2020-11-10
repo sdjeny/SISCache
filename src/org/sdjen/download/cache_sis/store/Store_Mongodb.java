@@ -480,4 +480,9 @@ public class Store_Mongodb implements IStore {
 		// TODO Auto-generated method stub
 		return null;
 	}
+
+	@Override
+	public String getLocalHtml(String id) throws Throwable {
+		return getLocalHtml(id, "1");
+	}
 }

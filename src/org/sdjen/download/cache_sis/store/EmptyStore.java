@@ -190,4 +190,10 @@ public class EmptyStore implements IStore {
 			return e.getMessage();
 		}
 	}
+
+	@Override
+	public String getLocalHtml(String id) throws Throwable {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

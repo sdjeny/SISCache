@@ -382,9 +382,9 @@ public class Controller_siscache {
 					}
 					rst.append("</tr></tbody>");
 					rst.append("<tbody><tr>");
-					rst.append(String
-							.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-					, _source.get("id"), _source.get("page"), _source.get("title")));
+					rst.append(
+							String.format("<td><a href='/siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+					, _source.get("id"), _source.get("title")));
 				}
 				rst.append("</tr></tbody>");
 				// rst.append("</br>");
@@ -456,8 +456,19 @@ public class Controller_siscache {
 		if (id.startsWith("thread")) {
 			String[] ss = id.split("-");
 			return detail(ss[1], ss[2]);
-		} else
-			return detail(id, "1");
+		} else {
+			try {
+				return store.getLocalHtml(id);
+			} catch (Throwable e) {
+				StringBuffer rst = new StringBuffer();
+				e.printStackTrace();
+				rst.append(e.getMessage());
+				for (java.lang.StackTraceElement element : e.getStackTrace()) {
+					rst.append(element.toString());
+				}
+				return rst.toString();
+			}
+		}
 	}
 
 	@RequestMapping("/detail/{id}/redirect.php")

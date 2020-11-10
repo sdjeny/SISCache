@@ -49,7 +49,7 @@ public class DownloadSingle {
 	// private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
 //rmlck	private Lock lock_w_db = new ReentrantReadWriteLock().writeLock();
 //	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
-	private Object lock_sis = new Object();
+//	private Object lock_sis = new Object();
 	private Object lock_file = new Object();
 //	private EntryData<String, Object> locks = new EntryData<>(new ConcurrentHashMap<>());
 	private long count = 0;
@@ -177,13 +177,10 @@ public class DownloadSingle {
 		// return false;
 		// }
 		long d = System.currentTimeMillis();
-		long d1 = 0;
 		if (null == tmp_html && null != url && !url.isEmpty()) {
-			synchronized (lock_sis) {
-				d1 = System.currentTimeMillis();
-				tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
-				d1 = System.currentTimeMillis() - d1;
-			}
+//			synchronized (lock_sis) {
+			tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
+//			}
 //			try {
 //				lock_w_html.lock();
 //			} finally {
@@ -233,18 +230,16 @@ public class DownloadSingle {
 		// String sub_html = "html/" + subKey;
 		final String sub_torrent = "torrent/" + subKey;
 		long fc = System.currentTimeMillis();
-		File savePath = new File(save_path);
 		synchronized (lock_file) {
+			File savePath = new File(save_path);
 			if (!savePath.exists())
 				savePath.mkdirs();
-		}
-		for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
-				, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
-				// , sub_bttrack//
-				// , sub_html //
-		}) {
-			File f = new File(savePath + "/" + sub);
-			synchronized (lock_file) {
+			for (String sub : new String[] { sub_images, sub_images + "/min", sub_images + "/mid", sub_images + "/max"//
+					, sub_torrent, sub_torrent + "/min", sub_torrent + "/mid", sub_torrent + "/max"//
+					// , sub_bttrack//
+					// , sub_html //
+			}) {
+				File f = new File(savePath + "/" + sub);
 				if (!f.exists()) {
 					f.mkdirs();
 					store.msg("{0}创建文件夹", f);
@@ -371,8 +366,8 @@ public class DownloadSingle {
 			try {
 				// rmlck lock_w_html.lock();
 				s = System.currentTimeMillis() - s;
-				store.msg("{0}	检索:{3}	下载:{4}({5}+{6})	保存:{5}	耗时:{1}	{2}", (++count),
-						(System.currentTimeMillis() - startTime), msg, l, d, s, d1, fc);
+				store.msg("{0}	检索:{3}	下载:{4}({5})	保存:{5}	耗时:{1}	{2}", (++count),
+						(System.currentTimeMillis() - startTime), msg, l, d, s, fc);
 			} finally {
 				// rmlck lock_w_html.unlock();
 			}
@@ -473,14 +468,14 @@ public class DownloadSingle {
 			try {
 				result = null;
 				if (path.startsWith("torrent")) {
-					synchronized (lock_sis) {
-						httpUtil.retry(new HttpUtil.Retry<Void>() {
-							public Void execute() throws Throwable {
-								httpUtil.execute(url, executor);
-								return null;
-							}
-						});
-					}
+//					synchronized (lock_sis) {
+					httpUtil.retry(new HttpUtil.Retry<Void>() {
+						public Void execute() throws Throwable {
+							httpUtil.execute(url, executor);
+							return null;
+						}
+					});
+//					}
 //					try {
 //						lock_w_html.lock();
 //					} finally {

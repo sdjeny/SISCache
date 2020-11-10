@@ -127,7 +127,8 @@ public class JsoupAnalysisor {
 	public static void main(String[] args) throws Throwable {
 		File[] files = new File(new File("").getAbsolutePath()).listFiles((dir, name) -> name.startsWith("sisdemo"));
 //		files = new File[] { new File("sisdemo-8757822.html"), new File("sisdemo_8720516.html") };
-		files = new File[] { new File("sisdemo_8784871.html") };
+//		files = new File[] { new File("sisdemo_8784871.html") };
+		files = new File[] { new File("sisdemo_8694622.html") };
 		for (File f : files) {
 			System.out.println(f);
 			StringBuffer stringBuffer = new StringBuffer();
@@ -142,7 +143,7 @@ public class JsoupAnalysisor {
 			temp = JsonUtil.toJson(details);
 			System.out.println(temp.getBytes().length + "	->	"
 					+ (content_txt.length() + ZipUtil.compress(temp).length) + "(" + content_txt.length() + ")");
-			System.out.println(restoreToHtml(details));
+//			System.out.println(restoreToHtml(details));
 			System.out.println(JsonUtil.toPrettyJson(details));
 		}
 //		com.google.common.io.Files.write(details.get("template").getBytes("GBK"), new File("template.html"));

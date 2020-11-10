@@ -105,7 +105,7 @@ public class HttpUtil {
 		return getHTML(uri, config.getChatset());
 	}
 
-	public String getHTML(final String uri, final String chatset) throws Throwable {
+	public synchronized String getHTML(final String uri, final String chatset) throws Throwable {
 		final Executor<String> executor = new Executor<String>() {
 			public void execute(byte[] bytes) throws Throwable {
 				setResult(null);

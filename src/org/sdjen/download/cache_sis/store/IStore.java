@@ -65,6 +65,8 @@ public interface IStore {
 		return getURL_Path(url);
 	}
 
+	String getLocalHtml(final String id) throws Throwable;
+
 	String getLocalHtml(final String id, final String page) throws Throwable;
 
 	String getMD5_Path(String key) throws Throwable;

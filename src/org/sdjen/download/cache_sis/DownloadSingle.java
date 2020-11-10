@@ -63,6 +63,10 @@ public class DownloadSingle {
 	private ConfigMain configMain;
 	@Resource(name = "downloadSingleExecutor")
 	private ThreadPoolTaskExecutor executor;
+	
+	public void setCount(long count) {
+		this.count = count;
+	}
 
 	public DownloadSingle() throws Exception {
 		System.out.println(">>>>>>>>>>>>>>>>>>DownloadSingle");

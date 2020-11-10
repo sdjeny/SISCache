@@ -76,46 +76,50 @@ public class Store_ElasticSearch implements IStore {
 						postStr.toString());
 			}
 			msg(rst);
+			Map<String, ESMap> inits = new HashMap<>();
 			for (String index : new String[] { "md", "html"
 //					, "last", "urls_failed", "test"
 			}) {
-				msg(index + ":	"
-						+ httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + index + "/_doc/_init_", "{}"));
+				inits.put(index, JsonUtil.toObject(
+						httpUtil.doLocalPostUtf8Json(configMain.getPath_es_start() + index + "/_doc/_init_", "{}"),
+						ESMap.class));
 			}
-			try {
-				msg("number_of_replicas:	" + httpUtil.doLocalPutUtf8Json("http://192.168.0.237:9200/_settings",
-						JsonUtil.toJson(Collections.singletonMap("number_of_replicas", 0))));
-			} catch (Throwable e) {
-				e.printStackTrace();
-			}
-			try {
-				msg("html:	" + httpUtil.doLocalPutUtf8Json(configMain.getPath_es_start() + "html/_doc/_mapping/"//
-						, JsonUtil.toJson(//
-								ESMap.get()//
-										.set("properties", ESMap.get()//
-												.set("context_zip", ESMap.get()//
-														.set("type", "binary")// text
-														.set("index", false)//
-//													.set("norms", false)//
+			msg(JsonUtil.toPrettyJson(inits));
+			if (inits.get("html").get("result", String.class).equalsIgnoreCase("created")) {
+				try {
+					msg("number_of_replicas:	" + httpUtil.doLocalPutUtf8Json("http://192.168.0.237:9200/_settings",
+							JsonUtil.toJson(Collections.singletonMap("number_of_replicas", 0))));
+				} catch (Throwable e) {
+					e.printStackTrace();
+				}
+				try {
+					msg("html:	" + httpUtil.doLocalPutUtf8Json(configMain.getPath_es_start() + "html/_doc/_mapping/"//
+							, JsonUtil.toJson(//
+									ESMap.get()//
+											.set("properties", ESMap.get()//
+													.set("context_zip", ESMap.get()//
+															.set("type", "binary")// text
+															.set("index", false)//
+//															.set("norms", false)//
 //													.set("fields", ESMap.get()//
 //															.set("keyword", ESMap.get()//
 //																	.set("type", "keyword")//
 //																	.set("ignore_above", 256)//
 //															)//
 //													)//
-												)//
-										)//
-						)//
-				));
-			} catch (Throwable e) {
+													)//
+											)//
+							)//
+					));
+				} catch (Throwable e) {
 //				msg("html:	" + httpUtil.doLocalPutUtf8Json(configMain.getPath_es_start() + "html/_doc/_mapping/?include_type_name=true"//
-				msg("html:	" + httpUtil.doLocalPutUtf8Json(configMain.getPath_es_start() + "html/_mapping/"//
-						, JsonUtil.toJson(//
-								ESMap.get()//
-										.set("properties", ESMap.get()//
-												.set("context_zip", ESMap.get()//
-														.set("type", "binary")// text
-														.set("index", false)//
+					msg("html:	" + httpUtil.doLocalPutUtf8Json(configMain.getPath_es_start() + "html/_mapping/"//
+							, JsonUtil.toJson(//
+									ESMap.get()//
+											.set("properties", ESMap.get()//
+													.set("context_zip", ESMap.get()//
+															.set("type", "binary")// text
+															.set("index", false)//
 //													.set("norms", false)//
 //													.set("fields", ESMap.get()//
 //															.set("keyword", ESMap.get()//
@@ -123,11 +127,11 @@ public class Store_ElasticSearch implements IStore {
 //																	.set("ignore_above", 256)//
 //															)//
 //													)//
-												)//
-										)//
-						)//
-				));
-
+													)//
+											)//
+							)//
+					));
+				}
 			}
 			inited = true;
 		}

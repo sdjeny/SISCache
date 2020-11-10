@@ -67,16 +67,19 @@ public class DownloadList {
 	}
 
 	public void execute(String type, int from, int to) throws Throwable {
-
-		Map<String, Object> last = store.getLast("download_list");
-		if (null != last) {
-			if (last.containsKey("running") && (Boolean) last.get("running")) {
-				logger.info(">>>>>>>>>>>>download_list is Running");
-				return;
+		synchronized (this) {
+			Map<String, Object> last = store.getLast("download_list");
+			if (null != last) {
+				if (last.containsKey("running") && (Boolean) last.get("running")) {
+					logger.info(">>>>>>>>>>>>download_list is Running");
+					return;
+				}
 			}
+			store.running("download_list",
+					JsonUtil.toJson(new EntryData<>().put("type", type).put("from", from).put("to", to).getData()),
+					"init");
+			downloadSingle.setCount(0);
 		}
-		store.running("download_list",
-				JsonUtil.toJson(new EntryData<>().put("type", type).put("from", from).put("to", to).getData()), "init");
 		try {
 			autoFirst = true;
 			try {

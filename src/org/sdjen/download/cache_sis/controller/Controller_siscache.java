@@ -380,14 +380,14 @@ public class Controller_siscache {
 								"ALL".equalsIgnoreCase(fid) ? IStore.FIDDESCES.get(_source.get("fid")) : "",
 								_source.get("type")));
 					}
-					rst.append(
-							String.format("<td><a href='/siscache/detail/%s' title='新窗口打开' target='_blank'>ALL</a></td>"//
-					, _source.get("id")));
 					rst.append("</tr></tbody>");
 					rst.append("<tbody><tr>");
+//					rst.append(String
+//							.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+//					, _source.get("id"), _source.get("page"), _source.get("title")));
 					rst.append(String
-							.format("<td><a href='/siscache/detail/%s/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
-					, _source.get("id"), _source.get("page"), _source.get("title")));
+							.format("<td><a href='/siscache/detail/%s' title='新窗口打开' target='_blank'>%s</a></td>"//
+					, _source.get("id"),  _source.get("title")));
 				}
 				rst.append("</tr></tbody>");
 				// rst.append("</br>");

@@ -144,7 +144,7 @@ public class Store_ElasticSearch implements IStore {
 	}
 
 	private String getKey(String id, String page) {
-		return id + "_" + page;
+		return Long.valueOf(id) + "_" + Long.valueOf(page);
 	}
 
 	private String returnToHtml(String id, ESMap _source) throws IOException {
@@ -213,10 +213,8 @@ public class Store_ElasticSearch implements IStore {
 			}
 			Map<String, Object> details = JsonUtil.toObject(
 					ZipUtil.uncompress(ZipUtil.stringToBytes(_source.get("context_zip", String.class))), Map.class);
-			System.out.println(JsonUtil.toPrettyJson(details));
 			details.put("contents", contents);
 			_source.put("context_zip", ZipUtil.bytesToString(ZipUtil.compress(JsonUtil.toJson(details))));
-			System.out.println(JsonUtil.toPrettyJson(details));
 			c = System.currentTimeMillis() - c;
 		} catch (NotFound notFound) {
 			_source = null;

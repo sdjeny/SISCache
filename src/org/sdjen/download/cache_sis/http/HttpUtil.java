@@ -30,6 +30,7 @@ public class HttpUtil {
 	private IStore store;
 	@Autowired
 	private ConfigHttputil config;
+	private Object lock_html = new Object();
 
 	public static abstract class Executor<R> {
 		private R result;
@@ -105,7 +106,7 @@ public class HttpUtil {
 		return getHTML(uri, config.getChatset());
 	}
 
-	public synchronized String getHTML(final String uri, final String chatset) throws Throwable {
+	public String getHTML(final String uri, final String chatset) throws Throwable {
 		final Executor<String> executor = new Executor<String>() {
 			public void execute(byte[] bytes) throws Throwable {
 				setResult(null);
@@ -115,12 +116,14 @@ public class HttpUtil {
 			}
 		};
 		return retry(() -> {
-			HttpUtil.this.execute(uri, executor);
-			String result = executor.getResult();
-			if (null == result)
-				throw new Exception("取不到数据	" + uri);
-			else
-				return result;
+			synchronized (lock_html) {
+				HttpUtil.this.execute(uri, executor);
+				String result = executor.getResult();
+				if (null == result)
+					throw new Exception("取不到数据	" + uri);
+				else
+					return result;
+			}
 		});
 	}
 

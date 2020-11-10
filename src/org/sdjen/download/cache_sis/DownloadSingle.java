@@ -49,8 +49,9 @@ public class DownloadSingle {
 	// private Lock lock_w_replace = new ReentrantReadWriteLock().writeLock();
 //rmlck	private Lock lock_w_db = new ReentrantReadWriteLock().writeLock();
 //	private Lock lock_w_html = new ReentrantReadWriteLock().writeLock();
-//	private Object sisLock = new Object();
-	private EntryData<String, Object> locks = new EntryData<>(new ConcurrentHashMap<>());
+	private Object lock_sis = new Object();
+	private Object lock_file = new Object();
+//	private EntryData<String, Object> locks = new EntryData<>(new ConcurrentHashMap<>());
 	private long count = 0;
 	// private org.sdjen.download.cache_sis.log.CassandraFactory
 	// cassandraFactory;
@@ -67,7 +68,7 @@ public class DownloadSingle {
 
 	public void init() {
 		this.count = 0;
-		locks.getData().clear();
+//		locks.getData().clear();
 	}
 
 	public DownloadSingle() throws Exception {
@@ -176,9 +177,9 @@ public class DownloadSingle {
 		// return false;
 		// }
 		long d = System.currentTimeMillis();
-		long d1 = System.currentTimeMillis();
+		long d1 = 0;
 		if (null == tmp_html && null != url && !url.isEmpty()) {
-			synchronized (locks.get("sis", k -> new Object())) {
+			synchronized (lock_sis) {
 				d1 = System.currentTimeMillis();
 				tmp_html = httpUtil.getHTML(url);// 覆盖模式下会进这里，本地没有再从网络取
 				d1 = System.currentTimeMillis() - d1;
@@ -233,7 +234,7 @@ public class DownloadSingle {
 		final String sub_torrent = "torrent/" + subKey;
 		long fc = System.currentTimeMillis();
 		File savePath = new File(save_path);
-		synchronized (locks.get(savePath.getPath(), k -> new Object())) {
+		synchronized (lock_file) {
 			if (!savePath.exists())
 				savePath.mkdirs();
 		}
@@ -243,7 +244,7 @@ public class DownloadSingle {
 				// , sub_html //
 		}) {
 			File f = new File(savePath + "/" + sub);
-			synchronized (locks.get(f.getPath(), k -> new Object())) {
+			synchronized (lock_file) {
 				if (!f.exists()) {
 					f.mkdirs();
 					store.msg("{0}创建文件夹", f);
@@ -472,7 +473,7 @@ public class DownloadSingle {
 			try {
 				result = null;
 				if (path.startsWith("torrent")) {
-					synchronized (locks.get("sis", k -> new Object())) {
+					synchronized (lock_sis) {
 						httpUtil.retry(new HttpUtil.Retry<Void>() {
 							public Void execute() throws Throwable {
 								httpUtil.execute(url, executor);

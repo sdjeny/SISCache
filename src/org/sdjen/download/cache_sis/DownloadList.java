@@ -204,7 +204,7 @@ public class DownloadList {
 					}
 				}
 //				HttpFactory.getPoolConnManager().closeExpiredConnections();
-				store.msg(lastMsg = MessageFormat.format("{4}[{5}]	耗时{3}	下载	{0} byte,	{1} 项	{2}",
+				store.msg(lastMsg = MessageFormat.format("耗时{3}	下载	{0} byte,	{1} 项	{4}[{5}]	{2}",
 						length_download, count, uri, (System.currentTimeMillis() - t), fid, IStore.FIDDESCES.get(fid)));
 				// httpUtil.getPoolConnManager().closeExpiredConnections();
 			}

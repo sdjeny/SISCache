@@ -128,86 +128,84 @@ public class DownloadList {
 	}
 
 	protected void list(final int i, String type, String logMsg) throws Throwable {
+		String lastMsg = "";
 		for (String fid : configMain.getFids()) {
 			if (IStore.FIDDESCES.containsKey(fid)) {
-				list(fid, i, type);
-				store.running("download_list", logMsg, fid);
-			}
-		}
-	}
-
-	protected void list(String fid, final int i, String type) throws Throwable {
-		long t = System.currentTimeMillis();
-		String uri = MessageFormat.format(configMain.getList_url(), fid, String.valueOf(i));
-		String html = getHTML(uri);
-		org.jsoup.nodes.Document doument = Jsoup.parse(html);
-		List<Future<Long>> resultList = new ArrayList<Future<Long>>();
-		for (final org.jsoup.nodes.Element element : doument.select("tbody").select("tr")) {
-			resultList.add(executor.submit(new Callable<Long>() {
-				public Long call() throws Exception {
-					String date = "";
-					for (org.jsoup.nodes.Element s : element.select("td.author")// class=author的td
-							.select("em")) {
-						String text = s.text();
-						try {
-							SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-							date = dateFormat.format(dateFormat.parse(text));
-							dateFormat = null;
-						} catch (Exception e) {
-							store.err("异常	{0}	{1}", text, e);
-						}
-					}
-					Long result = null;
-					String id = null;
-					String title = null;
-					for (org.jsoup.nodes.Element s : element.select("th").select("span")) {//
-						boolean threadpages = s.classNames().contains("threadpages");
-						for (org.jsoup.nodes.Element href : s.select("a[href]")) {
-							if (null == id) {
-								id = s.id();
-								id = id.substring(id.indexOf("_") + 1);
-								title = href.text();
-							}
-							String page = threadpages ? href.text() : "1";
-							String url = httpUtil.joinUrlPath(uri, href.attr("href"));
-							try {
-								Long length = downloadSingle.startDownload(type, fid, id, page, url, title, date);
-								if (null != length) {
-									if (null == result)
-										result = 0l;
-									result += length;
-									// break;
+				store.running("download_list", logMsg, lastMsg + " Running:" + fid + "[" + IStore.FIDDESCES.get(fid) + "]");
+				long t = System.currentTimeMillis();
+				String uri = MessageFormat.format(configMain.getList_url(), fid, String.valueOf(i));
+				String html = getHTML(uri);
+				org.jsoup.nodes.Document doument = Jsoup.parse(html);
+				List<Future<Long>> resultList = new ArrayList<Future<Long>>();
+				for (final org.jsoup.nodes.Element element : doument.select("tbody").select("tr")) {
+					resultList.add(executor.submit(new Callable<Long>() {
+						public Long call() throws Exception {
+							String date = "";
+							for (org.jsoup.nodes.Element s : element.select("td.author")// class=author的td
+									.select("em")) {
+								String text = s.text();
+								try {
+									SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+									date = dateFormat.format(dateFormat.parse(text));
+									dateFormat = null;
+								} catch (Exception e) {
+									store.err("异常	{0}	{1}", text, e);
 								}
-							} catch (Throwable e) {
-								store.err("异常	{0}	{1}", url, e);
-								e.printStackTrace();
 							}
+							Long result = null;
+							String id = null;
+							String title = null;
+							for (org.jsoup.nodes.Element s : element.select("th").select("span")) {//
+								boolean threadpages = s.classNames().contains("threadpages");
+								for (org.jsoup.nodes.Element href : s.select("a[href]")) {
+									if (null == id) {
+										id = s.id();
+										id = id.substring(id.indexOf("_") + 1);
+										title = href.text();
+									}
+									String page = threadpages ? href.text() : "1";
+									String url = httpUtil.joinUrlPath(uri, href.attr("href"));
+									try {
+										Long length = downloadSingle.startDownload(type, fid, id, page, url, title,
+												date);
+										if (null != length) {
+											if (null == result)
+												result = 0l;
+											result += length;
+											// break;
+										}
+									} catch (Throwable e) {
+										store.err("异常	{0}	{1}", url, e);
+										e.printStackTrace();
+									}
+								}
+							}
+							return result;
 						}
+					}));// ������ִ�н���洢��List��
+				}
+				long count = 0, length_download = 0;
+				for (Future<Long> fs : resultList) {
+					try {
+						// while (!fs.isDone())
+						// ;// Future�������û����ɣ���һֱѭ���ȴ���ֱ��Future�������
+						Long length = fs.get(30, TimeUnit.MINUTES);// �����̣߳�����ִ�еĽ��
+						if (null != length) {
+							length_download += length;
+							count++;
+						}
+					} catch (java.util.concurrent.TimeoutException e) {
+						fs.cancel(false);
+					} catch (Exception e) {
+						e.printStackTrace();
+					} finally {
 					}
-					return result;
 				}
-			}));// ������ִ�н���洢��List��
-		}
-		long count = 0, length_download = 0;
-		for (Future<Long> fs : resultList) {
-			try {
-				// while (!fs.isDone())
-				// ;// Future�������û����ɣ���һֱѭ���ȴ���ֱ��Future�������
-				Long length = fs.get(30, TimeUnit.MINUTES);// �����̣߳�����ִ�еĽ��
-				if (null != length) {
-					length_download += length;
-					count++;
-				}
-			} catch (java.util.concurrent.TimeoutException e) {
-				fs.cancel(false);
-			} catch (Exception e) {
-				e.printStackTrace();
-			} finally {
+//				HttpFactory.getPoolConnManager().closeExpiredConnections();
+				store.msg(lastMsg = MessageFormat.format("{4}[{5}]	耗时{3}	下载	{0} byte,	{1} 项	{2}",
+						length_download, count, uri, (System.currentTimeMillis() - t), fid, IStore.FIDDESCES.get(fid)));
+				// httpUtil.getPoolConnManager().closeExpiredConnections();
 			}
 		}
-//		HttpFactory.getPoolConnManager().closeExpiredConnections();
-		store.msg("耗时{3}	下载	{0} byte,	{1} 项	{2}", length_download, count, uri,
-				(System.currentTimeMillis() - t));
-		// httpUtil.getPoolConnManager().closeExpiredConnections();
 	}
 }

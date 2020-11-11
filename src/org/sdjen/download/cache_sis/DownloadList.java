@@ -4,8 +4,10 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -138,49 +140,57 @@ public class DownloadList {
 				String uri = MessageFormat.format(configMain.getList_url(), fid, String.valueOf(i));
 				String html = getHTML(uri);
 				org.jsoup.nodes.Document doument = Jsoup.parse(html);
-				List<Future<Long>> resultList = new ArrayList<Future<Long>>();
+				Map<String, Map<String, String>> map = new LinkedHashMap<>();
 				for (final org.jsoup.nodes.Element element : doument.select("tbody").select("tr")) {
+					String date = "";
+					for (org.jsoup.nodes.Element s : element.select("td.author")// class=author的td
+							.select("em")) {
+						String text = s.text();
+						try {
+							SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+							date = dateFormat.format(dateFormat.parse(text));
+							dateFormat = null;
+						} catch (Exception e) {
+							store.err("异常	{0}	{1}", text, e);
+						}
+					}
+					String id = null;
+					String title = null;
+					for (org.jsoup.nodes.Element s : element.select("th").select("span")) {//
+						boolean threadpages = s.classNames().contains("threadpages");
+						for (org.jsoup.nodes.Element href : s.select("a[href]")) {
+							if (null == id) {
+								id = s.id();
+								id = id.substring(id.indexOf("_") + 1);
+								title = href.text();
+							}
+							String page = threadpages ? href.text() : "1";
+							String url = httpUtil.joinUrlPath(uri, href.attr("href"));
+							map.put(url, new EntryData<String, String>()//
+									.put("id", id)//
+									.put("page", page)//
+									.put("url", url)//
+									.put("title", title)//
+									.put("date", date)//
+									.getData());
+						}
+					}
+				}
+				List<Future<Long>> resultList = new ArrayList<Future<Long>>();
+				for (Entry<String, Map<String, String>> entry : map.entrySet()) {
 					resultList.add(executor.submit(new Callable<Long>() {
 						public Long call() throws Exception {
-							String date = "";
-							for (org.jsoup.nodes.Element s : element.select("td.author")// class=author的td
-									.select("em")) {
-								String text = s.text();
-								try {
-									SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-									date = dateFormat.format(dateFormat.parse(text));
-									dateFormat = null;
-								} catch (Exception e) {
-									store.err("异常	{0}	{1}", text, e);
+							Long result = 0l;
+							try {
+								Long length = downloadSingle.startDownload(type, fid, entry.getValue().get("id"),
+										entry.getValue().get("page"), entry.getValue().get("url"),
+										entry.getValue().get("title"), entry.getValue().get("date"));
+								if (null != length) {
+									result += length;
 								}
-							}
-							Long result = null;
-							String id = null;
-							String title = null;
-							for (org.jsoup.nodes.Element s : element.select("th").select("span")) {//
-								boolean threadpages = s.classNames().contains("threadpages");
-								for (org.jsoup.nodes.Element href : s.select("a[href]")) {
-									if (null == id) {
-										id = s.id();
-										id = id.substring(id.indexOf("_") + 1);
-										title = href.text();
-									}
-									String page = threadpages ? href.text() : "1";
-									String url = httpUtil.joinUrlPath(uri, href.attr("href"));
-									try {
-										Long length = downloadSingle.startDownload(type, fid, id, page, url, title,
-												date);
-										if (null != length) {
-											if (null == result)
-												result = 0l;
-											result += length;
-											// break;
-										}
-									} catch (Throwable e) {
-										store.err("异常	{0}	{1}", url, e);
-										e.printStackTrace();
-									}
-								}
+							} catch (Throwable e) {
+								store.err("异常	{0}	{1}", entry.getValue().get("url"), e);
+								e.printStackTrace();
 							}
 							return result;
 						}

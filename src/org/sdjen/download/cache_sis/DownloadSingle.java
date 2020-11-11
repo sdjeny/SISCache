@@ -8,11 +8,8 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import javax.annotation.Resource;
 
@@ -26,7 +23,6 @@ import org.sdjen.download.cache_sis.log.LogUtil;
 //import org.sdjen.download.cache_sis.log.MapDBFactory;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.tool.Comparor;
-import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -366,7 +362,7 @@ public class DownloadSingle {
 			try {
 				// rmlck lock_w_html.lock();
 				s = System.currentTimeMillis() - s;
-				store.msg("{0}	检索:{3}	下载:{4}({6})	保存:{5}	耗时:{1}	{2}", (++count),
+				store.msg("{0}	({3} + {4} + {6})	保存:{5}	耗时:{1}	{2}", (++count),
 						(System.currentTimeMillis() - startTime), msg, l, d, s, fc);
 			} finally {
 				// rmlck lock_w_html.unlock();
@@ -469,8 +465,8 @@ public class DownloadSingle {
 				result = null;
 				if (path.startsWith("torrent")) {
 //					synchronized (lock_sis) {
-					httpUtil.retry(new HttpUtil.Retry<Void>() {
-						public Void execute() throws Throwable {
+					httpUtil.retry(() -> {
+						synchronized (httpUtil.getLock_sis()) {
 							httpUtil.execute(url, executor);
 							return null;
 						}

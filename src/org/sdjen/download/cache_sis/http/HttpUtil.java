@@ -30,7 +30,7 @@ public class HttpUtil {
 	private IStore store;
 	@Autowired
 	private ConfigHttputil config;
-	private Object lock_html = new Object();
+	private Object lock_sis = new Object();
 
 	public static abstract class Executor<R> {
 		private R result;
@@ -105,6 +105,10 @@ public class HttpUtil {
 	public String getHTML(final String uri) throws Throwable {
 		return getHTML(uri, config.getChatset());
 	}
+	
+	public Object getLock_sis() {
+		return lock_sis;
+	}
 
 	public String getHTML(final String uri, final String chatset) throws Throwable {
 		final Executor<String> executor = new Executor<String>() {
@@ -116,7 +120,7 @@ public class HttpUtil {
 			}
 		};
 		return retry(() -> {
-			synchronized (lock_html) {
+			synchronized (lock_sis) {
 				HttpUtil.this.execute(uri, executor);
 				String result = executor.getResult();
 				if (null == result)

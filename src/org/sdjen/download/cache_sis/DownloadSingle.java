@@ -362,7 +362,7 @@ public class DownloadSingle {
 			try {
 				// rmlck lock_w_html.lock();
 				s = System.currentTimeMillis() - s;
-				store.msg("{0} t:{1} VS	l:{3} + d:{4} + f:{6}+ s:{5}	{2}", (++count),
+				store.msg("{0} (l:{3} + d:{4} + f:{6}+ s:{5})	t:{1}	{2}", (++count),
 						(System.currentTimeMillis() - startTime), msg, l, d, s, fc);
 			} finally {
 				// rmlck lock_w_html.unlock();

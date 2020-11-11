@@ -42,6 +42,7 @@ public class DownloadList {
 	private ThreadPoolTaskExecutor executor;
 	@Autowired
 	private HttpUtil httpUtil;
+	private String lastMsg = "";
 
 	boolean autoFirst;
 	ConfUtil conf;
@@ -78,6 +79,7 @@ public class DownloadList {
 			store.running("download_list",
 					JsonUtil.toJson(new EntryData<>().put("type", type).put("from", from).put("to", to).getData()),
 					"init");
+			lastMsg = "";
 			downloadSingle.init();
 		}
 		try {
@@ -128,10 +130,10 @@ public class DownloadList {
 	}
 
 	protected void list(final int i, String type, String logMsg) throws Throwable {
-		String lastMsg = "";
 		for (String fid : configMain.getFids()) {
 			if (IStore.FIDDESCES.containsKey(fid)) {
-				store.running("download_list", logMsg, lastMsg + " Running:" + fid + "[" + IStore.FIDDESCES.get(fid) + "]");
+				store.running("download_list", logMsg,
+						lastMsg + " Running:" + fid + "[" + IStore.FIDDESCES.get(fid) + "]");
 				long t = System.currentTimeMillis();
 				String uri = MessageFormat.format(configMain.getList_url(), fid, String.valueOf(i));
 				String html = getHTML(uri);

@@ -24,6 +24,11 @@ public class ConfigMain implements Serializable {
 	private int copy_unit_limit = 500;
 	private List<String> connect_uncheck = Arrays.asList("sexinsex".split(","));
 	private String list_url = "http://www.sexinsex.net/bbs/forum-{0}-{1}.html";
+	private int list_page_middle = 50;
+	private int list_page_middle_begin = 1;
+	private int list_page_middle_end = 2;
+	private int times_period = 2;
+	private String times_ranges = "~1~30|torrent~1~5|torrent,image~1~5|cover~5~10";
 
 	@Override
 	public String toString() {
@@ -43,6 +48,11 @@ public class ConfigMain implements Serializable {
 							.put("copy_unit_limit", copy_unit_limit)//
 							.put("connect_uncheck", connect_uncheck)//
 							.put("list_url", list_url)//
+							.put("list_page_middle", list_page_middle)//
+							.put("list_page_middle_begin", list_page_middle_begin)//
+							.put("list_page_middle_end", list_page_middle_end)//
+							.put("times_period", times_period)//
+							.put("times_ranges", times_ranges)//
 							.getData());
 		} catch (java.lang.Throwable e) {
 			return super.toString();
@@ -151,5 +161,45 @@ public class ConfigMain implements Serializable {
 
 	public void setList_url(String list_url) {
 		this.list_url = list_url;
+	}
+
+	public int getList_page_middle() {
+		return list_page_middle;
+	}
+
+	public void setList_page_middle(int list_page_max) {
+		this.list_page_middle = list_page_max;
+	}
+
+	public int getList_page_middle_begin() {
+		return list_page_middle_begin;
+	}
+
+	public void setList_page_middle_begin(int list_page_max_begin) {
+		this.list_page_middle_begin = list_page_max_begin;
+	}
+
+	public int getList_page_middle_end() {
+		return list_page_middle_end;
+	}
+
+	public void setList_page_middle_end(int list_page_max_end) {
+		this.list_page_middle_end = list_page_max_end;
+	}
+
+	public int getTimes_period() {
+		return times_period;
+	}
+
+	public void setTimes_period(int times_period) {
+		this.times_period = times_period;
+	}
+
+	public String getTimes_ranges() {
+		return times_ranges;
+	}
+
+	public void setTimes_ranges(String times_ranges) {
+		this.times_ranges = times_ranges;
 	}
 }

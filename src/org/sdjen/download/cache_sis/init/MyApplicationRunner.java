@@ -2,11 +2,12 @@ package org.sdjen.download.cache_sis.init;
 
 import javax.annotation.Resource;
 
-import org.sdjen.download.cache_sis.configuration.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.InitStartTimer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -36,19 +37,15 @@ public class MyApplicationRunner implements ApplicationRunner {
 	private boolean can_copy_es_mongo = true;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
-
+	@Autowired
+	private ConfigMain configMain;
 	/**
 	 * 会在服务启动完成后立即执行
 	 */
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
-		double hour = 2;
-		try {
-			hour = Double.valueOf(ConfUtil.getDefaultConf().getProperties().getProperty("times_period"));
-		} catch (Exception e) {
-			ConfUtil.getDefaultConf().getProperties().setProperty("times_period", String.valueOf(hour));
-			ConfUtil.getDefaultConf().store();
-		}
+		System.out.println("ConfigMain:	" + configMain);
+		double hour = configMain.getTimes_period();
 		try {
 			store.init();
 		} catch (Throwable e) {

@@ -19,12 +19,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class TaskPoolConfig {
 	@Autowired
 	private ConfigAsync configAsync;
-	@Autowired
-	private ConfigMain configMain;
 
 	@Bean("taskExecutor")
 	public Executor taskExecutro() {
-		System.out.println("taskExecutro:	" + configMain);
 		ThreadPoolTaskExecutor taskExecutor = new ThreadPoolTaskExecutor();
 		taskExecutor.setCorePoolSize(10);// 配置核心线程数
 		taskExecutor.setMaxPoolSize(50);// 配置最大线程数

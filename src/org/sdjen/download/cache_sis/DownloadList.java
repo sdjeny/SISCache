@@ -3,7 +3,6 @@ package org.sdjen.download.cache_sis;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +25,6 @@ import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
@@ -47,7 +45,7 @@ public class DownloadList {
 	private String lastMsg = "";
 
 	boolean autoFirst;
-	ConfUtil conf;
+//	ConfUtil conf;
 
 	public static void main(String[] args) throws Throwable {
 		ConfUtil conf = ConfUtil.getDefaultConf();
@@ -60,7 +58,7 @@ public class DownloadList {
 
 	public DownloadList() throws Throwable {
 		System.out.println(">>>>>>>>>>>>>>>>>>DownloadList");
-		conf = ConfUtil.getDefaultConf();
+//		conf = ConfUtil.getDefaultConf();
 		LogUtil.init();
 	}
 
@@ -85,33 +83,34 @@ public class DownloadList {
 			downloadSingle.init();
 		}
 		try {
-			autoFirst = true;
-			try {
-				if (conf.getProperties().containsKey("auto_first"))
-					autoFirst = Boolean.valueOf(conf.getProperties().getProperty("auto_first"));
-				else
-					conf.getProperties().setProperty("auto_first", String.valueOf(autoFirst));
-			} catch (Exception e) {
-			}
-			int pageU = 50;
-			try {
-				pageU = Integer.valueOf(conf.getProperties().getProperty("list_page_max"));
-			} catch (Exception e) {
-			}
+//			autoFirst = true;
+//			try {
+//				if (conf.getProperties().containsKey("auto_first"))
+//					autoFirst = Boolean.valueOf(conf.getProperties().getProperty("auto_first"));
+//				else
+//					conf.getProperties().setProperty("auto_first", String.valueOf(autoFirst));
+//			} catch (Exception e) {
+//			}
+//			int pageU = 50;
+//			try {
+//				pageU = Integer.valueOf(conf.getProperties().getProperty("list_page_max"));
+//			} catch (Exception e) {
+//			}
 			try {
 				for (int i = from; i <= to; i++) {
-//					if (i != from && ((i - from) % pageU == 0)) {// 执行到一定数量重新下载3页，保证齐全
-//						for (int j = 2; j < 3; j++) {
-//							list(j, "");
-//						}
+					if (i != from && ((i - from) % configMain.getList_page_middle() == 0)) {// 执行到一定数量重新下载3页，保证齐全
+						for (int j = configMain.getList_page_middle_begin(); j < configMain.getList_page_middle_end(); j++) {
+							list(j, type, JsonUtil.toJson(new EntryData<>().put("type", type).put("from", i)
+									.put("to", to).put("middle", j).getData()));
+						}
 //						store.refreshMsgLog();
-//					}
+					}
 					list(i, type, JsonUtil
 							.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to).getData()));
-					if (autoFirst) {
-						conf.getProperties().setProperty("list_start", String.valueOf(i));
-						conf.store();// 自动记录最后一次执行完成
-					}
+//					if (autoFirst) {
+//						conf.getProperties().setProperty("list_start", String.valueOf(i));
+//						conf.store();// 自动记录最后一次执行完成
+//					}
 				}
 				store.finish("download_list", "finish");
 			} finally {

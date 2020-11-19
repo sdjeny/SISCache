@@ -1,6 +1,5 @@
 package org.sdjen.download.cache_sis.timer;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,7 @@ import java.util.TimerTask;
 import javax.annotation.Resource;
 
 import org.sdjen.download.cache_sis.DownloadList;
-import org.sdjen.download.cache_sis.configuration.ConfUtil;
+import org.sdjen.download.cache_sis.configuration.ConfigMain;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,6 +21,8 @@ public class SISDownloadTimer implements InitStartTimer {
 	private DownloadList downloadList;
 	@Resource(name = "${definde.service.name.store}")
 	private IStore store;
+	@Autowired
+	private ConfigMain configMain;
 
 	public SISDownloadTimer() {
 		System.out.println(">>>>>>>>>>>>SISDownloadTimer");
@@ -36,23 +37,8 @@ public class SISDownloadTimer implements InitStartTimer {
 	}
 
 	public TimerTask getTimerTask() {
-
-		String rangestr = null;
-		try {
-			rangestr = ConfUtil.getDefaultConf().getProperties().getProperty("times_ranges");
-		} catch (Exception e) {
-		}
-		if (null == rangestr) {
-			rangestr = "~1~30|torrent~1~5|torrent,image~1~5|cover~5~10";
-			try {
-				ConfUtil.getDefaultConf().getProperties().setProperty("times_ranges", rangestr);
-				ConfUtil.getDefaultConf().store();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-		}
 		List<String[]> ranges = new ArrayList<>();
-		for (String s : rangestr.split("\\|"))
+		for (String s : configMain.getTimes_ranges().split("\\|"))
 			ranges.add(s.split("~"));
 		return new TimerTask() {
 			Long times = 0l;

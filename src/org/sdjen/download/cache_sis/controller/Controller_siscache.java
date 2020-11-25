@@ -297,8 +297,23 @@ public class Controller_siscache {
 	}
 
 	@RequestMapping("/cache/{from}/{to}/{type}")
+	@ResponseBody
 	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type) {
-		return MessageFormat.format("redirect:/siscache/cache/{0}/{1}/{2}/", from, to, type);
+		ConfUtil.reload();
+		try {
+			logger.info(type + "	" + from + "	" + to);
+			downloadList.execute_async(type, from, to, "");
+		} catch (Throwable e) {
+			logger.error(e.getMessage(), e);
+		}
+//		return list(1);
+		try {
+			return JsonUtil.toJson(store.getLast("download_list"));
+		} catch (Throwable e) {
+			e.printStackTrace();
+			return e.getMessage();
+		}
+		// return "redirect:/siscache/cache_result";
 	}
 
 	@RequestMapping("/restart/{hours}")

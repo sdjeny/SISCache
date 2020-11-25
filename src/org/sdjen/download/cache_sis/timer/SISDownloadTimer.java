@@ -69,9 +69,14 @@ public class SISDownloadTimer implements InitStartTimer {
 						to = Integer.valueOf(range[2]);
 					} catch (Exception e1) {
 					}
+					String contrals = "";
+					try {
+						contrals = (String) range[3];
+					} catch (Exception e1) {
+					}
 					logger.info(times + "	" + type + "	" + from + "	" + to);
 					try {
-						downloadList.execute(type, from, to);
+						downloadList.execute(type, from, to, contrals);
 						times++;
 					} catch (Throwable e) {
 						e.printStackTrace();

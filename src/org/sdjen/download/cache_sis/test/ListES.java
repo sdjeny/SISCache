@@ -53,7 +53,7 @@ public class ListES {
 			listES.execute(from);
 		} catch (Exception e1) {
 			try {
-				new DownloadList().execute(type, size, limit + size);
+				new DownloadList().execute(type, size, limit + size, "143");
 			} catch (Throwable e) {
 				logger.log(Level.SEVERE, e.getMessage(), e);
 			}

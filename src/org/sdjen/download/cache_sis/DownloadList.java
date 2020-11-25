@@ -4,9 +4,11 @@ import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -52,7 +54,7 @@ public class DownloadList {
 		String type = args.length > 0 ? args[0] : "torrent";
 		int from = Integer.valueOf(args.length > 1 ? args[1] : conf.getProperties().getProperty("list_start"));
 		int to = Integer.valueOf(args.length > 2 ? args[2] : conf.getProperties().getProperty("list_end"));
-		new DownloadList().execute(type, from, to);
+		new DownloadList().execute(type, from, to, "");
 		HttpFactory.getPoolConnManager().close();
 	}
 
@@ -63,11 +65,11 @@ public class DownloadList {
 	}
 
 	@Async("taskExecutor")
-	public void execute_async(String type, int from, int to) throws Throwable {
-		execute(type, from, to);
+	public void execute_async(String type, int from, int to, String fids) throws Throwable {
+		execute(type, from, to, fids);
 	}
 
-	public void execute(String type, int from, int to) throws Throwable {
+	public void execute(String type, int from, int to, String fids) throws Throwable {
 		synchronized (this) {
 			Map<String, Object> last = store.getLast("download_list");
 			if (null != last) {
@@ -96,17 +98,36 @@ public class DownloadList {
 //				pageU = Integer.valueOf(conf.getProperties().getProperty("list_page_max"));
 //			} catch (Exception e) {
 //			}
+			Set<String> includes = new LinkedHashSet<>();
+			Set<String> excludes = new LinkedHashSet<>();
+			for (String fid : fids.split(",")) {
+				fid = fid.trim();
+				if (fid.startsWith("-"))
+					excludes.add(fid.substring(1));
+				else
+					includes.add(fid);
+			}
+			includes.remove("");
+			excludes.remove("");
+			if (includes.isEmpty())
+				includes.addAll(configMain.getFids());
 			try {
 				for (int i = from; i <= to; i++) {
 					if (i != from && ((i - from) % configMain.getList_page_middle() == 0)) {// 执行到一定数量重新下载3页，保证齐全
-						for (int j = configMain.getList_page_middle_begin(); j < configMain.getList_page_middle_end(); j++) {
-							list(j, type, JsonUtil.toJson(new EntryData<>().put("type", type).put("from", i)
-									.put("to", to).put("middle", j).getData()));
+						for (int j = configMain.getList_page_middle_begin(); j < configMain
+								.getList_page_middle_end(); j++) {
+							list(j, type,
+									JsonUtil.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to)
+											.put("includes", includes).put("excludes", excludes).put("middle", j)
+											.getData()),
+									includes, excludes);
 						}
 //						store.refreshMsgLog();
 					}
-					list(i, type, JsonUtil
-							.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to).getData()));
+					list(i, type,
+							JsonUtil.toJson(new EntryData<>().put("type", type).put("from", i).put("to", to)
+									.put("includes", includes).put("excludes", excludes).getData()),
+							includes, excludes);
 //					if (autoFirst) {
 //						conf.getProperties().setProperty("list_start", String.valueOf(i));
 //						conf.store();// 自动记录最后一次执行完成
@@ -130,9 +151,10 @@ public class DownloadList {
 		return httpUtil.getHTML(uri);
 	}
 
-	protected void list(final int i, String type, String logMsg) throws Throwable {
-		for (String fid : configMain.getFids()) {
-			if (IStore.FIDDESCES.containsKey(fid)) {
+	protected void list(final int i, String type, String logMsg, Set<String> includes, Set<String> excludes)
+			throws Throwable {
+		for (String fid : includes) {
+			if (IStore.FIDDESCES.containsKey(fid) && !excludes.contains(fid)) {
 				store.running("download_list", logMsg,
 						lastMsg + " Running:" + fid + "[" + IStore.FIDDESCES.get(fid) + "]");
 				long t = System.currentTimeMillis();

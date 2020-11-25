@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -274,13 +275,14 @@ public class Controller_siscache {
 		return cache(from, to, "");
 	}
 
-	@RequestMapping("/cache/{from}/{to}/{type}")
+	@RequestMapping("/cache/{from}/{to}/{type}/{fids}")
 	@ResponseBody
-	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type) {
+	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type,
+			@PathVariable("fids") String fids) {
 		ConfUtil.reload();
 		try {
-			logger.info(type + "	" + from + "	" + to);
-			downloadList.execute_async(type, from, to);
+			logger.info(type + "	" + from + "	" + to + "	" + fids);
+			downloadList.execute_async(type, from, to, fids);
 		} catch (Throwable e) {
 			logger.error(e.getMessage(), e);
 		}
@@ -292,6 +294,11 @@ public class Controller_siscache {
 			return e.getMessage();
 		}
 		// return "redirect:/siscache/cache_result";
+	}
+
+	@RequestMapping("/cache/{from}/{to}/{type}")
+	String cache(@PathVariable("from") int from, @PathVariable("to") int to, @PathVariable("type") final String type) {
+		return MessageFormat.format("redirect:/siscache/cache/{0}/{1}/{2}/", from, to, type);
 	}
 
 	@RequestMapping("/restart/{hours}")

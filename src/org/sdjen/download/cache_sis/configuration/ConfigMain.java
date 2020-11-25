@@ -28,7 +28,7 @@ public class ConfigMain implements Serializable {
 	private int list_page_middle_begin = 1;
 	private int list_page_middle_end = 2;
 	private int times_period = 2;
-	private String times_ranges = "~1~30|torrent~1~5|torrent,image~1~5|cover~5~10";
+	private String times_ranges = "~1~10~143|torrent~1~5|torrent,image~1~5|cover~5~10~143,25";
 
 	@Override
 	public String toString() {

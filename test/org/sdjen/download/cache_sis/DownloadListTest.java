@@ -1,7 +1,5 @@
 package org.sdjen.download.cache_sis;
 
-import static org.junit.Assert.*;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -12,11 +10,11 @@ public class DownloadListTest {
 
 	@Test
 	public void test() throws Throwable {
-		new DownloadList("") {
-			protected String getHTML(String uri) throws Throwable {
-				return getContext(new File("b.htm"));
-			};
-		}.execute(1, 2);
+//		new DownloadList("") {
+//			protected String getHTML(String uri) throws Throwable {
+//				return getContext(new File("b.htm"));
+//			};
+//		}.execute(1, 2);
 	}
 
 	private String getContext(File file) throws Throwable {

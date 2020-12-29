@@ -65,8 +65,8 @@ public class TestTimer implements InitStartTimer {
 			public Map<String, Object> getListDetail(Integer from) throws Exception {
 				Thread.sleep(1000);
 				List<Map<?, ?>> list = new ArrayList<>();
-				if (from < 100)
-					for (int i = 1; i <= 30; i++) {
+				if (from < 1)
+					for (int i = 1; i <= 1; i++) {
 						list.add(Collections.singletonMap("id", from + i));
 					}
 				Map<String, Object> result = new HashMap<String, Object>();

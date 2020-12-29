@@ -5,10 +5,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -22,10 +20,8 @@ import org.sdjen.download.cache_sis.json.JsonUtil;
 import org.sdjen.download.cache_sis.service.CopyEsToBck;
 import org.sdjen.download.cache_sis.service.CopyEsToMongo;
 import org.sdjen.download.cache_sis.service.CopyMongoToES;
-import org.sdjen.download.cache_sis.service.CopyESOToESN;
 import org.sdjen.download.cache_sis.store.IStore;
 import org.sdjen.download.cache_sis.timer.SISDownloadTimer;
-import org.sdjen.download.cache_sis.util.EntryData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -99,6 +95,11 @@ public class Controller_siscache {
 //		}
 //		return connection;
 //	}
+	@RequestMapping("/")
+	@ResponseBody
+	String root() {
+		return help();
+	}
 
 	@RequestMapping("/help")
 	@ResponseBody
@@ -119,7 +120,7 @@ public class Controller_siscache {
 				rst.append(String.format(
 						"<td><a href='/siscache/list/%s/1/100?debug=true' title='新窗口打开' target='_blank'>%s</a></td>",
 						fid, IStore.FIDDESCES.get(fid)));
-				rst.append(String.format("<td>%s</td>", IStore.FIDDESCES.get(fid)));
+				rst.append(String.format("<td>%s</td>", fid + " - " + IStore.FIDDESCES.get(fid)));
 				rst.append(String.format("<td>%s</td>", ""));
 				rst.append("</tr></tbody>");
 
